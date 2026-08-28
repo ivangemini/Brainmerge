@@ -1,7 +1,6 @@
 import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const root = new URL('../', import.meta.url);
 const dist = new URL('../dist/', import.meta.url);
 const platform = process.env.PLATFORM ?? 'local';
 const maxBytes = Number(process.env.MAX_PACKAGE_BYTES ?? 100 * 1024 * 1024);
@@ -17,6 +16,9 @@ for (const name of ['build', 'locales', 'public']) {
     throw error;
   }
 }
+
+await mkdir(new URL('../dist/src/', import.meta.url), { recursive: true });
+await cp(new URL('../src/styles.css', import.meta.url), new URL('../dist/src/styles.css', import.meta.url));
 
 let html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 html = html.replace('content="auto"', `content="${platform}"`);
