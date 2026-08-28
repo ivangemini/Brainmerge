@@ -5,6 +5,8 @@
   "hud.level": "Уровень {level}",
   "hud.merges": "Мерджи",
   "hud.language": "Язык",
+  "audio.mute": "Выключить звук",
+  "audio.unmute": "Включить звук",
   "board.title": "Поле мерджа",
   "board.hint": "Перетаскивай или нажимай на одинаковых персонажей",
   "board.emptyCell": "Пустая клетка поля",
