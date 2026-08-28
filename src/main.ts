@@ -9,6 +9,7 @@ import {
   spawnUnit
 } from './core/game.js';
 import type { GameState } from './core/types.js';
+import { AudioFeedback } from './feedback/audio-feedback.js';
 import { detectLocale, loadLocale, translate, type Locale } from './i18n/i18n.js';
 import type { PlatformAdapter } from './platform/adapter.js';
 import { createPlatformAdapter } from './platform/factory.js';
@@ -22,20 +23,44 @@ let platform: PlatformAdapter = new LocalPlatformAdapter();
 let locale: Locale = detectLocale();
 let state: GameState = createInitialState();
 let adBusy = false;
+const feedback = new AudioFeedback();
+
+function cellElement(index: number): Element | null {
+  return root.querySelector(`[data-cell="${index}"]`);
+}
 
 const view = new GameView(root, {
-  spawn: () => update(spawnUnit(state)),
+  spawn: () => {
+    const next = spawnUnit(state);
+    if (next !== state && next.coins !== state.coins) feedback.trigger('spawn');
+    update(next);
+  },
   rewardedSpawn: () => { void handleRewardedSpawn(); },
-  claimMission: () => update(claimFirstMission(state)),
-  rescueDeadlock: () => update(rescueDeadlock(state)),
+  claimMission: () => {
+    const next = claimFirstMission(state);
+    if (!state.missionClaimed && next.missionClaimed) feedback.trigger('reward');
+    update(next);
+  },
+  rescueDeadlock: () => {
+    const next = rescueDeadlock(state);
+    if (next !== state && next.cells.some((cell, index) => cell !== state.cells[index])) feedback.trigger('rescue');
+    update(next);
+  },
   select: (index) => {
     if (state.selectedIndex !== null && state.selectedIndex !== index) {
-      update(moveOrMerge(state, state.selectedIndex, index).state);
+      const from = state.selectedIndex;
+      const result = moveOrMerge(state, from, index);
+      update(result.state);
+      if (result.merged) feedback.trigger('merge', cellElement(index));
       return;
     }
     update(selectCell(state, state.selectedIndex === index ? null : index), false);
   },
-  moveOrMerge: (from, to) => update(moveOrMerge(state, from, to).state),
+  moveOrMerge: (from, to) => {
+    const result = moveOrMerge(state, from, to);
+    update(result.state);
+    if (result.merged) feedback.trigger('merge', cellElement(to));
+  },
   setLocale: async (nextLocale) => {
     await loadLocale(nextLocale);
     locale = nextLocale;
@@ -45,10 +70,12 @@ const view = new GameView(root, {
 });
 
 function render(): void {
-  view.render(state, locale, (key, params) => translate(locale, key, params), {
+  const t = (key: string, params?: Record<string, string | number>) => translate(locale, key, params);
+  view.render(state, locale, t, {
     rewardedAds: platform.capabilities.rewardedAds,
     adBusy
   });
+  feedback.setLabels(t('audio.mute'), t('audio.unmute'));
 }
 
 function update(next: GameState, persist = true): void {
@@ -64,7 +91,9 @@ async function handleRewardedSpawn(): Promise<void> {
   const rewarded = await platform.showRewarded('brain-box');
   adBusy = false;
   if (rewarded) {
-    update(spawnUnit(state, Math.random, true));
+    const next = spawnUnit(state, Math.random, true);
+    update(next);
+    feedback.trigger('reward');
     return;
   }
   state = { ...state, messageKey: 'message.rewardUnavailable' };
@@ -91,9 +120,12 @@ async function boot(): Promise<void> {
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') update(selectCell(state, null), false);
+  if (event.key.toLowerCase() === 'm' && event.target === document.body) feedback.toggleMute();
   if (event.code === 'Space' && event.target === document.body) {
     event.preventDefault();
-    update(spawnUnit(state));
+    const next = spawnUnit(state);
+    if (next !== state && next.coins !== state.coins) feedback.trigger('spawn');
+    update(next);
   }
 });
 
