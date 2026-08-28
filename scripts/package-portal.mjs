@@ -1,5 +1,6 @@
-import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const dist = new URL('../dist/', import.meta.url);
 const platform = process.env.PLATFORM ?? 'local';
@@ -28,15 +29,15 @@ if (platform === 'yandex' && !html.includes('src="/sdk.js"')) {
 await writeFile(new URL('../dist/index.html', import.meta.url), html);
 
 async function sizeOf(target) {
-  const info = await stat(target);
+  const targetPath = target instanceof URL ? fileURLToPath(target) : target;
+  const info = await stat(targetPath);
   if (info.isFile()) return info.size;
-  const { readdir } = await import('node:fs/promises');
-  const entries = await readdir(target, { withFileTypes: true });
+  const entries = await readdir(targetPath, { withFileTypes: true });
   let total = 0;
-  for (const entry of entries) total += await sizeOf(path.join(target, entry.name));
+  for (const entry of entries) total += await sizeOf(path.join(targetPath, entry.name));
   return total;
 }
 
-const bytes = await sizeOf(new URL('../dist/', import.meta.url));
+const bytes = await sizeOf(dist);
 if (bytes > maxBytes) throw new Error(`Portal package ${bytes} bytes exceeds ${maxBytes} byte limit`);
 console.log(`Portal package ready: platform=${platform}, size=${(bytes / 1024 / 1024).toFixed(2)} MiB`);
