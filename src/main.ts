@@ -16,8 +16,9 @@ import { createPlatformAdapter } from './platform/factory.js';
 import { LocalPlatformAdapter } from './platform/local.js';
 import { GameView } from './ui/game-view.js';
 
-const root = document.querySelector<HTMLElement>('#app');
-if (!root) throw new Error('Missing #app root');
+const rootCandidate = document.querySelector<HTMLElement>('#app');
+if (!rootCandidate) throw new Error('Missing #app root');
+const root: HTMLElement = rootCandidate;
 
 let platform: PlatformAdapter = new LocalPlatformAdapter();
 let locale: Locale = detectLocale();
