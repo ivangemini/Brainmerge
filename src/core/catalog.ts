@@ -11,6 +11,9 @@ export const BOARD_ROWS = 5;
 export const BOARD_SIZE = BOARD_COLUMNS * BOARD_ROWS;
 export const MAX_RUNTIME_TIER = 3;
 export const SPAWN_COST = 10;
+export const FIRST_MISSION_TARGET = 6;
+export const FIRST_MISSION_REWARD = 80;
+export const DEADLOCK_RESCUE_REFUND = 5;
 
 export const FAMILIES: readonly FamilyDefinition[] = [
   { id: 'camera-dude', nameKey: 'character.cameraDude', assetByForm: { 1: './public/assets/characters/camera-dude.webp' } },

@@ -1,16 +1,20 @@
 # Brainmerge — Platform & Localization Contract
 
 ## Distribution
-Brainmerge is a browser-first game intended for Yandex Games and additional web game platforms/portals. The core game must remain portal-agnostic.
+Brainmerge is browser-first and portal-agnostic. Yandex Games is the first implemented production adapter, not a gameplay dependency.
 
-Platform integrations are implemented as adapters/capabilities for lifecycle, ads, auth, persistence/cloud save, payments, leaderboards, locale and sharing where supported. A local mock/no-op adapter is required for normal development.
+Platform integrations expose capabilities for ads, rewarded ads, cloud save, leaderboards, payments and lifecycle. The current adapters are:
+- `local` — localStorage development fallback, no monetization capabilities;
+- `yandex` — Yandex SDK, safe storage fallback, player cloud save, rewarded/fullscreen ads, locale signal and gameplay/loading lifecycle.
+
+Yandex cloud writes are debounced because player data APIs are rate-limited. Safe/local storage is written immediately so progress does not depend on a cloud round-trip.
 
 ## Localization
-English (`en`) and Russian (`ru`) are mandatory production locales and must have full player-facing string parity. Player-facing source code must use localization keys rather than literals.
+English (`en`) and Russian (`ru`) are mandatory production locales with 100% key parity. Player-facing UI/gameplay source uses localization keys instead of hardcoded sentences.
 
-The localization layer must support future languages without changes to gameplay logic or screen architecture. Use semantic keys, plural-aware parameterization, locale formatting and fallback chains. UI validation includes pseudolocalization and expanded text testing.
+The localization layer supports future languages without changes to core gameplay or screen architecture. Platform locale signals are normalized into supported locales and fall back to English when a locale is not yet shipped.
 
-A language is considered supported only when required key coverage and locale QA are complete.
+Current automated validation checks EN/RU key parity. Pseudolocalization/runtime screenshot QA remains a visual-release gate.
 
 ## Input baseline
-Touch + mouse are baseline requirements. Keyboard is supported where it materially improves desktop UX. Gamepad is optional unless a future distribution target requires it.
+Touch + mouse are first-class. Tap-to-select and pointer drag are both supported. Keyboard shortcuts are additive desktop UX. Gamepad remains optional unless a future portal requires it.

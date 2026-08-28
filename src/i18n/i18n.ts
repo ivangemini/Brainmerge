@@ -10,8 +10,12 @@ export async function loadLocale(locale: Locale): Promise<void> {
   dictionaries.set(locale, await response.json() as Dictionary);
 }
 
+export function localeFromLanguage(language: string | null | undefined): Locale {
+  return language?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+}
+
 export function detectLocale(): Locale {
-  return navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+  return localeFromLanguage(navigator.language);
 }
 
 export function translate(locale: Locale, key: string, params: Record<string, string | number> = {}): string {

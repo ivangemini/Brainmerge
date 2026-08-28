@@ -1,13 +1,39 @@
-import { assetForUnit, BOARD_COLUMNS, FAMILIES, SPAWN_COST, familyById } from '../core/catalog.js';
-import { canMerge, isBoardFull, playerLevel } from '../core/game.js';
+import {
+  assetForUnit,
+  BOARD_COLUMNS,
+  DEADLOCK_RESCUE_REFUND,
+  FAMILIES,
+  FIRST_MISSION_REWARD,
+  FIRST_MISSION_TARGET,
+  SPAWN_COST,
+  familyById
+} from '../core/catalog.js';
+import {
+  canClaimFirstMission,
+  canMerge,
+  findFirstMergePair,
+  isBoardFull,
+  isDeadlocked,
+  onboardingPhase,
+  playerLevel,
+  playerLevelProgress
+} from '../core/game.js';
 import type { GameState } from '../core/types.js';
 import type { Locale } from '../i18n/i18n.js';
 
 export interface GameViewActions {
   spawn(): void;
+  rewardedSpawn(): void;
+  claimMission(): void;
+  rescueDeadlock(): void;
   select(index: number): void;
   moveOrMerge(from: number, to: number): void;
   setLocale(locale: Locale): void;
+}
+
+export interface GameViewCapabilities {
+  rewardedAds: boolean;
+  adBusy: boolean;
 }
 
 export type Translator = (key: string, params?: Record<string, string | number>) => string;
@@ -23,11 +49,17 @@ export class GameView {
     private readonly actions: GameViewActions
   ) {}
 
-  render(state: GameState, locale: Locale, t: Translator): void {
+  render(state: GameState, locale: Locale, t: Translator, capabilities: GameViewCapabilities): void {
     const level = playerLevel(state.xp);
-    const missionTarget = 6;
     const unlocked = new Set(state.cells.flatMap((cell) => cell ? [cell.familyId] : []));
     const boardFull = isBoardFull(state);
+    const deadlocked = isDeadlocked(state);
+    const phase = onboardingPhase(state);
+    const tutorialPair = phase === 'merge' ? findFirstMergePair(state) : null;
+    const tutorialIndexes = new Set(tutorialPair ?? []);
+    const missionClaimable = canClaimFirstMission(state);
+    const missionProgress = Math.min(state.merges, FIRST_MISSION_TARGET);
+    const xpProgress = Math.round(playerLevelProgress(state.xp) * 100);
 
     this.root.innerHTML = `
       <main class="game-shell">
@@ -38,7 +70,7 @@ export class GameView {
           </div>
           <div class="hud-cluster">
             <div class="hud-pill hud-pill--coin"><span class="hud-icon">●</span><span>${state.coins}</span><small>${t('hud.coins')}</small></div>
-            <div class="hud-pill"><strong>${t('hud.level', { level })}</strong><span class="xp-track"><i style="width:${Math.min(100, (state.xp % 40) / 40 * 100)}%"></i></span></div>
+            <div class="hud-pill"><strong>${t('hud.level', { level })}</strong><span class="xp-track"><i style="width:${xpProgress}%"></i></span></div>
             <div class="hud-pill"><strong>${state.merges}</strong><small>${t('hud.merges')}</small></div>
             <div class="locale-switch" role="group" aria-label="${t('hud.language')}">
               <button class="locale-button ${locale === 'en' ? 'is-active' : ''}" data-locale="en">EN</button>
@@ -51,16 +83,28 @@ export class GameView {
           <aside class="side-card side-card--mission">
             <div class="side-card__eyebrow">${t('action.missions')}</div>
             <h2>${t('panel.missionTitle')}</h2>
-            <p>${t('panel.missionText', { count: missionTarget })}</p>
-            <div class="mission-track"><i style="width:${Math.min(100, state.merges / missionTarget * 100)}%"></i></div>
-            <strong>${t('panel.progress', { current: Math.min(state.merges, missionTarget), target: missionTarget })}</strong>
+            <p>${t('panel.missionText', { count: FIRST_MISSION_TARGET })}</p>
+            <div class="mission-track"><i style="width:${Math.min(100, state.merges / FIRST_MISSION_TARGET * 100)}%"></i></div>
+            <div class="mission-row">
+              <strong>${t('panel.progress', { current: missionProgress, target: FIRST_MISSION_TARGET })}</strong>
+              <span class="mission-reward">+${FIRST_MISSION_REWARD} ●</span>
+            </div>
+            ${state.missionClaimed
+              ? `<div class="mission-complete">${t('panel.missionComplete')}</div>`
+              : `<button class="side-action" data-action="claim-mission" ${missionClaimable ? '' : 'disabled'}>${t('action.claimReward')}</button>`}
           </aside>
 
           <section class="board-zone">
             <div class="board-header">
               <div><span class="eyebrow">${t('board.title')}</span><p>${t('board.hint')}</p></div>
-              <div class="message ${state.messageKey ? 'is-visible' : ''}">${state.messageKey ? t(state.messageKey) : ''}</div>
+              <div class="message ${state.messageKey ? 'is-visible' : ''}" role="status">${state.messageKey ? t(state.messageKey) : ''}</div>
             </div>
+
+            ${phase !== 'complete' ? `<div class="coach-card ${phase === 'spawn' ? 'coach-card--spawn' : ''}">
+              <span class="coach-step">${phase === 'merge' ? '1/2' : '2/2'}</span>
+              <div><strong>${t(`onboarding.${phase}Title`)}</strong><p>${t(`onboarding.${phase}Text`)}</p></div>
+            </div>` : ''}
+
             <div class="board-frame">
               <div class="board-rim">
                 <div class="board-tray" style="--columns:${BOARD_COLUMNS}">
@@ -71,7 +115,8 @@ export class GameView {
                     const occupied = Boolean(cell);
                     const family = cell ? familyById.get(cell.familyId) : null;
                     const asset = cell ? assetForUnit(cell.familyId, cell.tier) : null;
-                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''}" data-cell="${index}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: cell.tier })}` : t('board.title')}">
+                    const tutorial = tutorialIndexes.has(index);
+                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: cell.tier })}` : t('board.emptyCell')}">
                       ${cell && asset ? `<img draggable="false" class="unit-art" src="${asset}" alt="" />` : ''}
                       ${cell ? `<span class="tier-badge">${t('tier.label', { tier: cell.tier })}</span>` : ''}
                     </button>`;
@@ -79,12 +124,20 @@ export class GameView {
                 </div>
               </div>
             </div>
-            ${boardFull ? `<div class="board-status">${t('status.fullBoard')}</div>` : ''}
-            <div class="spawn-dock">
-              <button class="spawn-button" data-action="spawn" ${state.coins < SPAWN_COST || boardFull ? 'disabled' : ''}>
+
+            ${boardFull ? `<div class="board-status ${deadlocked ? 'board-status--danger' : ''}">
+              <span>${deadlocked ? t('status.deadlock') : t('status.fullBoard')}</span>
+              ${deadlocked ? `<button class="rescue-button" data-action="rescue">${t('action.rescue', { refund: DEADLOCK_RESCUE_REFUND })}</button>` : ''}
+            </div>` : ''}
+
+            <div class="spawn-dock ${phase === 'spawn' ? 'is-tutorial' : ''}">
+              <button class="spawn-button" data-action="spawn" ${state.coins < SPAWN_COST || boardFull || capabilities.adBusy ? 'disabled' : ''}>
                 <span class="spawn-button__icon">✦</span>
                 <span><strong>${t('action.spawn')}</strong><small>${t('action.spawnCost', { cost: SPAWN_COST })}</small></span>
               </button>
+              ${capabilities.rewardedAds ? `<button class="rewarded-button" data-action="rewarded-spawn" ${boardFull || capabilities.adBusy ? 'disabled' : ''}>
+                <span>▶</span><span><strong>${capabilities.adBusy ? t('action.adLoading') : t('action.rewardedSpawn')}</strong><small>${t('action.rewardedSpawnHint')}</small></span>
+              </button>` : ''}
             </div>
           </section>
 
@@ -105,6 +158,9 @@ export class GameView {
 
   private bindInteractions(): void {
     this.root.querySelector('[data-action="spawn"]')?.addEventListener('click', () => this.actions.spawn());
+    this.root.querySelector('[data-action="rewarded-spawn"]')?.addEventListener('click', () => this.actions.rewardedSpawn());
+    this.root.querySelector('[data-action="claim-mission"]')?.addEventListener('click', () => this.actions.claimMission());
+    this.root.querySelector('[data-action="rescue"]')?.addEventListener('click', () => this.actions.rescueDeadlock());
     this.root.querySelectorAll<HTMLButtonElement>('[data-locale]').forEach((button) => {
       button.addEventListener('click', () => this.actions.setLocale(button.dataset.locale as Locale));
     });
@@ -133,6 +189,10 @@ export class GameView {
           return;
         }
         this.actions.select(index);
+      });
+      cell.addEventListener('pointercancel', () => {
+        this.dragFrom = null;
+        this.dragMoved = false;
       });
     });
   }

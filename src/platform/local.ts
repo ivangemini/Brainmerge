@@ -30,7 +30,11 @@ export class LocalPlatformAdapter implements PlatformAdapter {
   }
 
   async saveState(state: GameState): Promise<void> {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    } catch {
+      // Local persistence is best-effort in private/restricted browser contexts.
+    }
   }
 
   async showInterstitial(_reason: string): Promise<boolean> {
@@ -40,4 +44,6 @@ export class LocalPlatformAdapter implements PlatformAdapter {
   async showRewarded(_reason: string): Promise<boolean> {
     return false;
   }
+
+  setGameplayActive(_active: boolean): void {}
 }

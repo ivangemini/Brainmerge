@@ -18,4 +18,5 @@ export interface PlatformAdapter {
   saveState(state: GameState): Promise<void>;
   showInterstitial(reason: string): Promise<boolean>;
   showRewarded(reason: string): Promise<boolean>;
+  setGameplayActive(active: boolean): void;
 }

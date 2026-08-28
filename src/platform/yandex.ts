@@ -1,0 +1,189 @@
+import type { GameState } from '../core/types.js';
+import { localeFromLanguage, type Locale } from '../i18n/i18n.js';
+import type { PlatformAdapter } from './adapter.js';
+
+const SAVE_KEY = 'brainmerge.save.v2';
+const CLOUD_FIELD = 'brainmerge';
+const CLOUD_SAVE_DELAY_MS = 1200;
+
+type AnyRecord = Record<string, unknown>;
+
+interface YandexPlayer {
+  getData(keys?: string[]): Promise<AnyRecord>;
+  setData(data: AnyRecord, flush?: boolean): Promise<void>;
+}
+
+interface YandexStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+}
+
+interface AdCallbacks {
+  callbacks?: {
+    onOpen?: () => void;
+    onRewarded?: () => void;
+    onClose?: (wasShown: boolean) => void;
+    onError?: (_error: unknown) => void;
+  };
+}
+
+interface YandexSdk {
+  environment?: { i18n?: { lang?: string } };
+  getPlayer(): Promise<YandexPlayer>;
+  getStorage?(): Promise<YandexStorage>;
+  adv: {
+    showFullscreenAdv(options?: AdCallbacks): void;
+    showRewardedVideo(options?: AdCallbacks): void;
+  };
+  features?: {
+    LoadingAPI?: { ready(): void | Promise<void> };
+    GameplayAPI?: { start(): void | Promise<void>; stop(): void | Promise<void> };
+  };
+}
+
+interface YaGamesGlobal {
+  init(): Promise<YandexSdk>;
+}
+
+function yaGamesGlobal(): YaGamesGlobal | null {
+  const value = (window as unknown as { YaGames?: YaGamesGlobal }).YaGames;
+  return value ?? null;
+}
+
+export class YandexPlatformAdapter implements PlatformAdapter {
+  readonly id = 'yandex';
+  readonly capabilities = {
+    ads: true,
+    rewardedAds: true,
+    cloudSave: true,
+    leaderboards: false,
+    payments: false
+  } as const;
+
+  private sdk: YandexSdk | null = null;
+  private player: YandexPlayer | null = null;
+  private storage: YandexStorage | null = null;
+  private pendingCloudState: GameState | null = null;
+  private cloudTimer: number | null = null;
+
+  async initialize(): Promise<void> {
+    const yaGames = yaGamesGlobal();
+    if (!yaGames) throw new Error('Yandex Games SDK is not available');
+    this.sdk = await yaGames.init();
+
+    try {
+      this.storage = this.sdk.getStorage ? await this.sdk.getStorage() : window.localStorage;
+    } catch {
+      this.storage = window.localStorage;
+    }
+
+    try {
+      this.player = await this.sdk.getPlayer();
+    } catch {
+      this.player = null;
+    }
+
+    await Promise.resolve(this.sdk.features?.LoadingAPI?.ready());
+    this.setGameplayActive(true);
+  }
+
+  preferredLocale(): Locale | null {
+    const language = this.sdk?.environment?.i18n?.lang;
+    return language ? localeFromLanguage(language) : null;
+  }
+
+  async loadState(): Promise<unknown> {
+    if (this.player) {
+      try {
+        const data = await this.player.getData([CLOUD_FIELD]);
+        const cloud = data[CLOUD_FIELD];
+        if (cloud && typeof cloud === 'object') return cloud;
+      } catch {
+        // Fall back to safe/local storage below.
+      }
+    }
+
+    try {
+      const raw = this.storage?.getItem(SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveState(state: GameState): Promise<void> {
+    try {
+      this.storage?.setItem(SAVE_KEY, JSON.stringify(state));
+    } catch {
+      // Safe/local persistence is best-effort; cloud save may still succeed.
+    }
+
+    if (!this.player) return;
+    this.pendingCloudState = state;
+    if (this.cloudTimer !== null) window.clearTimeout(this.cloudTimer);
+    this.cloudTimer = window.setTimeout(() => {
+      this.cloudTimer = null;
+      void this.flushCloudSave(false);
+    }, CLOUD_SAVE_DELAY_MS);
+  }
+
+  async showInterstitial(_reason: string): Promise<boolean> {
+    if (!this.sdk) return false;
+    this.setGameplayActive(false);
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (shown: boolean): void => {
+        if (settled) return;
+        settled = true;
+        this.setGameplayActive(true);
+        resolve(shown);
+      };
+      try {
+        this.sdk?.adv.showFullscreenAdv({ callbacks: { onClose: (wasShown) => finish(Boolean(wasShown)), onError: () => finish(false) } });
+      } catch {
+        finish(false);
+      }
+    });
+  }
+
+  async showRewarded(_reason: string): Promise<boolean> {
+    if (!this.sdk) return false;
+    this.setGameplayActive(false);
+    return new Promise<boolean>((resolve) => {
+      let rewarded = false;
+      let settled = false;
+      const finish = (): void => {
+        if (settled) return;
+        settled = true;
+        this.setGameplayActive(true);
+        resolve(rewarded);
+      };
+      try {
+        this.sdk?.adv.showRewardedVideo({ callbacks: { onRewarded: () => { rewarded = true; }, onClose: () => finish(), onError: () => finish() } });
+      } catch {
+        finish();
+      }
+    });
+  }
+
+  setGameplayActive(active: boolean): void {
+    try {
+      const api = this.sdk?.features?.GameplayAPI;
+      if (!api) return;
+      void Promise.resolve(active ? api.start() : api.stop());
+    } catch {
+      // Lifecycle reporting should never break gameplay.
+    }
+  }
+
+  private async flushCloudSave(flush: boolean): Promise<void> {
+    if (!this.player || !this.pendingCloudState) return;
+    const state = this.pendingCloudState;
+    this.pendingCloudState = null;
+    try {
+      await this.player.setData({ [CLOUD_FIELD]: state }, flush);
+    } catch {
+      this.pendingCloudState = state;
+    }
+  }
+}

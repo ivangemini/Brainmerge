@@ -1,12 +1,16 @@
 {
   "name": "brainmerge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/check-locales.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
+    "verify": "npm test",
     "serve": "python3 -m http.server 4173"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=20"

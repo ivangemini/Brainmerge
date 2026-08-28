@@ -15,13 +15,16 @@ export interface Unit {
 }
 
 export type Cell = Unit | null;
+export type OnboardingPhase = 'merge' | 'spawn' | 'complete';
 
 export interface GameState {
-  version: 1;
+  version: 2;
   cells: Cell[];
   coins: number;
   xp: number;
   merges: number;
+  spawns: number;
+  missionClaimed: boolean;
   selectedIndex: number | null;
   messageKey: string | null;
 }
