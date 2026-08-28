@@ -32,49 +32,49 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'camera-dude',
     nameKey: 'character.cameraDude',
     assetByForm: { 1: './public/assets/characters/camera-dude.webp' },
-    presentation: { scale: 1.2, yPercent: 4, shadowScale: 0.78, collectionScale: 1.16 }
+    presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
   },
   {
     id: 'toilet-buddy',
     nameKey: 'character.toiletBuddy',
     assetByForm: { 1: './public/assets/characters/toilet-buddy.webp' },
-    presentation: { scale: 1.06, yPercent: 3, shadowScale: 0.86, collectionScale: 1.06 }
+    presentation: { scale: 1, yPercent: 0, shadowScale: 0.9, collectionScale: 1 }
   },
   {
     id: 'sigma-rock',
     nameKey: 'character.sigmaRock',
     assetByForm: { 1: './public/assets/characters/sigma-rock.webp' },
-    presentation: { scale: 1.18, yPercent: 4, shadowScale: 0.88, collectionScale: 1.12 }
+    presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.92, collectionScale: 1 }
   },
   {
     id: 'rizz-head',
     nameKey: 'character.rizzHead',
     assetByForm: { 1: './public/assets/characters/rizz-head.webp' },
-    presentation: { scale: 1.2, yPercent: 2, shadowScale: 0.74, collectionScale: 1.13 }
+    presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.82, collectionScale: 1 }
   },
   {
     id: 'shark-sneakers',
     nameKey: 'character.sharkSneakers',
     assetByForm: { 1: './public/assets/characters/shark-sneakers.webp' },
-    presentation: { scale: 1, yPercent: 5, shadowScale: 1, collectionScale: 1 }
+    presentation: { scale: 1.04, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
   },
   {
     id: 'crocodile-bomber',
     nameKey: 'character.crocodileBomber',
     assetByForm: { 1: './public/assets/characters/crocodile-bomber.webp' },
-    presentation: { scale: 1.08, yPercent: 4, shadowScale: 1.02, collectionScale: 1.04 }
+    presentation: { scale: 1, yPercent: 0, shadowScale: 1, collectionScale: 1 }
   },
   {
     id: 'coffee-ballerina',
     nameKey: 'character.coffeeBallerina',
     assetByForm: { 1: './public/assets/characters/coffee-ballerina.webp' },
-    presentation: { scale: 1.16, yPercent: 2, shadowScale: 0.72, collectionScale: 1.13 }
+    presentation: { scale: 1.06, yPercent: 0, shadowScale: 0.86, collectionScale: 1.05 }
   },
   {
     id: 'tung-wood',
     nameKey: 'character.tungWood',
     assetByForm: { 1: './public/assets/characters/tung-wood.webp' },
-    presentation: { scale: 0.74, yPercent: 9, shadowScale: 0.72, collectionScale: 0.84 }
+    presentation: { scale: 0.96, yPercent: 0, shadowScale: 0.82, collectionScale: 0.96 }
   }
 ] as const;
 
