@@ -1,19 +1,28 @@
 # Brainmerge
 
-Brainrot-themed browser merge game targeting Yandex Games and additional web game platforms.
+Brainrot-themed browser merge game built for Yandex Games and additional web portals.
 
-## Project contracts
+## Run locally
 
-- `AGENTS.md` — single-agent development operating contract.
-- `docs/ART_BIBLE.md` — locked visual direction and tier/form cadence.
-- `docs/ASSET_MANIFEST.md` — canonical approved asset index.
-- `docs/PLATFORM_AND_LOCALIZATION.md` — multi-platform and full localization contract.
-- `production/session-state/active.md` — persistent current development state.
+```bash
+npm run build
+npm run serve
+```
 
-## Localization
+Open `http://localhost:4173`.
 
-English (`en`) and Russian (`ru`) are mandatory full production locales. Additional locales must be addable without restructuring gameplay/UI.
+## Verify
 
-## Platform architecture
+```bash
+npm test
+```
 
-Yandex Games is a launch target, not a hardcoded dependency. Portal SDKs are isolated behind platform adapters/capabilities.
+## Current playable slice
+- 6×5 responsive merge board;
+- real approved character art;
+- touch/mouse pointer drag and tap-to-merge interaction;
+- spawn economy, XP, mission progress and collection preview;
+- EN/RU localization with parity validation;
+- local save through the platform-adapter boundary.
+
+See `docs/ART_BIBLE.md`, `docs/PLATFORM_AND_LOCALIZATION.md` and `docs/ARCHITECTURE.md` for source-of-truth constraints.

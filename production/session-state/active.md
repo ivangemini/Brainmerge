@@ -1,20 +1,26 @@
-# Active session state
+# Active Session — Brainmerge
 
-## Project
-Brainmerge — browser-first multi-platform merge game.
+## Current objective
+Build the first real playable vertical slice from the approved board direction and Tier-1 character roster.
 
-## Locked decisions
-- Single Codex/ChatGPT implementation agent using role profiles.
-- Toy-like polished 3D casual-game visual direction; see `docs/ART_BIBLE.md`.
-- Approved merge board direction exists in Figma `Brainmerge — Art & UI`.
-- One major character visual form normally covers three gameplay tiers.
-- EN and RU are mandatory full production localizations from the start.
-- Architecture must support additional locales without UI/gameplay rewrites.
-- Yandex Games is one target; platform-specific SDKs must use adapters so other web portals/platforms can be added.
-- Touch and mouse are mandatory; keyboard where useful; gamepad is not a baseline requirement.
+## Completed in this pass
+- dependency-free TypeScript browser bootstrap;
+- deterministic 6x5 merge-board core;
+- spawn, move, pointer drag/drop and tap-to-select merge flow;
+- tier 1–3 progression with the locked 3-tiers-per-visual-form mapping;
+- coins, XP/level, merge count, first mission progress and collection preview;
+- EN/RU runtime localization, language switching and automated key parity check;
+- platform adapter boundary with local save implementation;
+- approved character reference images processed to transparent runtime WebP assets;
+- responsive toy-like board/HUD styling matching the approved Figma board direction;
+- pure logic regression tests.
 
-## Current next step
-Bootstrap the actual playable game architecture and first vertical slice: board state, spawn, drag/drop, merge, tier/form progression, persistence, localization foundation and platform adapter foundation.
+## Intentional current limit
+Tier 4+ gameplay is blocked until approved Form B art is supplied. This avoids presenting a fake recolor/placeholder as a production character evolution.
 
-## Known asset status
-Approved character concepts and board/art direction exist, but production/runtime asset packaging should be verified before claiming the full art pack is committed and runtime-ready.
+## Next logical steps
+1. integrate approved Form B evolution art as it arrives;
+2. build the complete gameplay HUD/navigation target in Figma and run visual QA against runtime;
+3. add Yandex adapter behind the platform interface;
+4. extend save migration/version coverage and tutorial/onboarding polish;
+5. add audio/VFX feedback and performance pass.
