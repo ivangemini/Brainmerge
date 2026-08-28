@@ -5,6 +5,8 @@
   "hud.level": "Level {level}",
   "hud.merges": "Merges",
   "hud.language": "Language",
+  "audio.mute": "Mute sound",
+  "audio.unmute": "Unmute sound",
   "board.title": "Merge Board",
   "board.hint": "Drag or tap identical characters together",
   "board.emptyCell": "Empty board cell",
