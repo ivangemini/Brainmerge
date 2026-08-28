@@ -27,53 +27,55 @@ export const FIRST_MISSION_TARGET = 6;
 export const FIRST_MISSION_REWARD = 80;
 export const DEADLOCK_RESCUE_REFUND = 5;
 
+const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
+
 export const FAMILIES: readonly FamilyDefinition[] = [
   {
     id: 'camera-dude',
     nameKey: 'character.cameraDude',
-    assetByForm: { 1: './public/assets/characters/camera-dude.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
   },
   {
     id: 'toilet-buddy',
     nameKey: 'character.toiletBuddy',
-    assetByForm: { 1: './public/assets/characters/toilet-buddy.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1, yPercent: 0, shadowScale: 0.9, collectionScale: 1 }
   },
   {
     id: 'sigma-rock',
     nameKey: 'character.sigmaRock',
-    assetByForm: { 1: './public/assets/characters/sigma-rock.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.92, collectionScale: 1 }
   },
   {
     id: 'rizz-head',
     nameKey: 'character.rizzHead',
-    assetByForm: { 1: './public/assets/characters/rizz-head.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.82, collectionScale: 1 }
   },
   {
     id: 'shark-sneakers',
     nameKey: 'character.sharkSneakers',
-    assetByForm: { 1: './public/assets/characters/shark-sneakers.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1.04, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
   },
   {
     id: 'crocodile-bomber',
     nameKey: 'character.crocodileBomber',
-    assetByForm: { 1: './public/assets/characters/crocodile-bomber.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1, yPercent: 0, shadowScale: 1, collectionScale: 1 }
   },
   {
     id: 'coffee-ballerina',
     nameKey: 'character.coffeeBallerina',
-    assetByForm: { 1: './public/assets/characters/coffee-ballerina.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 1.06, yPercent: 0, shadowScale: 0.86, collectionScale: 1.05 }
   },
   {
     id: 'tung-wood',
     nameKey: 'character.tungWood',
-    assetByForm: { 1: './public/assets/characters/tung-wood.webp' },
+    assetByForm: { 1: BASE_CHARACTER_ATLAS },
     presentation: { scale: 0.96, yPercent: 0, shadowScale: 0.82, collectionScale: 0.96 }
   }
 ] as const;
