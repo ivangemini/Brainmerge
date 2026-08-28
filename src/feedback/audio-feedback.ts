@@ -30,21 +30,7 @@ export class AudioFeedback {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.feedbackMute = 'true';
-    button.style.cssText = [
-      'position:fixed',
-      'left:max(12px,env(safe-area-inset-left))',
-      'bottom:max(12px,env(safe-area-inset-bottom))',
-      'z-index:50',
-      'width:44px',
-      'height:44px',
-      'border:2px solid rgba(83,63,70,.12)',
-      'border-radius:14px',
-      'background:rgba(255,248,236,.92)',
-      'box-shadow:0 8px 18px rgba(86,60,47,.16)',
-      'color:#4a344c',
-      'font-size:20px',
-      'cursor:pointer'
-    ].join(';');
+    button.className = 'audio-toggle';
     button.addEventListener('click', () => this.toggleMute());
     document.body.append(button);
     this.button = button;
@@ -114,35 +100,36 @@ export class AudioFeedback {
     const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
     const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
     const palette: Record<FeedbackKind, string[]> = {
-      merge: ['#fff3a8', '#86c8c3', '#f6a24a'],
-      spawn: ['#86c8c3', '#f9edcf', '#ffffff'],
-      reward: ['#ffd475', '#f6a24a', '#fff3a8'],
-      rescue: ['#9d78aa', '#f9edcf', '#86c8c3']
+      merge: ['#fff3a8', '#86c8c3', '#f6a24a', '#ffffff'],
+      spawn: ['#86c8c3', '#f9edcf', '#ffffff', '#9d78aa'],
+      reward: ['#ffd475', '#f6a24a', '#fff3a8', '#ffffff'],
+      rescue: ['#9d78aa', '#f9edcf', '#86c8c3', '#ffffff']
     };
 
-    for (let index = 0; index < 9; index += 1) {
+    for (let index = 0; index < 12; index += 1) {
       const particle = document.createElement('i');
-      const angle = (Math.PI * 2 * index) / 9 + Math.random() * 0.35;
-      const distance = 36 + Math.random() * 44;
+      const angle = (Math.PI * 2 * index) / 12 + Math.random() * 0.3;
+      const distance = 40 + Math.random() * 52;
       const dx = Math.cos(angle) * distance;
       const dy = Math.sin(angle) * distance;
+      const size = 6 + Math.random() * 5;
       particle.style.cssText = [
         'position:fixed',
-        `left:${x - 4}px`,
-        `top:${y - 4}px`,
-        'width:8px',
-        'height:8px',
-        'border-radius:999px',
+        `left:${x - size / 2}px`,
+        `top:${y - size / 2}px`,
+        `width:${size}px`,
+        `height:${size}px`,
+        `border-radius:${index % 3 === 0 ? '3px' : '999px'}`,
         `background:${palette[kind][index % palette[kind].length]}`,
         'pointer-events:none',
         'z-index:80',
-        'box-shadow:0 2px 5px rgba(52,42,56,.18)'
+        'box-shadow:0 2px 6px rgba(52,42,56,.22)'
       ].join(';');
       document.body.append(particle);
       const animation = particle.animate([
-        { transform: 'translate(0,0) scale(1)', opacity: 1 },
-        { transform: `translate(${dx}px,${dy}px) scale(.35)`, opacity: 0 }
-      ], { duration: 420 + Math.random() * 180, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 1 },
+        { transform: `translate(${dx}px,${dy}px) rotate(${90 + Math.random() * 180}deg) scale(.25)`, opacity: 0 }
+      ], { duration: 460 + Math.random() * 190, easing: 'cubic-bezier(.2,.8,.2,1)' });
       animation.addEventListener('finish', () => particle.remove(), { once: true });
     }
   }

@@ -6,7 +6,8 @@ import {
   FIRST_MISSION_REWARD,
   FIRST_MISSION_TARGET,
   SPAWN_COST,
-  familyById
+  familyById,
+  type FamilyDefinition
 } from '../core/catalog.js';
 import {
   canClaimFirstMission,
@@ -37,6 +38,11 @@ export interface GameViewCapabilities {
 }
 
 export type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function presentationStyle(family: FamilyDefinition): string {
+  const p = family.presentation;
+  return `--unit-scale:${p.scale};--unit-y:${p.yPercent}%;--shadow-scale:${p.shadowScale};--collection-scale:${p.collectionScale}`;
+}
 
 export class GameView {
   private dragFrom: number | null = null;
@@ -69,9 +75,9 @@ export class GameView {
             <div class="tagline">${t('app.tagline')}</div>
           </div>
           <div class="hud-cluster">
-            <div class="hud-pill hud-pill--coin"><span class="hud-icon">●</span><span>${state.coins}</span><small>${t('hud.coins')}</small></div>
-            <div class="hud-pill"><strong>${t('hud.level', { level })}</strong><span class="xp-track"><i style="width:${xpProgress}%"></i></span></div>
-            <div class="hud-pill"><strong>${state.merges}</strong><small>${t('hud.merges')}</small></div>
+            <div class="hud-pill hud-pill--coin"><span class="hud-icon">●</span><span class="hud-value">${state.coins}</span><small>${t('hud.coins')}</small></div>
+            <div class="hud-pill hud-pill--level"><strong>${t('hud.level', { level })}</strong><span class="xp-track"><i style="width:${xpProgress}%"></i></span></div>
+            <div class="hud-pill hud-pill--merge"><strong>${state.merges}</strong><small>${t('hud.merges')}</small></div>
             <div class="locale-switch" role="group" aria-label="${t('hud.language')}">
               <button class="locale-button ${locale === 'en' ? 'is-active' : ''}" data-locale="en">EN</button>
               <button class="locale-button ${locale === 'ru' ? 'is-active' : ''}" data-locale="ru">RU</button>
@@ -81,6 +87,7 @@ export class GameView {
 
         <section class="game-layout">
           <aside class="side-card side-card--mission">
+            <span class="panel-orb panel-orb--orange" aria-hidden="true"></span>
             <div class="side-card__eyebrow">${t('action.missions')}</div>
             <h2>${t('panel.missionTitle')}</h2>
             <p>${t('panel.missionText', { count: FIRST_MISSION_TARGET })}</p>
@@ -96,7 +103,7 @@ export class GameView {
 
           <section class="board-zone">
             <div class="board-header">
-              <div><span class="eyebrow">${t('board.title')}</span><p>${t('board.hint')}</p></div>
+              <div class="board-heading"><span class="eyebrow">${t('board.title')}</span><p>${t('board.hint')}</p></div>
               <div class="message ${state.messageKey ? 'is-visible' : ''}" role="status">${state.messageKey ? t(state.messageKey) : ''}</div>
             </div>
 
@@ -106,6 +113,8 @@ export class GameView {
             </div>` : ''}
 
             <div class="board-frame">
+              <div class="board-screw board-screw--tl" aria-hidden="true"></div>
+              <div class="board-screw board-screw--br" aria-hidden="true"></div>
               <div class="board-rim">
                 <div class="board-tray" style="--columns:${BOARD_COLUMNS}">
                   ${state.cells.map((cell, index) => {
@@ -116,8 +125,10 @@ export class GameView {
                     const family = cell ? familyById.get(cell.familyId) : null;
                     const asset = cell ? assetForUnit(cell.familyId, cell.tier) : null;
                     const tutorial = tutorialIndexes.has(index);
-                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: cell.tier })}` : t('board.emptyCell')}">
-                      ${cell && asset ? `<img draggable="false" class="unit-art" src="${asset}" alt="" />` : ''}
+                    const style = family ? presentationStyle(family) : '';
+                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: cell.tier })}` : t('board.emptyCell')}">
+                      <span class="cell-gloss" aria-hidden="true"></span>
+                      ${cell && asset ? `<span class="unit-shadow" aria-hidden="true"></span><span class="unit-visual"><img draggable="false" class="unit-art" src="${asset}" alt="" /></span>` : ''}
                       ${cell ? `<span class="tier-badge">${t('tier.label', { tier: cell.tier })}</span>` : ''}
                     </button>`;
                   }).join('')}
@@ -136,19 +147,20 @@ export class GameView {
                 <span><strong>${t('action.spawn')}</strong><small>${t('action.spawnCost', { cost: SPAWN_COST })}</small></span>
               </button>
               ${capabilities.rewardedAds ? `<button class="rewarded-button" data-action="rewarded-spawn" ${boardFull || capabilities.adBusy ? 'disabled' : ''}>
-                <span>▶</span><span><strong>${capabilities.adBusy ? t('action.adLoading') : t('action.rewardedSpawn')}</strong><small>${t('action.rewardedSpawnHint')}</small></span>
+                <span class="rewarded-button__icon">▶</span><span><strong>${capabilities.adBusy ? t('action.adLoading') : t('action.rewardedSpawn')}</strong><small>${t('action.rewardedSpawnHint')}</small></span>
               </button>` : ''}
             </div>
           </section>
 
           <aside class="side-card side-card--collection">
+            <span class="panel-orb panel-orb--purple" aria-hidden="true"></span>
             <div class="side-card__eyebrow">${t('action.collection')}</div>
             <h2>${t('panel.collectionTitle')}</h2>
             <p>${t('panel.collectionHint')}</p>
             <div class="collection-grid">
-              ${FAMILIES.map((family) => `<div class="collection-chip ${unlocked.has(family.id) ? 'is-unlocked' : ''}" title="${t(family.nameKey)}"><img src="${family.assetByForm[1] ?? ''}" alt=""/></div>`).join('')}
+              ${FAMILIES.map((family) => `<div class="collection-chip ${unlocked.has(family.id) ? 'is-unlocked' : ''}" title="${t(family.nameKey)}" style="${presentationStyle(family)}"><img src="${family.assetByForm[1] ?? ''}" alt=""/></div>`).join('')}
             </div>
-            <strong>${unlocked.size}/${FAMILIES.length}</strong>
+            <div class="collection-count"><span>${unlocked.size}</span>/${FAMILIES.length}</div>
           </aside>
         </section>
       </main>`;
@@ -163,6 +175,16 @@ export class GameView {
     this.root.querySelector('[data-action="rescue"]')?.addEventListener('click', () => this.actions.rescueDeadlock());
     this.root.querySelectorAll<HTMLButtonElement>('[data-locale]').forEach((button) => {
       button.addEventListener('click', () => this.actions.setLocale(button.dataset.locale as Locale));
+    });
+
+    this.root.querySelectorAll<HTMLImageElement>('.unit-art, .collection-chip img').forEach((image) => {
+      const markMissing = () => {
+        image.hidden = true;
+        image.closest('.cell')?.classList.add('is-missing-art');
+        image.closest('.collection-chip')?.classList.add('is-missing');
+      };
+      if (image.complete && image.naturalWidth === 0) markMissing();
+      else image.addEventListener('error', markMissing, { once: true });
     });
 
     this.root.querySelectorAll<HTMLButtonElement>('[data-cell]').forEach((cell) => {

@@ -15,7 +15,7 @@ import {
   sanitizeState,
   spawnUnit
 } from '../build/core/game.js';
-import { BOARD_SIZE, FIRST_MISSION_REWARD, visualFormForTier } from '../build/core/catalog.js';
+import { BOARD_SIZE, FAMILIES, FIRST_MISSION_REWARD, visualFormForTier } from '../build/core/catalog.js';
 import { localeFromLanguage } from '../build/i18n/i18n.js';
 
 test('visual form changes every three tiers', () => {
@@ -24,6 +24,15 @@ test('visual form changes every three tiers', () => {
   assert.equal(visualFormForTier(4), 2);
   assert.equal(visualFormForTier(6), 2);
   assert.equal(visualFormForTier(7), 3);
+});
+
+test('runtime character presentation stays inside safe normalization bounds', () => {
+  for (const family of FAMILIES) {
+    assert.ok(family.presentation.scale >= 0.7 && family.presentation.scale <= 1.25, `${family.id} scale`);
+    assert.ok(family.presentation.yPercent >= -4 && family.presentation.yPercent <= 12, `${family.id} yPercent`);
+    assert.ok(family.presentation.shadowScale >= 0.65 && family.presentation.shadowScale <= 1.1, `${family.id} shadowScale`);
+    assert.ok(family.presentation.collectionScale >= 0.75 && family.presentation.collectionScale <= 1.2, `${family.id} collectionScale`);
+  }
 });
 
 test('matching family and tier merge into next tier', () => {

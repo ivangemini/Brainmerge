@@ -15,6 +15,19 @@
 ### Character rule
 The joke/identity must read in roughly 0.5 seconds. Preserve the few defining visual traits that make the archetype recognizable, then adapt the rest to the shared game style.
 
+### Runtime presentation normalization
+Approved source renders do not need identical source framing. Runtime owns final perceived size and placement.
+
+- Shark Sneakers is the current Tier-1 baseline for perceived board-cell mass.
+- Each family has an explicit presentation contract: `scale`, vertical correction, contact-shadow scale, and collection-thumbnail scale.
+- Normalize **perceived mass**, not raw PNG/WebP bounds. Tall/skinny and wide/low characters should feel equally important on the board.
+- Default target is roughly 72–82% useful visual occupancy without clipping, with exceptions for inherently horizontal silhouettes.
+- Character art must use a shared ground/contact-shadow language even when the source render included its own lighting.
+- Per-family runtime transforms are presentation data, not gameplay data, and must not change hit boxes or merge rules.
+- Missing/corrupt art must fail gracefully in UI rather than showing browser broken-image chrome.
+
+Current Tier-1 runtime normalization intentionally reduces Tung Wood and increases Camera Dude/Coffee Ballerina relative to their source framing. Re-tune only from real runtime captures, not from isolated asset previews.
+
 ### Style-anchor workflow
 For Gemini generations:
 1. Attach the approved character image as **identity reference**.
