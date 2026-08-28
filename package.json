@@ -1,12 +1,14 @@
 {
   "name": "brainmerge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/check-locales.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
     "verify": "npm test",
+    "package": "npm run build && node scripts/package-portal.mjs",
+    "package:yandex": "npm run build && PLATFORM=yandex node scripts/package-portal.mjs",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {
