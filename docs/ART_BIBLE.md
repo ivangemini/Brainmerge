@@ -18,46 +18,42 @@ The joke/identity must read in roughly 0.5 seconds. Preserve the few defining vi
 ### Runtime presentation normalization
 Approved source renders do not need identical source framing. Runtime owns final perceived size and placement.
 
-- Shark Sneakers is the current Tier-1 baseline for perceived board-cell mass.
-- Each family has an explicit presentation contract: `scale`, vertical correction, contact-shadow scale, and collection-thumbnail scale.
+- Shark Sneakers is the current perceived-mass baseline for board-cell presentation.
+- Each character has an explicit presentation contract: `scale`, vertical correction, contact-shadow scale, and collection-thumbnail scale.
 - Normalize **perceived mass**, not raw PNG/WebP bounds. Tall/skinny and wide/low characters should feel equally important on the board.
 - Default target is roughly 72–82% useful visual occupancy without clipping, with exceptions for inherently horizontal silhouettes.
 - Character art must use a shared ground/contact-shadow language even when the source render included its own lighting.
-- Per-family runtime transforms are presentation data, not gameplay data, and must not change hit boxes or merge rules.
+- Per-character runtime transforms are presentation data, not gameplay data, and must not change hit boxes or merge rules.
 - Missing/corrupt art must fail gracefully in UI rather than showing browser broken-image chrome.
 
-Current Tier-1 runtime normalization intentionally reduces Tung Wood and increases Camera Dude/Coffee Ballerina relative to their source framing. Re-tune only from real runtime captures, not from isolated asset previews.
+Re-tune normalization only from real runtime captures, not from isolated asset previews.
 
 ### Style-anchor workflow
-For Gemini generations:
+For generated replacements or future variants:
 1. Attach the approved character image as **identity reference**.
 2. Attach 2–3 approved Brainmerge characters as **style references**.
-3. Ask for a controlled game-style evolution, not a 1:1 redraw and not a generic redesign.
+3. Ask for a controlled game-style adaptation, not a generic redesign.
 4. Keep the same material language, lighting, level of stylization, and compact silhouette.
 
-## Tier-to-form progression lock
-A new full character render is **not** created for every tier. One visual form spans three gameplay tiers.
+## Core merge progression lock
 
-- Tiers 1–3 = Form A / Base
-- Tiers 4–6 = Form B / Evolved
-- Tiers 7–9 = Form C / Elite
-- Tiers 10–12 = Form D / Legendary
-- Tiers 13–15 = Form E / Mythic
+The main game uses **one sequential chain**, not several parallel character families.
 
-Within each three-tier band, reuse the same base character art and communicate progression with lightweight reusable treatment rather than a new character model/sprite:
-- first tier in band: clean form;
-- second tier in band: subtle rank mark / small aura / one star;
-- third tier in band: stronger rank mark / aura / two stars.
+- Tier 1 — Toilet Buddy
+- Tier 2 — Camera Dude
+- Tier 3 — Sigma Rock
+- Tier 4 — Rizz Head
+- Tier 5 — Shark Sneakers
+- Tier 6 — Crocodile Bomber
+- Tier 7 — Coffee Ballerina
+- Tier 8 — Tung Wood
 
-The transitions 3→4, 6→7, 9→10, and 12→13 are major evolution moments and receive a genuinely new character form plus stronger merge/reveal feedback.
+Two identical characters merge into the next character in the chain. A successful merge must therefore produce a visibly new identity, making discovery itself the reward.
 
-This cadence can continue beyond Tier 15 in additional three-tier bands if the progression design requires it. Avoid committing to an arbitrary maximum tier in the art pipeline.
+The Brain Box feeds Tier 1 only. Higher-tier characters are earned through merging. Do not dilute the core loop by spawning arbitrary high-tier characters from the standard Brain Box.
 
-### Evolution budget
-- Each new form should preserve the family identity and introduce only a few major upgrades.
-- Do not spend all possible visual escalation in early forms; later forms must still have room to become more absurd, rare, and desirable.
-- Prefer reusable auras, badges, particles, frames, and rank marks for within-form progression.
-- Reserve full Gemini-generated character renders for genuine form changes.
+### Future visual escalation
+Alternate forms, prestige skins, event variants, auras and rarity treatments may be added later, but they are secondary systems layered on top of the readable core chain. They must not make two different merge tiers look like the same base character.
 
 ### Avoid
 - Generic AI/casual mascot redesign that destroys recognition.
@@ -66,11 +62,12 @@ This cadence can continue beyond Tier 15 in additional three-tier bands if the p
 - Random ornaments/accessories without gameplay purpose.
 - Style drift between characters.
 - Overly detailed backgrounds in character assets.
-- One unique full character render for every gameplay tier.
+- Parallel Tier-1 character families in the core merge loop.
+- Reusing one character identity across several core merge tiers.
 
 ## Current style anchors
-- Camera Dude
 - Toilet Buddy
+- Camera Dude
 - Sigma Rock
 - Rizz Head
 - Shark Sneakers
