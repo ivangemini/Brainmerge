@@ -37,7 +37,13 @@ Convert the working vertical slice from a strong prototype into a production-loo
 - approved standalone Toilet Buddy now renders directly on both board and Collection instead of being silently replaced by the legacy atlas crop;
 - higher chain tiers receive lightweight reusable cell-value treatment without fabricating new character art;
 - new presentation layer remains responsive and respects `prefers-reduced-motion`;
-- CI compile regression from strict `bestFamily` typing was identified from Actions logs and fixed; subsequent `npm test` and Yandex packaging passed.
+- CI compile regression from strict `bestFamily` typing was identified from Actions logs and fixed; subsequent `npm test` and Yandex packaging passed;
+- deadlock Rescue is now chain-aware: it removes a terminal/top-tier blocker first instead of deleting the lowest-tier useful progress;
+- deterministic `findBestMergePair` added to choose the highest-value available merge without mutating state;
+- crowded-board guidance now highlights only that best merge pair, avoiding noisy all-pairs highlighting;
+- full-board-but-solvable and true-deadlock states now have distinct copy and visual treatment;
+- Rescue and crowded-board messaging updated in both EN/RU;
+- regression coverage added for highest-tier merge hints and preserving lower-tier progress during deadlock rescue.
 
 ## Intentional limits
 - Current chain ends at Tier 8 Tung Wood until more approved character identities are assigned beyond it.
@@ -46,8 +52,9 @@ Convert the working vertical slice from a strong prototype into a production-loo
 - Character normalization remains subject to real screenshot QA as approved standalone art replaces atlas entries.
 
 ## Next logical steps
-1. capture the updated real browser runtime at desktop 1440x900 and compact/mobile dimensions;
-2. compare the new chain strip, Collection states and first-session hierarchy against approved Figma targets;
-3. tune any clipping/scale/baseline deltas found in real captures;
-4. replace Camera Dude through Tung Wood shared-atlas sources as approved standalone assets become available;
-5. after runtime visual QA is clean, expand retention/meta content around the validated core chain rather than changing the merge rule again.
+1. validate the chain-aware rescue/hint pass in CI and fix any compile/test/package regressions;
+2. capture the updated real browser runtime at desktop 1440x900 and compact/mobile dimensions;
+3. compare chain strip, crowded-board hints, Collection states and first-session hierarchy against approved Figma targets;
+4. tune clipping/scale/baseline deltas found in real captures;
+5. replace Camera Dude through Tung Wood shared-atlas sources as approved standalone assets become available;
+6. after runtime visual QA is clean, expand retention/meta content around the validated core chain rather than changing the merge rule again.
