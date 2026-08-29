@@ -1,0 +1,5 @@
+/* Raster art storage only. Structural UI is rendered by code-ui.css. */
+:root {
+  --ui-atlas: url('./assets/ui/ui-atlas.webp');
+  --character-atlas: url('./assets/characters/character-atlas.webp');
+}
