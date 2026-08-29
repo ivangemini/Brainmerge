@@ -1,4 +1,4 @@
-import type { FamilyId, MissionDefinition } from './types.js';
+import type { FamilyId, MissionDefinition, UpgradeDefinition, UpgradeId } from './types.js';
 
 export interface UnitPresentation {
   /** Perceived runtime size relative to the Shark Sneakers baseline. */
@@ -16,6 +16,8 @@ export interface FamilyDefinition {
   nameKey: string;
   /** Fixed position in the one core merge chain. */
   tier: number;
+  /** Base passive production before the global income upgrade multiplier. */
+  incomePerMinute: number;
   asset: string;
   presentation: UnitPresentation;
 }
@@ -23,17 +25,67 @@ export interface FamilyDefinition {
 export const BOARD_COLUMNS = 6;
 export const BOARD_ROWS = 5;
 export const BOARD_SIZE = BOARD_COLUMNS * BOARD_ROWS;
-/**
- * Flat Tier-1 feed price. At 12 coins the full T1 -> T8 route stays
- * self-sustaining with merge income while still making coins meaningful.
- */
-export const SPAWN_COST = 12;
+
+/** Paid Brain Box economy. Rewarded boxes never increment paidBoxes. */
+export const BASE_BOX_COST = 20;
+export const BOX_COST_GROWTH = 1.045;
+/** Compatibility alias for older code/tests; new code should use brainBoxCostForPurchases(). */
+export const SPAWN_COST = BASE_BOX_COST;
 export const DEADLOCK_RESCUE_REFUND = 5;
 
 /**
- * Deterministic first-cycle goals. They intentionally alternate actions and
- * discovery milestones so the player always has one clear short-term target
- * without adding another currency or meta screen.
+ * Passive production is deliberately >2x per tier so merging two equal units
+ * always increases production instead of punishing the player for merging.
+ */
+export const INCOME_PER_MINUTE_BY_TIER: Readonly<Record<number, number>> = {
+  1: 3,
+  2: 7,
+  3: 16,
+  4: 36,
+  5: 82,
+  6: 185,
+  7: 420,
+  8: 950
+};
+
+export const LUCKY_DROP_CHANCE_BY_LEVEL = [0, 0.05, 0.10, 0.16, 0.23, 0.30] as const;
+export const INCOME_MULTIPLIER_BY_LEVEL = [1, 1.15, 1.32, 1.52, 1.75, 2] as const;
+export const OFFLINE_HOURS_BY_LEVEL = [2, 4, 6, 8, 12] as const;
+/** Level 0 = T1 base, level 3 = T4 base. Spawn is always capped to already-discovered tiers. */
+export const MAX_BOX_BASE_TIER_LEVEL = 3;
+
+export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
+  {
+    id: 'boxBaseTier',
+    titleKey: 'upgrade.boxBaseTier.title',
+    descriptionKey: 'upgrade.boxBaseTier.description',
+    costs: [600, 3000, 15000]
+  },
+  {
+    id: 'luckyDrop',
+    titleKey: 'upgrade.luckyDrop.title',
+    descriptionKey: 'upgrade.luckyDrop.description',
+    costs: [200, 500, 1200, 3000, 7500]
+  },
+  {
+    id: 'income',
+    titleKey: 'upgrade.income.title',
+    descriptionKey: 'upgrade.income.description',
+    costs: [250, 700, 1800, 5000, 14000]
+  },
+  {
+    id: 'offline',
+    titleKey: 'upgrade.offline.title',
+    descriptionKey: 'upgrade.offline.description',
+    costs: [300, 900, 2500, 7000]
+  }
+] as const;
+
+export const upgradeById = new Map(UPGRADE_DEFINITIONS.map((upgrade) => [upgrade.id, upgrade]));
+
+/**
+ * Deterministic first-cycle goals. They alternate actions and discovery
+ * milestones so the player always has one clear short-term target.
  */
 export const MISSION_TRACK: readonly MissionDefinition[] = [
   { id: 'merge-6', kind: 'merges', target: 6, reward: 80, titleKey: 'mission.merge6.title', textKey: 'mission.merge6.text' },
@@ -49,7 +101,7 @@ export const MISSION_TRACK: readonly MissionDefinition[] = [
 export const FIRST_MISSION_TARGET = MISSION_TRACK[0]!.target;
 export const FIRST_MISSION_REWARD = MISSION_TRACK[0]!.reward;
 
-/** One-time rewards for first discovering a tier. Tier 2 is already effectively gifted by the starter board. */
+/** One-time rewards for first discovering a tier. Tier 2 is effectively gifted by the starter board. */
 export const DISCOVERY_BONUS_BY_TIER: Readonly<Record<number, number>> = {
   2: 0,
   3: 8,
@@ -64,14 +116,15 @@ const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
 const TOILET_BUDDY = './public/assets/characters/toilet-buddy-form-a.webp';
 
 /**
- * Canonical core progression. Brain Box creates only Tier 1. Two identical
- * characters merge into the next entry in this array.
+ * Canonical core progression. First discovery of every tier above T1 must come
+ * from merging. Brain Box upgrades only accelerate rebuilding of discovered tiers.
  */
 export const FAMILIES: readonly FamilyDefinition[] = [
   {
     id: 'toilet-buddy',
     nameKey: 'character.toiletBuddy',
     tier: 1,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[1]!,
     asset: TOILET_BUDDY,
     presentation: { scale: 1, yPercent: 0, shadowScale: 0.9, collectionScale: 1 }
   },
@@ -79,6 +132,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'camera-dude',
     nameKey: 'character.cameraDude',
     tier: 2,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[2]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
   },
@@ -86,6 +140,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'sigma-rock',
     nameKey: 'character.sigmaRock',
     tier: 3,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[3]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.92, collectionScale: 1 }
   },
@@ -93,6 +148,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'rizz-head',
     nameKey: 'character.rizzHead',
     tier: 4,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[4]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.82, collectionScale: 1 }
   },
@@ -100,6 +156,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'shark-sneakers',
     nameKey: 'character.sharkSneakers',
     tier: 5,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[5]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 0.90, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
   },
@@ -107,6 +164,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'crocodile-bomber',
     nameKey: 'character.crocodileBomber',
     tier: 6,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[6]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1, yPercent: 0, shadowScale: 1, collectionScale: 1 }
   },
@@ -114,6 +172,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'coffee-ballerina',
     nameKey: 'character.coffeeBallerina',
     tier: 7,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[7]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.06, yPercent: 0, shadowScale: 0.86, collectionScale: 1.05 }
   },
@@ -121,6 +180,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'tung-wood',
     nameKey: 'character.tungWood',
     tier: 8,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[8]!,
     asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 0.96, yPercent: 0, shadowScale: 0.82, collectionScale: 0.96 }
   }
@@ -146,4 +206,35 @@ export function mergeRewardForTier(tier: number): number {
 
 export function discoveryBonusForTier(tier: number): number {
   return DISCOVERY_BONUS_BY_TIER[Math.floor(tier)] ?? 0;
+}
+
+export function brainBoxCostForPurchases(paidBoxes: number): number {
+  const safePurchases = Math.max(0, Math.floor(paidBoxes));
+  return Math.max(BASE_BOX_COST, Math.ceil(BASE_BOX_COST * BOX_COST_GROWTH ** safePurchases));
+}
+
+export function luckyDropChanceForLevel(level: number): number {
+  const index = Math.max(0, Math.min(LUCKY_DROP_CHANCE_BY_LEVEL.length - 1, Math.floor(level)));
+  return LUCKY_DROP_CHANCE_BY_LEVEL[index]!;
+}
+
+export function incomeMultiplierForLevel(level: number): number {
+  const index = Math.max(0, Math.min(INCOME_MULTIPLIER_BY_LEVEL.length - 1, Math.floor(level)));
+  return INCOME_MULTIPLIER_BY_LEVEL[index]!;
+}
+
+export function offlineHoursForLevel(level: number): number {
+  const index = Math.max(0, Math.min(OFFLINE_HOURS_BY_LEVEL.length - 1, Math.floor(level)));
+  return OFFLINE_HOURS_BY_LEVEL[index]!;
+}
+
+export function maxUpgradeLevel(id: UpgradeId): number {
+  return upgradeById.get(id)?.costs.length ?? 0;
+}
+
+export function upgradeCost(id: UpgradeId, currentLevel: number): number | null {
+  const upgrade = upgradeById.get(id);
+  if (!upgrade) return null;
+  const level = Math.max(0, Math.floor(currentLevel));
+  return upgrade.costs[level] ?? null;
 }
