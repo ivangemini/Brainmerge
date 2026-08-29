@@ -4,6 +4,7 @@ import {
   canClaimFirstMission,
   claimFirstMission,
   createInitialState,
+  findBestMergePair,
   hasAnyMerge,
   isBoardFull,
   isDeadlocked,
@@ -98,6 +99,17 @@ test('initial state always has an immediate merge', () => {
   assert.equal(isBoardFull(state), false);
 });
 
+test('best merge hint prefers the highest-tier available pair', () => {
+  const base = createInitialState();
+  const first = moveOrMerge(base, 0, 1).state;
+  const second = moveOrMerge(first, 2, 3).state;
+  const cells = second.cells.slice();
+  cells[4] = { id: 't1-a', familyId: 'toilet-buddy', tier: 1 };
+  cells[5] = { id: 't1-b', familyId: 'toilet-buddy', tier: 1 };
+  const withTwoPairs = { ...second, cells };
+  assert.deepEqual(findBestMergePair(withTwoPairs), [1, 3]);
+});
+
 test('legacy v2 save migrates families onto canonical chain tiers', () => {
   const current = createInitialState();
   const cells = current.cells.slice();
@@ -143,14 +155,17 @@ test('first mission reward can only be claimed once', () => {
   assert.deepEqual(claimFirstMission(claimed), claimed);
 });
 
-test('deadlock rescue only activates on a full board with no merge', () => {
+test('deadlock rescue clears a terminal blocker before useful lower-tier progress', () => {
   const base = createInitialState();
   const top = FAMILIES[FAMILIES.length - 1];
+  const low = FAMILIES[0];
   const cells = Array.from({ length: BOARD_SIZE }, (_, index) => ({ id: `top-${index}`, familyId: top.id, tier: top.tier }));
+  cells[0] = { id: 'valuable-low', familyId: low.id, tier: low.tier };
   const deadlocked = { ...base, cells, maxDiscoveredTier: top.tier };
   assert.equal(isDeadlocked(deadlocked), true);
   const rescued = rescueDeadlock(deadlocked);
   assert.equal(rescued.cells.filter(Boolean).length, BOARD_SIZE - 1);
+  assert.equal(rescued.cells[0]?.familyId, low.id);
   assert.equal(rescued.coins, deadlocked.coins + 5);
   assert.equal(isDeadlocked(rescued), false);
 });
