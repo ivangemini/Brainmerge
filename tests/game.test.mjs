@@ -16,7 +16,16 @@ import {
   sanitizeState,
   spawnUnit
 } from '../build/core/game.js';
-import { BOARD_SIZE, FAMILIES, FIRST_MISSION_REWARD, MAX_RUNTIME_TIER, nextFamilyFor } from '../build/core/catalog.js';
+import {
+  BOARD_SIZE,
+  FAMILIES,
+  FIRST_MISSION_REWARD,
+  MAX_RUNTIME_TIER,
+  SPAWN_COST,
+  discoveryBonusForTier,
+  mergeRewardForTier,
+  nextFamilyFor
+} from '../build/core/catalog.js';
 import { localeFromLanguage } from '../build/i18n/i18n.js';
 
 test('core progression is one ordered eight-character merge chain', () => {
@@ -74,10 +83,11 @@ test('unit can move into empty cell', () => {
   assert.equal(result.state.cells[10]?.familyId, 'toilet-buddy');
 });
 
-test('paid Brain Box always spawns the bottom of the chain', () => {
+test('paid Brain Box always spawns the bottom of the chain at tuned cost', () => {
   const state = createInitialState();
   const next = spawnUnit(state, () => 0.99);
-  assert.equal(next.coins, 90);
+  assert.equal(SPAWN_COST, 12);
+  assert.equal(next.coins, state.coins - SPAWN_COST);
   assert.equal(next.spawns, 1);
   assert.equal(next.cells[4]?.familyId, 'toilet-buddy');
   assert.equal(next.cells[4]?.tier, 1);
@@ -89,6 +99,29 @@ test('rewarded spawn is free but still feeds Tier 1', () => {
   assert.equal(next.coins, state.coins);
   assert.equal(next.spawns, 1);
   assert.equal(next.cells[4]?.familyId, 'toilet-buddy');
+});
+
+test('first discovery bonus is paid once, then repeat merges use base reward', () => {
+  const base = createInitialState();
+  const first = moveOrMerge(base, 0, 1).state;
+  const second = moveOrMerge(first, 2, 3).state;
+  const beforeDiscovery = second.coins;
+  const discovered = moveOrMerge(second, 1, 3).state;
+  assert.equal(discovered.maxDiscoveredTier, 3);
+  assert.equal(
+    discovered.coins - beforeDiscovery,
+    mergeRewardForTier(3) + discoveryBonusForTier(3)
+  );
+
+  const repeatBase = {
+    ...discovered,
+    cells: discovered.cells.map(() => null),
+    maxDiscoveredTier: 3
+  };
+  repeatBase.cells[0] = { id: 'cam-a', familyId: 'camera-dude', tier: 2 };
+  repeatBase.cells[1] = { id: 'cam-b', familyId: 'camera-dude', tier: 2 };
+  const repeated = moveOrMerge(repeatBase, 0, 1).state;
+  assert.equal(repeated.coins - repeatBase.coins, mergeRewardForTier(3));
 });
 
 test('initial state always has an immediate merge', () => {
@@ -153,6 +186,25 @@ test('first mission reward can only be claimed once', () => {
   assert.equal(claimed.missionClaimed, true);
   assert.equal(canClaimFirstMission(claimed), false);
   assert.deepEqual(claimFirstMission(claimed), claimed);
+});
+
+test('tuned paid economy can reach T8 without rewarded ads or coin starvation', () => {
+  let state = createInitialState();
+  let guard = 0;
+  while (state.maxDiscoveredTier < MAX_RUNTIME_TIER && guard < 500) {
+    guard += 1;
+    const pair = findBestMergePair(state);
+    if (pair) {
+      state = moveOrMerge(state, pair[0], pair[1]).state;
+      if (canClaimFirstMission(state)) state = claimFirstMission(state);
+      continue;
+    }
+    assert.ok(state.coins >= SPAWN_COST, `coin starvation before T${state.maxDiscoveredTier + 1}`);
+    state = spawnUnit(state, () => 0).state ?? spawnUnit(state, () => 0);
+  }
+  assert.ok(guard < 500, 'economy smoke loop should converge');
+  assert.equal(state.maxDiscoveredTier, MAX_RUNTIME_TIER);
+  assert.ok(state.coins >= 0);
 });
 
 test('deadlock rescue clears a terminal blocker before useful lower-tier progress', () => {
