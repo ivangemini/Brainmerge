@@ -27,6 +27,7 @@
   }
   .right-rail .side-card{
     display:block!important;
+    grid-row:auto!important;
     width:100%!important;
     height:auto!important;
     min-height:0!important;
