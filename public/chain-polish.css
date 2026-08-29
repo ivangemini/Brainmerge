@@ -25,6 +25,10 @@
 .collection-chip[data-family='coffee-ballerina']{--char-x:66.666667%;--char-y:100%}
 .collection-chip[data-family='tung-wood']{--char-x:100%;--char-y:100%}
 
+/* Shared-atlas board art uses the same absolute slot model as Collection. Flex sizing
+ * could collapse the pseudo sprite in occupied cells even though its labels remained visible. */
+.cell:not([data-family='toilet-buddy']) .unit-visual::before{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;display:block!important}
+
 .collection-chip{overflow:visible!important;transition:transform .16s ease,filter .16s ease,opacity .16s ease,border-color .16s ease,box-shadow .16s ease}
 .collection-chip::after{inset:8%!important}
 .collection-chip.is-current{z-index:3;transform:translateY(-2px) scale(1.055);border-color:#ffcb3f!important;box-shadow:0 0 0 3px #fff2a9,inset 0 2px 0 rgba(255,255,255,.82),0 7px 12px rgba(119,76,44,.16)!important}
