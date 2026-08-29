@@ -30,7 +30,14 @@ Convert the working vertical slice from a strong prototype into a production-loo
 - reduced-motion handling and responsive desktop/mobile layout;
 - user-approved Toilet Buddy integrated as canonical Tier-1 art via `public/assets/characters/toilet-buddy-form-a.webp`;
 - Toilet Buddy source cleaned to transparent background and normalized on a 256x256 runtime canvas;
-- deterministic regression coverage rewritten around the sequential chain, migration, persistent discovery, deadlock and onboarding behavior.
+- deterministic regression coverage rewritten around the sequential chain, migration, persistent discovery, deadlock and onboarding behavior;
+- sequential-chain presentation pass added: persistent Best Discovery -> Next Target strip, locked/current/next Collection states and tier badges;
+- new-character discovery feedback added with a short localized reveal toast plus board pulse;
+- Collection atlas ordering corrected after the chain reorder so each slot matches its character identity again;
+- approved standalone Toilet Buddy now renders directly on both board and Collection instead of being silently replaced by the legacy atlas crop;
+- higher chain tiers receive lightweight reusable cell-value treatment without fabricating new character art;
+- new presentation layer remains responsive and respects `prefers-reduced-motion`;
+- CI compile regression from strict `bestFamily` typing was identified from Actions logs and fixed; subsequent `npm test` and Yandex packaging passed.
 
 ## Intentional limits
 - Current chain ends at Tier 8 Tung Wood until more approved character identities are assigned beyond it.
@@ -39,8 +46,8 @@ Convert the working vertical slice from a strong prototype into a production-loo
 - Character normalization remains subject to real screenshot QA as approved standalone art replaces atlas entries.
 
 ## Next logical steps
-1. validate the sequential-chain refactor in CI and fix any compile/test/package regressions;
-2. capture the updated real browser runtime at desktop 1440x900 and compact/mobile dimensions;
-3. verify that each merge visibly reveals the expected next identity and that Collection discovery persists;
-4. replace remaining shared-atlas character sources with already-approved standalone art where available;
-5. compare runtime against Figma and adjust the largest remaining visual/game-feel deltas before expanding retention/meta content.
+1. capture the updated real browser runtime at desktop 1440x900 and compact/mobile dimensions;
+2. compare the new chain strip, Collection states and first-session hierarchy against approved Figma targets;
+3. tune any clipping/scale/baseline deltas found in real captures;
+4. replace Camera Dude through Tung Wood shared-atlas sources as approved standalone assets become available;
+5. after runtime visual QA is clean, expand retention/meta content around the validated core chain rather than changing the merge rule again.
