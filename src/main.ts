@@ -24,6 +24,9 @@ const rootCandidate = document.querySelector<HTMLElement>('#app');
 if (!rootCandidate) throw new Error('Missing #app root');
 const root: HTMLElement = rootCandidate;
 
+const INCOME_TICK_MS = 5_000;
+const AUTOSAVE_MS = 30_000;
+
 let platform: PlatformAdapter = new LocalPlatformAdapter();
 let locale: Locale = detectLocale();
 let state: GameState = createInitialState();
@@ -164,7 +167,15 @@ window.setInterval(() => {
   } else {
     state = next;
   }
-}, 5000);
+}, INCOME_TICK_MS);
+
+// Passive-only sessions still receive periodic canonical snapshots. This bounds
+// cloud/local data loss without writing on every 5-second income presentation tick.
+window.setInterval(() => {
+  if (document.hidden) return;
+  settleOnline();
+  void platform.saveState(state);
+}, AUTOSAVE_MS);
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
@@ -187,7 +198,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     settleOnline(now);
     platform.setGameplayActive(false);
-    void platform.saveState(state);
+    // Mobile browsers may suspend before pagehide. Flush the latest economy snapshot now.
+    void platform.saveState(state, true);
     return;
   }
   state = accrueOfflineIncome(state, now);
@@ -199,7 +211,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => {
   settleOnline();
   platform.setGameplayActive(false);
-  void platform.saveState(state);
+  void platform.saveState(state, true);
 });
 
 void boot();
