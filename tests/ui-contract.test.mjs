@@ -46,6 +46,8 @@ test('Brain Lab state and actions stay code-owned', () => {
 
 test('keyboard board controls reuse gameplay actions without hidden spending shortcut', () => {
   assert.match(main, /function activateCell\(index: number\)/);
+  assert.match(main, /restoreKeyboardFocus/);
+  assert.match(main, /cellElement\(index\)\?\.focus\(\)/);
   assert.match(main, /root\.addEventListener\('keydown'/);
   assert.match(main, /event\.key === 'Enter' \|\| event\.key === ' '/);
   assert.match(main, /ArrowLeft/);
