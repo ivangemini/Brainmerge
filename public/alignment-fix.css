@@ -2,7 +2,92 @@
 
 /* Mission: progress stays left, reward amount stays right, gift is centered in the art slot. */
 @media (min-width: 1181px) {
+  /* Render generated panel art directly on the cards. Avoid negative-z pseudo layers. */
+  .side-card::before {
+    display: none !important;
+  }
+
+  .side-card--mission {
+    background: var(--ui-atlas) no-repeat 0 0 / 400% 293.409742% !important;
+  }
+
+  .side-card--collection {
+    background: var(--ui-atlas) no-repeat 33.333333% 0 / 400% 293.409742% !important;
+  }
+
+  /* Generated header plates are reserved for section labels. */
+  .side-card--mission .side-card__eyebrow,
+  .side-card--collection .side-card__eyebrow {
+    display: flex !important;
+    position: absolute;
+    z-index: 3;
+    top: 14px;
+    left: 26px;
+    right: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    color: #fff8e9;
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: .08em;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 2px 2px rgba(91, 48, 30, .45);
+  }
+
+  .side-card--collection .side-card__eyebrow {
+    color: #fff8ff;
+    text-shadow: 0 2px 2px rgba(82, 37, 103, .55);
+  }
+
+  .side-card--mission h2,
+  .side-card--collection h2 {
+    left: 25px;
+    right: 25px;
+    height: auto;
+    justify-content: flex-start;
+    text-align: left;
+    color: #563f47;
+    text-shadow: none;
+  }
+
+  .side-card--mission h2 {
+    top: 61px;
+    font-size: 16px;
+  }
+
+  .side-card--collection h2 {
+    top: 57px;
+    font-size: 15px;
+  }
+
+  .side-card--mission > p,
+  .side-card--collection > p {
+    left: 25px;
+    right: 25px;
+    text-align: left;
+    color: #745b55;
+  }
+
+  .side-card--mission > p {
+    top: 86px;
+    font-size: 11px;
+  }
+
+  .side-card--collection > p {
+    top: 79px;
+    font-size: 9px;
+  }
+
+  .mission-track {
+    top: 128px;
+  }
+
   .mission-row {
+    top: 151px;
     justify-content: space-between;
     align-items: center;
     text-align: left;
@@ -36,12 +121,27 @@
     content: '';
     position: absolute;
     left: 50%;
-    top: 38px;
+    top: 62px;
     width: 58px;
     height: 58px;
     transform: translateX(-50%);
     background: var(--ui-atlas) no-repeat 93.220339% 44.067797% / 1280%;
     pointer-events: none;
+  }
+
+  /* Claim CTA sits on one optical axis beneath the mission card. */
+  .side-card--mission .side-action {
+    left: 50%;
+    top: 309px;
+    width: 164px;
+    transform: translateX(-50%);
+  }
+
+  /* Collection content is centered inside the generated cream well. */
+  .collection-grid {
+    top: 103px;
+    left: 27px;
+    right: 27px;
   }
 
   /* Collection count is a real centered badge, not loose text. */
@@ -72,6 +172,15 @@
     color: inherit;
     font-size: inherit;
   }
+}
+
+/* Character atlas is painted directly on the centered visual box. This is more robust than a pseudo-element. */
+.unit-visual {
+  background: var(--character-atlas) no-repeat var(--char-x, 0) var(--char-y, 0) / 400% 200% !important;
+}
+
+.unit-visual::before {
+  display: none !important;
 }
 
 /* Shark is intentionally smaller than the shared atlas baseline so all four shoes stay inside the tile. */
