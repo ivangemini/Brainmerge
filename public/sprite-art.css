@@ -3,3 +3,11 @@
   --ui-atlas: url('./assets/ui/ui-atlas.webp');
   --character-atlas: url('./assets/characters/character-atlas.webp');
 }
+
+/* Mission gift uses a dedicated higher-resolution sprite instead of the tiny 256px UI atlas crop. */
+.mission-row::after {
+  background-image: url('./assets/ui/reward-gift.webp'), radial-gradient(circle at 50% 34%, #fffdf0, #fff1d0 65%, #ead0a5) !important;
+  background-repeat: no-repeat, no-repeat !important;
+  background-position: center, center !important;
+  background-size: 78px 78px, 100% 100% !important;
+}
