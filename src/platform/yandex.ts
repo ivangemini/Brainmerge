@@ -111,7 +111,7 @@ export class YandexPlatformAdapter implements PlatformAdapter {
     }
   }
 
-  async saveState(state: GameState): Promise<void> {
+  async saveState(state: GameState, flush = false): Promise<void> {
     try {
       this.storage?.setItem(SAVE_KEY, JSON.stringify(state));
     } catch {
@@ -120,7 +120,17 @@ export class YandexPlatformAdapter implements PlatformAdapter {
 
     if (!this.player) return;
     this.pendingCloudState = state;
-    if (this.cloudTimer !== null) window.clearTimeout(this.cloudTimer);
+
+    if (this.cloudTimer !== null) {
+      window.clearTimeout(this.cloudTimer);
+      this.cloudTimer = null;
+    }
+
+    if (flush) {
+      await this.flushCloudSave(true);
+      return;
+    }
+
     this.cloudTimer = window.setTimeout(() => {
       this.cloudTimer = null;
       void this.flushCloudSave(false);
@@ -183,7 +193,8 @@ export class YandexPlatformAdapter implements PlatformAdapter {
     try {
       await this.player.setData({ [CLOUD_FIELD]: state }, flush);
     } catch {
-      this.pendingCloudState = state;
+      // Never let a failed older write overwrite a newer snapshot queued while it was in flight.
+      if (!this.pendingCloudState) this.pendingCloudState = state;
     }
   }
 }
