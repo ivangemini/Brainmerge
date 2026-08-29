@@ -11,9 +11,9 @@ Use dependency-light browser TypeScript + DOM/CSS. Keep deterministic gameplay/e
 - `src/feedback/` — non-authoritative audio/particle feedback.
 - `public/assets/` — runtime art derived from approved character/UI assets.
 - `public/code-ui.css` — primary code-first component geometry and structural skin.
-- `public/chain-polish.css` — sequential-chain presentation states.
+- `public/chain-polish.css` — sequential-chain presentation states and character sprite-state corrections.
 - `public/mission-journey.css` — first-cycle mission presentation.
-- `public/economy-loop.css` — production, offline reward and Brain Lab component styling.
+- `public/economy-loop.css` — production, offline reward and Brain Lab component styling; it does not own page-level responsive rail composition.
 - `public/upgrade-art.css` — approved Brain Lab/offline raster presentation only; it must not own responsive panel visibility/order or live state.
 - `public/return-loop.css` — computed return-session/next-action presentation.
 - `public/mobile-runtime.css` — final responsive composition authority for compact/tablet/phone layouts.
@@ -29,9 +29,29 @@ CSS responsibilities are intentionally layered:
 4. `mobile-runtime.css` owns final responsive panel composition and ordering;
 5. `accessibility.css` is last so interaction affordances cannot be accidentally hidden by visual polish.
 
-`tests/ui-contract.test.mjs` protects this contract. It verifies stylesheet order, keeps upgrade art out of responsive composition, requires Mission/Collection/Brain Lab to remain reachable at compact breakpoints, and checks that Brain Lab state/actions still originate from code.
+`tests/ui-contract.test.mjs` protects this contract. It verifies stylesheet order, keeps upgrade/economy art layers out of responsive page composition, requires Mission/Collection/Brain Lab to remain reachable at compact breakpoints, clears legacy nested grid-row ownership, protects shared-atlas vs standalone character rendering and checks that Brain Lab state/actions still originate from code.
 
 The board is keyboard-operable without hidden economy actions. Enter/Space on a focused cell reuses the same select/move/merge path as pointer input; arrow keys move focus by board geometry; focus is restored after code-driven DOM rerenders; Escape clears selection. There is no global Space shortcut that spends coins.
+
+## Packaged-runtime browser gate
+CI builds the real Yandex `dist/` package first and then opens that packaged output in headless Chromium through `scripts/runtime-smoke.mjs`. The page uses `?platform=local` only to isolate visual/input validation from the external Yandex SDK; HTML, CSS, compiled JS and raster assets are the actual distribution files.
+
+The browser gate runs three production viewports:
+- desktop: 1440x900;
+- compact landscape: 1024x576;
+- phone: 390x844 with touch capability enabled.
+
+For each viewport it verifies:
+- all 30 board cells and the Mission, Collection, Brain Lab, Brain Box and onboarding/Next Move surfaces are present;
+- no horizontal document overflow, broken `<img>` resource or uncaught page error;
+- compact Brain Lab/Collection share the intended rail row and keep independent natural heights;
+- phone Brain Lab precedes Collection;
+- a real mouse merge works on desktop/compact through the pointer handlers;
+- a real touch tap merge works in the phone context;
+- the resulting Camera Dude shared-atlas sprite has a visible absolute board slot;
+- a separate fresh-state keyboard merge succeeds and restores focus to the target cell.
+
+Full-page screenshots are uploaded as a dedicated CI artifact. These screenshots are reviewed when responsive or presentation code changes. This gate is technical runtime evidence; it does not replace approved Figma/art-direction comparison or human pacing review.
 
 ## Canonical state ownership
 `GameState` is the only authoritative progression/economy snapshot. UI never owns currency, production, upgrade or discovery truth. Platform adapters persist the same state; they do not modify gameplay rules.
@@ -145,7 +165,8 @@ Common runtime depends only on `PlatformAdapter`.
 - save migration through v5;
 - periodic autosave and lifecycle cloud flush;
 - EN/RU player-facing string parity;
-- responsive code-driven UI, focus-visible/coarse-pointer hardening and reduced-motion handling.
+- responsive code-driven UI, focus-visible/coarse-pointer hardening and reduced-motion handling;
+- packaged Chromium screenshot/mouse/touch/keyboard regression coverage in CI.
 
 ## Current content boundary
 The chain ends at T8 Tung Wood. Toilet Buddy has approved standalone runtime art. Camera Dude through Tung Wood still use the shared character atlas until their approved standalone assets are integrated.
