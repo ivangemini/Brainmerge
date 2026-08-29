@@ -23,10 +23,25 @@ export interface FamilyDefinition {
 export const BOARD_COLUMNS = 6;
 export const BOARD_ROWS = 5;
 export const BOARD_SIZE = BOARD_COLUMNS * BOARD_ROWS;
-export const SPAWN_COST = 10;
+/**
+ * Flat Tier-1 feed price. At 12 coins the full T1 -> T8 route stays
+ * self-sustaining with merge income while still making coins meaningful.
+ */
+export const SPAWN_COST = 12;
 export const FIRST_MISSION_TARGET = 6;
 export const FIRST_MISSION_REWARD = 80;
 export const DEADLOCK_RESCUE_REFUND = 5;
+
+/** One-time rewards for first discovering a tier. Tier 2 is already effectively gifted by the starter board. */
+export const DISCOVERY_BONUS_BY_TIER: Readonly<Record<number, number>> = {
+  2: 0,
+  3: 8,
+  4: 12,
+  5: 20,
+  6: 32,
+  7: 48,
+  8: 80
+};
 
 const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
 const TOILET_BUDDY = './public/assets/characters/toilet-buddy-form-a.webp';
@@ -106,4 +121,12 @@ export function nextFamilyFor(familyId: FamilyId): FamilyDefinition | null {
 
 export function assetForUnit(familyId: FamilyId): string | null {
   return familyById.get(familyId)?.asset ?? null;
+}
+
+export function mergeRewardForTier(tier: number): number {
+  return Math.max(0, Math.floor(tier)) * 4;
+}
+
+export function discoveryBonusForTier(tier: number): number {
+  return DISCOVERY_BONUS_BY_TIER[Math.floor(tier)] ?? 0;
 }
