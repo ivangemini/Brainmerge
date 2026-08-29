@@ -132,15 +132,15 @@ try {
       assert(snapshot.labRect.top < snapshot.collectionRect.top, 'mobile: Brain Lab must appear before Collection');
     }
 
-    // Exercise the same pointer handlers a player uses. Desktop/compact use mouse clicks;
-    // phone uses an actual touch-capable context and tap events.
+    // Exercise the same pointer handlers a player uses. Tutorial cells intentionally pulse,
+    // so force bypasses Playwright's visual-stability wait while still dispatching real mouse/touch input.
     if (viewport.touch) {
-      await page.locator('[data-cell="0"]').tap();
-      await page.locator('[data-cell="1"]').tap();
+      await page.locator('[data-cell="0"]').tap({ force: true });
+      await page.locator('[data-cell="1"]').tap({ force: true });
       await waitForOneMerge(page, `${viewport.name} touch`);
     } else {
-      await page.locator('[data-cell="0"]').click();
-      await page.locator('[data-cell="1"]').click();
+      await page.locator('[data-cell="0"]').click({ force: true });
+      await page.locator('[data-cell="1"]').click({ force: true });
       await waitForOneMerge(page, `${viewport.name} mouse`);
     }
 
