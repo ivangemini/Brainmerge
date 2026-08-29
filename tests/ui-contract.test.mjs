@@ -20,9 +20,9 @@ test('responsive composition loads after art presentation layers', () => {
 });
 
 test('upgrade art remains presentation-only', () => {
-  assert.doesNotMatch(upgradeArt, /\.side-card--mission\s*,/);
-  assert.doesNotMatch(upgradeArt, /\.right-rail\s+\.side-card\s*\{\s*display:/);
-  assert.doesNotMatch(upgradeArt, /order\s*:/);
+  assert.doesNotMatch(upgradeArt, /\.side-card--mission/);
+  assert.doesNotMatch(upgradeArt, /\.right-rail/);
+  assert.doesNotMatch(upgradeArt, /grid-template-columns/);
   assert.match(upgradeArt, /button\[data-upgrade='boxBaseTier'\]/);
   assert.match(upgradeArt, /button\[data-upgrade='luckyDrop'\]/);
   assert.match(upgradeArt, /button\[data-upgrade='income'\]/);
@@ -40,7 +40,7 @@ test('Brain Lab state and actions stay code-owned', () => {
   assert.match(gameView, /UPGRADE_DEFINITIONS\.map/);
   assert.match(gameView, /canPurchaseUpgrade\(state, id\)/);
   assert.match(gameView, /upgradeRequiredDiscoveryTier\(id, currentLevel\)/);
-  assert.match(gameView, /data-upgrade=\\"\$\{id\}\\"/);
+  assert.match(gameView, /data-upgrade="\$\{id\}"/);
   assert.match(gameView, /purchaseUpgrade\(button\.dataset\.upgrade as UpgradeId\)/);
 });
 
