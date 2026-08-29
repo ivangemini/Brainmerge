@@ -9,9 +9,11 @@
     "verify": "npm test",
     "package": "npm run build && PLATFORM=local node scripts/package-portal.mjs && node scripts/check-package.mjs local",
     "package:yandex": "npm run build && PLATFORM=yandex node scripts/package-portal.mjs && node scripts/check-package.mjs yandex",
+    "smoke:runtime": "node scripts/runtime-smoke.mjs",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {
+    "playwright": "^1.55.0",
     "typescript": "^5.8.3"
   },
   "engines": {
