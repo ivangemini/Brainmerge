@@ -7,6 +7,36 @@
  */
 :root{--upgrade-ui-atlas:url('./assets/ui/upgrade-ui-atlas.webp')}
 
+/* Brain Lab uses the same code-drawn raised-panel grammar as Mission/Collection.
+ * The panel itself is not a raster screenshot: geometry, header and states stay CSS/DOM-owned. */
+.side-card--lab{
+  padding:54px 12px 14px!important;
+  border:7px solid #49bdb8!important;
+  outline:2px solid #188f97!important;
+  border-radius:30px!important;
+  background:radial-gradient(circle at 20% 18%,rgba(255,255,255,.42) 0 1px,transparent 1.6px) 0 0/15px 15px,linear-gradient(180deg,#fbf7ff 0%,#f4eafa 62%,#e5d5ed 100%)!important;
+  box-shadow:0 13px 22px rgba(76,59,87,.15),0 5px 0 rgba(54,113,112,.08),inset 0 3px 0 rgba(255,255,255,.88),inset 0 -4px 0 rgba(87,58,107,.08)!important;
+}
+.side-card--lab::before{inset:7px!important;border-radius:23px!important;border:2px solid rgba(255,255,255,.54)!important;box-shadow:inset 0 0 0 1px rgba(75,58,89,.06)!important;background:none!important}
+.side-card--lab .side-card__eyebrow{
+  position:absolute!important;
+  z-index:4!important;
+  top:-13px!important;
+  left:20px!important;
+  right:20px!important;
+  height:48px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:4px solid #168f98!important;
+  border-radius:21px!important;
+  color:#fff!important;
+  background:linear-gradient(180deg,#71e7dd,#42cbc4 55%,#24aba9)!important;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.38),inset 0 -4px 0 rgba(21,113,119,.18),0 6px 8px rgba(54,101,108,.18)!important;
+  text-shadow:0 2px rgba(24,108,113,.44)!important;
+}
+.side-card--lab h2{margin:0 0 5px!important}.side-card--lab>p{margin:0 0 10px!important}
+
 .upgrade-card{position:relative;isolation:isolate;min-height:112px;overflow:hidden}
 .upgrade-card::before{
   content:"";
@@ -88,6 +118,7 @@
   .right-rail .side-card--collection,.right-rail .side-card--lab{grid-row:auto}
 }
 @media(max-width:700px){
+  .side-card--lab{padding:52px 12px 14px!important}
   .upgrade-card{min-height:104px}
   .upgrade-card::before{width:46px;height:46px;left:7px;top:7px;border-radius:13px}
   .upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{margin-left:51px}
