@@ -14,81 +14,96 @@ export interface UnitPresentation {
 export interface FamilyDefinition {
   id: FamilyId;
   nameKey: string;
-  assetByForm: Partial<Record<number, string>>;
+  /** Fixed position in the one core merge chain. */
+  tier: number;
+  asset: string;
   presentation: UnitPresentation;
 }
 
 export const BOARD_COLUMNS = 6;
 export const BOARD_ROWS = 5;
 export const BOARD_SIZE = BOARD_COLUMNS * BOARD_ROWS;
-export const MAX_RUNTIME_TIER = 3;
 export const SPAWN_COST = 10;
 export const FIRST_MISSION_TARGET = 6;
 export const FIRST_MISSION_REWARD = 80;
 export const DEADLOCK_RESCUE_REFUND = 5;
 
 const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
-const TOILET_BUDDY_FORM_A = './public/assets/characters/toilet-buddy-form-a.webp';
+const TOILET_BUDDY = './public/assets/characters/toilet-buddy-form-a.webp';
 
+/**
+ * Canonical core progression. Brain Box creates only Tier 1. Two identical
+ * characters merge into the next entry in this array.
+ */
 export const FAMILIES: readonly FamilyDefinition[] = [
-  {
-    id: 'camera-dude',
-    nameKey: 'character.cameraDude',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
-    presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
-  },
   {
     id: 'toilet-buddy',
     nameKey: 'character.toiletBuddy',
-    assetByForm: { 1: TOILET_BUDDY_FORM_A },
+    tier: 1,
+    asset: TOILET_BUDDY,
     presentation: { scale: 1, yPercent: 0, shadowScale: 0.9, collectionScale: 1 }
+  },
+  {
+    id: 'camera-dude',
+    nameKey: 'character.cameraDude',
+    tier: 2,
+    asset: BASE_CHARACTER_ATLAS,
+    presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
   },
   {
     id: 'sigma-rock',
     nameKey: 'character.sigmaRock',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    tier: 3,
+    asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.92, collectionScale: 1 }
   },
   {
     id: 'rizz-head',
     nameKey: 'character.rizzHead',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    tier: 4,
+    asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.82, collectionScale: 1 }
   },
   {
     id: 'shark-sneakers',
     nameKey: 'character.sharkSneakers',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    tier: 5,
+    asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 0.90, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
   },
   {
     id: 'crocodile-bomber',
     nameKey: 'character.crocodileBomber',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    tier: 6,
+    asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1, yPercent: 0, shadowScale: 1, collectionScale: 1 }
   },
   {
     id: 'coffee-ballerina',
     nameKey: 'character.coffeeBallerina',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    tier: 7,
+    asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.06, yPercent: 0, shadowScale: 0.86, collectionScale: 1.05 }
   },
   {
     id: 'tung-wood',
     nameKey: 'character.tungWood',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    tier: 8,
+    asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 0.96, yPercent: 0, shadowScale: 0.82, collectionScale: 0.96 }
   }
 ] as const;
 
+export const MAX_RUNTIME_TIER = FAMILIES.length;
 export const familyById = new Map(FAMILIES.map((family) => [family.id, family]));
+export const familyByTier = new Map(FAMILIES.map((family) => [family.tier, family]));
 
-export function visualFormForTier(tier: number): number {
-  return Math.floor((Math.max(1, tier) - 1) / 3) + 1;
-}
-
-export function assetForUnit(familyId: FamilyId, tier: number): string | null {
+export function nextFamilyFor(familyId: FamilyId): FamilyDefinition | null {
   const family = familyById.get(familyId);
   if (!family) return null;
-  return family.assetByForm[visualFormForTier(tier)] ?? null;
+  return familyByTier.get(family.tier + 1) ?? null;
+}
+
+export function assetForUnit(familyId: FamilyId): string | null {
+  return familyById.get(familyId)?.asset ?? null;
 }
