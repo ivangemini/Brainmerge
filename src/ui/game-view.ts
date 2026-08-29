@@ -57,7 +57,6 @@ export class GameView {
 
   render(state: GameState, locale: Locale, t: Translator, capabilities: GameViewCapabilities): void {
     const level = playerLevel(state.xp);
-    const unlocked = new Set(state.cells.flatMap((cell) => cell ? [cell.familyId] : []));
     const boardFull = isBoardFull(state);
     const deadlocked = isDeadlocked(state);
     const phase = onboardingPhase(state);
@@ -123,13 +122,13 @@ export class GameView {
                     const mergeTarget = Boolean(selectedUnit && cell && index !== state.selectedIndex && canMerge(selectedUnit, cell));
                     const occupied = Boolean(cell);
                     const family = cell ? familyById.get(cell.familyId) : null;
-                    const asset = cell ? assetForUnit(cell.familyId, cell.tier) : null;
+                    const asset = cell ? assetForUnit(cell.familyId) : null;
                     const tutorial = tutorialIndexes.has(index);
                     const style = family ? presentationStyle(family) : '';
-                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: cell.tier })}` : t('board.emptyCell')}">
+                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: family.tier })}` : t('board.emptyCell')}">
                       <span class="cell-gloss" aria-hidden="true"></span>
                       ${cell && asset ? `<span class="unit-shadow" aria-hidden="true"></span><span class="unit-visual"><img draggable="false" class="unit-art" src="${asset}" alt="" /></span>` : ''}
-                      ${cell ? `<span class="tier-badge">${t('tier.label', { tier: cell.tier })}</span>` : ''}
+                      ${family ? `<span class="tier-badge">${t('tier.label', { tier: family.tier })}</span>` : ''}
                     </button>`;
                   }).join('')}
                 </div>
@@ -158,9 +157,9 @@ export class GameView {
             <h2>${t('panel.collectionTitle')}</h2>
             <p>${t('panel.collectionHint')}</p>
             <div class="collection-grid">
-              ${FAMILIES.map((family) => `<div class="collection-chip ${unlocked.has(family.id) ? 'is-unlocked' : ''}" title="${t(family.nameKey)}" style="${presentationStyle(family)}"><img src="${family.assetByForm[1] ?? ''}" alt=""/></div>`).join('')}
+              ${FAMILIES.map((family) => `<div class="collection-chip ${family.tier <= state.maxDiscoveredTier ? 'is-unlocked' : ''}" title="${t(family.nameKey)}" style="${presentationStyle(family)}"><img src="${family.asset}" alt=""/></div>`).join('')}
             </div>
-            <div class="collection-count"><span>${unlocked.size}</span>/${FAMILIES.length}</div>
+            <div class="collection-count"><span>${state.maxDiscoveredTier}</span>/${FAMILIES.length}</div>
           </aside>
         </section>
       </main>`;
