@@ -29,9 +29,13 @@ test('upgrade art remains presentation-only', () => {
   assert.match(upgradeArt, /button\[data-upgrade='offline'\]/);
 });
 
-test('responsive runtime keeps all production panels reachable', () => {
+test('responsive runtime keeps all production panels reachable without equal-height stretching', () => {
   assert.match(mobileRuntime, /\.side-card--mission[\s\S]*display:block!important/);
   assert.match(mobileRuntime, /\.right-rail[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(mobileRuntime, /grid-auto-rows:max-content!important/);
+  assert.match(mobileRuntime, /align-items:start!important/);
+  assert.match(mobileRuntime, /\.right-rail \.side-card[\s\S]*height:auto!important/);
+  assert.match(mobileRuntime, /\.right-rail \.side-card[\s\S]*align-self:start!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card--lab\{order:1!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card--collection\{order:2!important/);
 });
