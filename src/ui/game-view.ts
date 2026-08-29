@@ -13,6 +13,7 @@ import {
 import {
   canClaimFirstMission,
   canMerge,
+  findBestMergePair,
   findFirstMergePair,
   isBoardFull,
   isDeadlocked,
@@ -64,6 +65,12 @@ export class GameView {
     const phase = onboardingPhase(state);
     const tutorialPair = phase === 'merge' ? findFirstMergePair(state) : null;
     const tutorialIndexes = new Set(tutorialPair ?? []);
+    const occupiedCount = state.cells.reduce((count, cell) => count + (cell ? 1 : 0), 0);
+    const crowded = occupiedCount >= Math.floor(state.cells.length * 0.72);
+    const suggestedPair = phase === 'complete' && state.selectedIndex === null && (crowded || boardFull)
+      ? findBestMergePair(state)
+      : null;
+    const suggestedIndexes = new Set(suggestedPair ?? []);
     const missionClaimable = canClaimFirstMission(state);
     const missionProgress = Math.min(state.merges, FIRST_MISSION_TARGET);
     const xpProgress = Math.round(playerLevelProgress(state.xp) * 100);
@@ -135,6 +142,8 @@ export class GameView {
               <div><strong>${t(`onboarding.${phase}Title`)}</strong><p>${t(`onboarding.${phase}Text`)}</p></div>
             </div>` : ''}
 
+            ${crowded && !deadlocked && suggestedPair ? `<div class="board-nudge" role="status"><span>✦</span>${t('status.bestMergeHint')}</div>` : ''}
+
             <div class="board-frame">
               <div class="board-screw board-screw--tl" aria-hidden="true"></div>
               <div class="board-screw board-screw--br" aria-hidden="true"></div>
@@ -148,8 +157,9 @@ export class GameView {
                     const family = cell ? familyById.get(cell.familyId) : null;
                     const asset = cell ? assetForUnit(cell.familyId) : null;
                     const tutorial = tutorialIndexes.has(index);
+                    const suggested = suggestedIndexes.has(index);
                     const style = family ? presentationStyle(family) : '';
-                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}" data-chain-tier="${family.tier}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: family.tier })}` : t('board.emptyCell')}">
+                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''} ${suggested ? 'is-suggested-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}" data-chain-tier="${family.tier}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: family.tier })}` : t('board.emptyCell')}">
                       <span class="cell-gloss" aria-hidden="true"></span>
                       ${cell && asset ? `<span class="unit-shadow" aria-hidden="true"></span><span class="unit-visual"><img draggable="false" class="unit-art" src="${asset}" alt="" /></span>` : ''}
                       ${family ? `<span class="tier-badge">${t('tier.label', { tier: family.tier })}</span>` : ''}
@@ -159,8 +169,8 @@ export class GameView {
               </div>
             </div>
 
-            ${boardFull ? `<div class="board-status ${deadlocked ? 'board-status--danger' : ''}">
-              <span>${deadlocked ? t('status.deadlock') : t('status.fullBoard')}</span>
+            ${boardFull ? `<div class="board-status ${deadlocked ? 'board-status--danger' : 'board-status--merge-ready'}">
+              <span>${deadlocked ? t('status.deadlock') : t('status.fullBoardMergeReady')}</span>
               ${deadlocked ? `<button class="rescue-button" data-action="rescue">${t('action.rescue', { refund: DEADLOCK_RESCUE_REFUND })}</button>` : ''}
             </div>` : ''}
 
