@@ -92,6 +92,8 @@ When the app is hidden/closed, the next resume/load converts elapsed time into `
 
 The accounting cursor never moves backwards during a runtime clock rollback, preventing duplicate elapsed-time credit.
 
+Runtime persistence uses a debounced normal cloud-save path plus explicit flushes at visibility/pagehide boundaries. Passive-only visible sessions receive periodic canonical snapshots so a long idle foreground session does not depend on a later interaction to persist its latest economy state.
+
 ## Merge/discovery rewards
 Passive production is the long-running economy, but active play still has immediate rewards:
 
@@ -110,6 +112,31 @@ The opening board contains four T1 Toilet Buddies arranged as two ready pairs. T
 4. understand that paid Box prices rise and coins can later be spent in Brain Lab.
 
 The target is to reach an early meaningful economic choice quickly, not to race to T8 in one uninterrupted session.
+
+### Pacing guardrails
+The deterministic no-upgrade baseline is intentionally split into an active opening and a longer return curve:
+
+- T4 must be reachable in a compact opening sequence without requiring passive waiting;
+- by T4, mission rewards should make both `Lucky Drop` and `Brain Income` affordable while another Brain Box is still a valid competing purchase;
+- T5 remains reachable inside the early active loop without a forced wait;
+- baseline T8 should require meaningful accumulated passive time, but the deterministic no-upgrade route must stay inside roughly **90–240 passive minutes** rather than becoming either instant or a hard wall.
+
+These are simulation guardrails, not claims about real human session length. Runtime/playtest pacing still needs visual/input/session QA.
+
+## Return-session guidance
+Offline income is not enough by itself to create a useful return loop. After onboarding, the runtime computes one deterministic `Next move` hint from canonical state.
+
+Priority order:
+1. collect pending offline production;
+2. claim a ready mission reward;
+3. recover a true deadlock;
+4. take a free production-positive merge;
+5. surface the number of permanent Brain Lab upgrades currently affordable;
+6. open a Brain Box when affordable;
+7. otherwise show an approximate number of minutes until the next paid Brain Box at current production;
+8. after the T8 journey is complete, stop presenting another Brain Box as mandatory progression.
+
+The guidance is advisory only. It creates no new currency, counter or hidden progression state and does not auto-spend for the player.
 
 ## First-cycle mission journey
 The mission track remains cumulative and sequential:
@@ -152,6 +179,7 @@ Legacy v1-v4 saves migrate to v5 with safe economy defaults. Legacy users start 
 - Do not reset cumulative mission counters between goals.
 - Do not delete useful low-tier pieces during deadlock recovery while terminal blockers are present.
 - Keep economy tables centralized and deterministic.
+- `Next move` guidance may explain state but must not secretly change it.
 - Prestige/rebirth is deferred until this economy loop is validated in real sessions.
 
 ## Validation baseline
@@ -162,7 +190,10 @@ Automated tests must cover:
 - upgrade costs/locks/max levels;
 - online fractional income;
 - capped explicit offline collection and no double claim;
-- clock rollback behavior;
+- hide/resume/reload idempotence and clock rollback behavior;
+- Yandex debounced-save/latest-snapshot/flush semantics;
 - save v1-v5 migration/sanitization;
 - deterministic progression from fresh save to T8 with simulated production time and no mandatory ads;
+- first-session T4/T5 and long-cycle passive-time pacing bands;
+- deterministic return-session next-action priority;
 - mission, Collection, deadlock and hint regressions.
