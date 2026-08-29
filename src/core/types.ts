@@ -1,6 +1,6 @@
 export type FamilyId =
-  | 'camera-dude'
   | 'toilet-buddy'
+  | 'camera-dude'
   | 'sigma-rock'
   | 'rizz-head'
   | 'shark-sneakers'
@@ -11,6 +11,7 @@ export type FamilyId =
 export interface Unit {
   id: string;
   familyId: FamilyId;
+  /** Position in the single core merge chain. Each tier has exactly one character identity. */
   tier: number;
 }
 
@@ -18,12 +19,14 @@ export type Cell = Unit | null;
 export type OnboardingPhase = 'merge' | 'spawn' | 'complete';
 
 export interface GameState {
-  version: 2;
+  version: 3;
   cells: Cell[];
   coins: number;
   xp: number;
   merges: number;
   spawns: number;
+  /** Highest core merge tier ever created; keeps Collection discovery persistent. */
+  maxDiscoveredTier: number;
   missionClaimed: boolean;
   selectedIndex: number | null;
   messageKey: string | null;
