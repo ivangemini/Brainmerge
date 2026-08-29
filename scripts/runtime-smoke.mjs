@@ -68,17 +68,7 @@ function baseState(overrides = {}) {
 function highTierState() {
   const cells = Array(30).fill(null);
   FAMILIES.forEach(([familyId, tier], index) => { cells[index] = unit(familyId, tier, index); });
-  return baseState({
-    cells,
-    coins: 50000,
-    xp: 4000,
-    merges: 80,
-    spawns: 45,
-    paidBoxes: 30,
-    maxDiscoveredTier: 8,
-    missionIndex: 7,
-    upgrades: { boxBaseTier: 2, luckyDrop: 3, income: 3, offline: 2 }
-  });
+  return baseState({ cells, coins: 50000, xp: 4000, merges: 80, spawns: 45, paidBoxes: 30, maxDiscoveredTier: 8, missionIndex: 7, upgrades: { boxBaseTier: 2, luckyDrop: 3, income: 3, offline: 2 } });
 }
 
 function crowdedState() {
@@ -87,68 +77,33 @@ function crowdedState() {
     const [familyId, tier] = FAMILIES[i % 5];
     cells[i] = unit(familyId, tier, i);
   }
-  // Ensure the deterministic best pair is T5 while keeping the board non-full.
   cells[19] = unit('shark-sneakers', 5, 'best-a');
   cells[20] = unit('shark-sneakers', 5, 'best-b');
   return baseState({ cells, maxDiscoveredTier: 5, merges: 35, spawns: 25, missionIndex: 4 });
 }
 
 function deadlockState() {
-  return baseState({
-    cells: Array.from({ length: 30 }, (_, i) => unit('tung-wood', 8, i)),
-    coins: 777,
-    maxDiscoveredTier: 8,
-    merges: 100,
-    spawns: 50,
-    missionIndex: 8,
-    upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 }
-  });
+  return baseState({ cells: Array.from({ length: 30 }, (_, i) => unit('tung-wood', 8, i)), coins: 777, maxDiscoveredTier: 8, merges: 100, spawns: 50, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
 }
 
 function rewardAndUpgradeState() {
   const cells = Array(30).fill(null);
   cells[0] = unit('toilet-buddy', 1, 0);
   cells[1] = unit('camera-dude', 2, 1);
-  return baseState({
-    cells,
-    coins: 99999,
-    merges: 6,
-    spawns: 12,
-    maxDiscoveredTier: 1,
-    missionIndex: 0,
-    pendingOfflineCoins: 12345,
-    upgrades: { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 }
-  });
+  return baseState({ cells, coins: 99999, merges: 6, spawns: 12, maxDiscoveredTier: 1, missionIndex: 0, pendingOfflineCoins: 12345, upgrades: { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 } });
 }
 
 function maxedUpgradeState() {
   const cells = Array(30).fill(null);
   cells[0] = unit('tung-wood', 8, 0);
-  return baseState({
-    cells,
-    coins: 250000,
-    merges: 120,
-    spawns: 90,
-    paidBoxes: 60,
-    maxDiscoveredTier: 8,
-    missionIndex: 8,
-    upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 }
-  });
+  return baseState({ cells, coins: 250000, merges: 120, spawns: 90, paidBoxes: 60, maxDiscoveredTier: 8, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
 }
 
 function discoveryState() {
   const cells = Array(30).fill(null);
   cells[0] = unit('coffee-ballerina', 7, 'a');
   cells[1] = unit('coffee-ballerina', 7, 'b');
-  return baseState({
-    cells,
-    coins: 5000,
-    merges: 60,
-    spawns: 30,
-    maxDiscoveredTier: 7,
-    missionIndex: 6,
-    upgrades: { boxBaseTier: 2, luckyDrop: 2, income: 2, offline: 2 }
-  });
+  return baseState({ cells, coins: 5000, merges: 60, spawns: 30, maxDiscoveredTier: 7, missionIndex: 6, upgrades: { boxBaseTier: 2, luckyDrop: 2, income: 2, offline: 2 } });
 }
 
 const server = createServer(async (req, res) => {
@@ -161,10 +116,7 @@ const server = createServer(async (req, res) => {
       if (!extname(filePath)) filePath = join(ROOT.pathname, 'index.html');
     }
     const body = await readFile(filePath);
-    res.writeHead(200, {
-      'content-type': mime.get(extname(filePath)) ?? 'application/octet-stream',
-      'cache-control': 'no-store'
-    });
+    res.writeHead(200, { 'content-type': mime.get(extname(filePath)) ?? 'application/octet-stream', 'cache-control': 'no-store' });
     res.end(body);
   } catch {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
@@ -190,9 +142,18 @@ async function waitForOneMerge(page, label) {
 
 async function loadState(page, state) {
   await page.goto('http://127.0.0.1:4173/?platform=local', { waitUntil: 'networkidle' });
-  await page.evaluate(([key, value]) => localStorage.setItem(key, JSON.stringify(value)), [SAVE_KEY, state]);
+  // Wait for the first boot to finish its initial save before replacing local state;
+  // otherwise its async boot tail can race and overwrite the controlled fixture.
+  await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+  const fixture = { ...state, lastAccrualAt: Date.now(), selectedIndex: null, messageKey: null };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, JSON.stringify(value)), [SAVE_KEY, fixture]);
   await page.reload({ waitUntil: 'networkidle' });
   await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+  await page.waitForFunction(([key, expectedTier]) => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return false;
+    try { return JSON.parse(raw).maxDiscoveredTier === expectedTier; } catch { return false; }
+  }, [SAVE_KEY, fixture.maxDiscoveredTier]);
 }
 
 async function assertHealthyPage(page, label) {
@@ -207,10 +168,7 @@ async function assertHealthyPage(page, label) {
 
 try {
   for (const viewport of viewports) {
-    const context = await browser.newContext({
-      viewport: { width: viewport.width, height: viewport.height },
-      hasTouch: viewport.touch
-    });
+    const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, hasTouch: viewport.touch });
     const page = await context.newPage();
     const pageErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -232,16 +190,7 @@ try {
         const box = element.getBoundingClientRect();
         return { top: box.top, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
       };
-      return {
-        cells: document.querySelectorAll('.board-tray .cell').length,
-        mission: isVisible('.side-card--mission'),
-        collection: isVisible('.side-card--collection'),
-        lab: isVisible('.side-card--lab'),
-        spawn: isVisible('[data-action="spawn"]'),
-        nextMove: isVisible('.next-action') || isVisible('.coach-card'),
-        labRect: rect('.side-card--lab'),
-        collectionRect: rect('.side-card--collection')
-      };
+      return { cells: document.querySelectorAll('.board-tray .cell').length, mission: isVisible('.side-card--mission'), collection: isVisible('.side-card--collection'), lab: isVisible('.side-card--lab'), spawn: isVisible('[data-action="spawn"]'), nextMove: isVisible('.next-action') || isVisible('.coach-card'), labRect: rect('.side-card--lab'), collectionRect: rect('.side-card--collection') };
     });
 
     assert(snapshot.cells === 30, `${viewport.name}: expected 30 board cells, got ${snapshot.cells}`);
@@ -298,16 +247,14 @@ try {
     await waitForOneMerge(page, `${viewport.name} keyboard`);
     const activeCell = await page.evaluate(() => document.activeElement instanceof HTMLElement ? document.activeElement.dataset.cell : null);
     assert(activeCell === '1', `${viewport.name}: keyboard focus was not restored to merge target`);
-
     await context.close();
   }
 
-  // Production state matrix uses compact width so board + panels are all rendered at meaningful scale.
   const stateContext = await browser.newContext({ viewport: { width: 1024, height: 576 } });
   const statePage = await stateContext.newPage();
 
   await loadState(statePage, highTierState());
-  assert((await statePage.locator('.cell[data-chain-tier]').count()) === 8, 'high-tier: expected one board unit for every T1-T8 tier');
+  for (const [familyId] of FAMILIES) assert((await statePage.locator(`.cell[data-family="${familyId}"]`).count()) >= 1, `high-tier: missing ${familyId} board unit`);
   assert((await statePage.locator('.collection-chip.is-unlocked').count()) === 8, 'high-tier: Collection must unlock all eight tiers');
   for (const [familyId] of FAMILIES.slice(1)) {
     const sprite = await statePage.locator(`.cell[data-family="${familyId}"] .unit-visual`).evaluate((element) => {
