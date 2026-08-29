@@ -1,0 +1,18 @@
+/* Interaction/accessibility hardening shared by mouse, keyboard and coarse pointers. */
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.cell{touch-action:none}
+button:focus-visible{outline:4px solid rgba(57,112,182,.88);outline-offset:3px}
+.cell:focus-visible{outline-color:#fff;outline-offset:2px;box-shadow:0 0 0 5px rgba(59,112,183,.82),0 5px 0 #168f9b!important}
+.spawn-button:focus-visible,.rewarded-button:focus-visible,.rescue-button:focus-visible,.side-action:focus-visible,.offline-reward button:focus-visible,.upgrade-card button:focus-visible{outline-color:#4c70b7}
+.locale-button:focus-visible{outline-width:3px;outline-offset:1px}
+
+@media(pointer:coarse){
+  .locale-button{min-width:44px;min-height:44px}
+  .side-action,.rescue-button,.offline-reward button,.upgrade-card button{min-height:44px}
+  .spawn-button,.rewarded-button{min-height:56px}
+  .cell{cursor:default}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important}
+}
