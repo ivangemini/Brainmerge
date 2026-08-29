@@ -3,20 +3,21 @@ import {
   BOARD_COLUMNS,
   DEADLOCK_RESCUE_REFUND,
   FAMILIES,
-  FIRST_MISSION_REWARD,
-  FIRST_MISSION_TARGET,
+  MISSION_TRACK,
   SPAWN_COST,
   familyById,
   familyByTier,
   type FamilyDefinition
 } from '../core/catalog.js';
 import {
-  canClaimFirstMission,
+  activeMission,
+  canClaimCurrentMission,
   canMerge,
   findBestMergePair,
   findFirstMergePair,
   isBoardFull,
   isDeadlocked,
+  missionProgress as missionProgressForState,
   onboardingPhase,
   playerLevel,
   playerLevelProgress
@@ -52,6 +53,7 @@ export class GameView {
   private dragStartX = 0;
   private dragStartY = 0;
   private lastDiscoveredTier: number | null = null;
+  private lastMissionIndex: number | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -71,8 +73,11 @@ export class GameView {
       ? findBestMergePair(state)
       : null;
     const suggestedIndexes = new Set(suggestedPair ?? []);
-    const missionClaimable = canClaimFirstMission(state);
-    const missionProgress = Math.min(state.merges, FIRST_MISSION_TARGET);
+    const mission = activeMission(state);
+    const missionClaimable = canClaimCurrentMission(state);
+    const missionCurrent = mission ? missionProgressForState(state, mission) : 0;
+    const missionPercent = mission ? Math.min(100, missionCurrent / mission.target * 100) : 100;
+    const missionAdvanced = this.lastMissionIndex !== null && state.missionIndex > this.lastMissionIndex;
     const xpProgress = Math.round(playerLevelProgress(state.xp) * 100);
     const bestFamily = familyByTier.get(state.maxDiscoveredTier) ?? FAMILIES[0]!;
     const nextFamily = familyByTier.get(state.maxDiscoveredTier + 1) ?? null;
@@ -81,7 +86,7 @@ export class GameView {
       : null;
 
     this.root.innerHTML = `
-      <main class="game-shell ${newlyDiscovered ? 'has-new-discovery' : ''}">
+      <main class="game-shell ${newlyDiscovered ? 'has-new-discovery' : ''} ${missionAdvanced ? 'has-mission-advance' : ''}">
         <header class="topbar">
           <div class="brand-block">
             <div class="brand">${t('app.title')}</div>
@@ -99,19 +104,23 @@ export class GameView {
         </header>
 
         <section class="game-layout">
-          <aside class="side-card side-card--mission">
+          <aside class="side-card side-card--mission ${mission ? '' : 'is-track-complete'}">
             <span class="panel-orb panel-orb--orange" aria-hidden="true"></span>
             <div class="side-card__eyebrow">${t('action.missions')}</div>
-            <h2>${t('panel.missionTitle')}</h2>
-            <p>${t('panel.missionText', { count: FIRST_MISSION_TARGET })}</p>
-            <div class="mission-track"><i style="width:${Math.min(100, state.merges / FIRST_MISSION_TARGET * 100)}%"></i></div>
-            <div class="mission-row">
-              <strong>${t('panel.progress', { current: missionProgress, target: FIRST_MISSION_TARGET })}</strong>
-              <span class="mission-reward">+${FIRST_MISSION_REWARD} ●</span>
+            <div class="mission-stage">${t('mission.stage', { current: Math.min(state.missionIndex + 1, MISSION_TRACK.length), total: MISSION_TRACK.length })}</div>
+            <div class="mission-sequence" aria-label="${t('mission.journeyLabel')}">
+              ${MISSION_TRACK.map((_, index) => `<span class="mission-sequence__dot ${index < state.missionIndex ? 'is-done' : ''} ${index === state.missionIndex ? 'is-current' : ''}"></span>`).join('')}
             </div>
-            ${state.missionClaimed
-              ? `<div class="mission-complete">${t('panel.missionComplete')}</div>`
-              : `<button class="side-action" data-action="claim-mission" ${missionClaimable ? '' : 'disabled'}>${t('action.claimReward')}</button>`}
+            <h2>${mission ? t(mission.titleKey) : t('mission.trackComplete.title')}</h2>
+            <p>${mission ? t(mission.textKey, { target: mission.target }) : t('mission.trackComplete.text')}</p>
+            <div class="mission-track"><i style="width:${missionPercent}%"></i></div>
+            <div class="mission-row">
+              <strong>${mission ? t('panel.progress', { current: missionCurrent, target: mission.target }) : t('mission.allDone')}</strong>
+              ${mission ? `<span class="mission-reward">+${mission.reward} ●</span>` : '<span class="mission-crown">★</span>'}
+            </div>
+            ${mission
+              ? `<button class="side-action ${missionClaimable ? 'is-ready' : ''}" data-action="claim-mission" ${missionClaimable ? '' : 'disabled'}>${missionClaimable ? t('action.claimReward') : t('mission.inProgress')}</button>`
+              : `<div class="mission-complete">${t('mission.trackComplete.badge')}</div>`}
           </aside>
 
           <section class="board-zone">
@@ -120,6 +129,8 @@ export class GameView {
               <span>${t('chain.discovery', { tier: newlyDiscovered.tier, character: t(newlyDiscovered.nameKey) })}</span>
               <span class="discovery-toast__spark">✦</span>
             </div>` : ''}
+
+            ${missionAdvanced ? `<div class="mission-advance-toast" role="status" aria-live="polite">${state.missionIndex >= MISSION_TRACK.length ? t('mission.trackComplete.toast') : t('mission.nextUnlocked')}</div>` : ''}
 
             <div class="board-header">
               <div class="board-heading"><span class="eyebrow">${t('board.title')}</span><p>${t('board.hint')}</p></div>
@@ -208,6 +219,7 @@ export class GameView {
       </main>`;
 
     this.lastDiscoveredTier = state.maxDiscoveredTier;
+    this.lastMissionIndex = state.missionIndex;
     this.bindInteractions();
   }
 
