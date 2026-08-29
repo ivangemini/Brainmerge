@@ -1,5 +1,5 @@
 import {
-  claimFirstMission,
+  claimCurrentMission,
   createInitialState,
   isBoardFull,
   moveOrMerge,
@@ -38,8 +38,9 @@ const view = new GameView(root, {
   },
   rewardedSpawn: () => { void handleRewardedSpawn(); },
   claimMission: () => {
-    const next = claimFirstMission(state);
-    if (!state.missionClaimed && next.missionClaimed) feedback.trigger('reward');
+    const beforeIndex = state.missionIndex;
+    const next = claimCurrentMission(state);
+    if (next.missionIndex > beforeIndex) feedback.trigger('reward');
     update(next);
   },
   rescueDeadlock: () => {
