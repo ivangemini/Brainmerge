@@ -4,7 +4,7 @@
 Use dependency-light browser TypeScript + DOM/CSS. Keep deterministic gameplay/economy/save rules independent from rendering and portal SDKs so the same canonical state can run on local web, Yandex Games and future web portals through adapters.
 
 ## Boundaries
-- `src/core/` — deterministic merge, progression, economy, idle-income and save rules; no DOM or platform SDKs.
+- `src/core/` — deterministic merge, progression, economy, idle-income, next-action guidance and save rules; no DOM or platform SDKs.
 - `src/ui/` — board/HUD/mission/upgrade rendering and pointer/touch interaction.
 - `src/i18n/` + `locales/` — EN/RU localization and locale normalization.
 - `src/platform/` — portal adapters, persistence, ads and lifecycle capability detection.
@@ -13,6 +13,8 @@ Use dependency-light browser TypeScript + DOM/CSS. Keep deterministic gameplay/e
 - `public/chain-polish.css` — sequential-chain presentation states.
 - `public/mission-journey.css` — first-cycle mission presentation.
 - `public/economy-loop.css` — production, offline reward and Brain Lab presentation.
+- `public/return-loop.css` — computed return-session/next-action presentation.
+- `public/accessibility.css` — focus-visible, coarse-pointer and touch-gesture hardening.
 
 ## Canonical state ownership
 `GameState` is the only authoritative progression/economy snapshot. UI never owns currency, production, upgrade or discovery truth. Platform adapters persist the same state; they do not modify gameplay rules.
@@ -44,9 +46,38 @@ Passive income is computed from elapsed time, not from frame count.
 
 Before an action changes board composition or an income multiplier, runtime settles online income up to `Date.now()`. This prevents a newly purchased upgrade or newly merged high-tier unit from retroactively earning at its new rate for earlier elapsed time.
 
-While visible, the runtime accrues online income on a coarse interval. On hide/pagehide it settles and persists state. On resume/load, elapsed time is converted to `pendingOfflineCoins`, capped by the current Offline Storage level. Collection is explicit and zeroes the pending value, preventing double collection.
+While visible:
+- presentation accrues income on a 5-second coarse tick;
+- a 30-second autosave persists canonical foreground state without writing on every display tick.
 
-The accounting cursor never moves backward inside a running state. A device clock rollback therefore cannot create a second copy of already credited elapsed time.
+At lifecycle boundaries:
+- `visibilitychange -> hidden` settles income, stops GameplayAPI and requests `saveState(state, true)`;
+- `pagehide` repeats the flush-safe boundary in case the browser closes instead of suspending;
+- resume/load converts only elapsed time after `lastAccrualAt` into capped `pendingOfflineCoins`;
+- duplicate resume events and clock rollback do not move the cursor backward and therefore cannot duplicate elapsed-time credit.
+
+Offline collection is explicit. Claiming transfers `pendingOfflineCoins` once and zeroes it before persistence.
+
+## Persistence model
+`PlatformAdapter.saveState(state, flush?)` supports two write modes:
+
+- normal saves are safe/local immediately and may debounce remote/cloud work;
+- `flush=true` is reserved for lifecycle boundaries where a deferred cloud timer may never execute.
+
+### Local
+`LocalPlatformAdapter` stores the canonical snapshot synchronously through localStorage inside a best-effort async wrapper.
+
+### Yandex
+`YandexPlatformAdapter` writes safe/local storage immediately and debounces cloud `player.setData()` during ordinary activity. A flush save cancels any pending debounce timer and writes the newest queued snapshot with the Yandex flush flag.
+
+If an older in-flight cloud write fails after a newer snapshot has already been queued, the failed old snapshot is not allowed to overwrite the newer pending state.
+
+Automated platform tests cover:
+- ordinary debounce;
+- newest-snapshot replacement;
+- immediate lifecycle flush;
+- safe/local latest snapshot;
+- cloud-first load with local fallback.
 
 ## Brain Box / discovery model
 The paid Brain Box price is derived from `paidBoxes`. Rewarded Brain Boxes do not increase that counter.
@@ -55,11 +86,26 @@ Box upgrades may rebuild already-discovered tiers, but `spawnTier` is always cla
 
 This keeps the merge reveal as the progression gate while allowing late-game rebuilding to accelerate.
 
+## Return-session guidance
+`nextActionHint(state)` is pure derived state. It does not add a save field or hidden progression counter.
+
+Its priority is:
+1. pending offline collection;
+2. ready mission reward;
+3. true deadlock Rescue;
+4. free production-positive merge;
+5. currently affordable permanent upgrades;
+6. affordable Brain Box;
+7. estimated minutes until the next Brain Box at current production;
+8. completed-current-chain state.
+
+The UI renders this as advisory `Next move` guidance after onboarding. The player remains free to ignore it.
+
 ## Platform model
 Common runtime depends only on `PlatformAdapter`.
 
 - Local development uses `LocalPlatformAdapter`.
-- Yandex Games uses `YandexPlatformAdapter` for SDK initialization, locale signal, local/cloud persistence, rewarded/fullscreen ads and LoadingAPI/GameplayAPI lifecycle reporting.
+- Yandex Games uses `YandexPlatformAdapter` for SDK initialization, locale signal, safe/local + cloud persistence, rewarded/fullscreen ads and LoadingAPI/GameplayAPI lifecycle reporting.
 - Paid/rewarded gameplay semantics remain in `src/core/`; adapters only expose capabilities and ad/persistence primitives.
 
 `index.html` uses an `auto` platform hint. Distribution packages may explicitly select Yandex or use `?platform=yandex` for integration testing. Future portals add adapters rather than gameplay forks.
@@ -76,13 +122,15 @@ Common runtime depends only on `PlatformAdapter`.
 - capped explicit offline-reward flow;
 - persistent Collection discovery;
 - cumulative eight-step first-cycle mission journey;
+- computed return-session `Next move` guidance;
 - crowded-board best-merge hint;
 - chain-aware true-deadlock Rescue;
 - save migration through v5;
+- periodic autosave and lifecycle cloud flush;
 - EN/RU player-facing string parity;
-- responsive touch/mouse UI and reduced-motion handling.
+- responsive touch/mouse UI, focus-visible/coarse-pointer hardening and reduced-motion handling.
 
 ## Current content boundary
 The chain ends at T8 Tung Wood. Toilet Buddy has approved standalone runtime art. Camera Dude through Tung Wood still use the shared character atlas until their approved standalone assets are integrated.
 
-Extending character content does not require changing the merge/economy architecture. Prestige/rebirth remains intentionally deferred until the production economy and return-session pacing are validated.
+Extending character content does not require changing the merge/economy architecture. Prestige/rebirth remains intentionally deferred until the production economy is validated in real player sessions.
