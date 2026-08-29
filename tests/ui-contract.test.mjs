@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, upgradeArt, economyLoop, mobileRuntime, gameView, main] = await Promise.all([
+const [html, upgradeArt, chainPolish, economyLoop, mobileRuntime, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),
+  readFile(new URL('../public/chain-polish.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/economy-loop.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/mobile-runtime.css', import.meta.url), 'utf8'),
   readFile(new URL('../src/ui/game-view.ts', import.meta.url), 'utf8'),
@@ -30,11 +31,12 @@ test('upgrade art remains presentation-only', () => {
   assert.match(upgradeArt, /button\[data-upgrade='offline'\]/);
 });
 
-test('responsive runtime keeps all production panels reachable without equal-height stretching', () => {
+test('responsive runtime keeps all production panels reachable without legacy row or height stretching', () => {
   assert.match(mobileRuntime, /\.side-card--mission[\s\S]*display:block!important/);
   assert.match(mobileRuntime, /\.right-rail[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(mobileRuntime, /grid-auto-rows:max-content!important/);
   assert.match(mobileRuntime, /align-items:start!important/);
+  assert.match(mobileRuntime, /\.right-rail \.side-card[\s\S]*grid-row:auto!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card[\s\S]*height:auto!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card[\s\S]*align-self:start!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card--lab\{order:1!important/);
@@ -47,6 +49,14 @@ test('economy layer does not re-own responsive page composition', () => {
   assert.doesNotMatch(economyLoop, /\.side-card--lab\{width:min\(330px/);
   assert.match(economyLoop, /\.unit-income[\s\S]*font-size:8px/);
   assert.match(economyLoop, /white-space:nowrap/);
+});
+
+test('shared board sprites use an absolute atlas slot while Toilet Buddy keeps standalone art', () => {
+  assert.match(chainPolish, /\.cell:not\(\[data-family='toilet-buddy'\]\) \.unit-visual::before/);
+  assert.match(chainPolish, /position:absolute!important/);
+  assert.match(chainPolish, /inset:0!important/);
+  assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-visual::before\{display:none!important\}/);
+  assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-art[\s\S]*opacity:1!important/);
 });
 
 test('Brain Lab state and actions stay code-owned', () => {
