@@ -1,4 +1,36 @@
-/* Final narrow-screen composition layer. Keeps existing DOM/state components intact. */
+/* Final responsive composition layer.
+ * This file owns narrow/compact arrangement and visibility. Presentation-only
+ * art layers must not decide whether Mission, Collection or Brain Lab exist.
+ */
+@media(max-width:1180px){
+  .game-layout{
+    grid-template-columns:minmax(0,720px)!important;
+    justify-content:center!important;
+    row-gap:14px!important;
+  }
+  .board-zone{grid-row:1!important;min-width:0!important}
+  .side-card--mission{
+    grid-row:2!important;
+    display:block!important;
+    width:min(340px,100%)!important;
+    margin:0 auto 50px!important;
+  }
+  .right-rail{
+    grid-row:3!important;
+    width:min(720px,100%)!important;
+    justify-self:center!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+  }
+  .right-rail .side-card{
+    display:block!important;
+    width:100%!important;
+    margin-top:0!important;
+    justify-self:stretch!important;
+  }
+}
+
 @media(max-width:700px){
   .topbar{
     display:grid!important;
@@ -30,13 +62,20 @@
   .hud-pill--coin .hud-icon{width:23px!important;height:23px!important;flex-basis:23px!important}
   .hud-value,.hud-pill strong{font-size:13px!important;white-space:nowrap}
   .hud-pill--level .xp-track{display:none!important}
-  .locale-switch{
-    grid-column:2/span 2;
-    width:100%!important;
-    padding:3px!important;
-  }
+  .locale-switch{grid-column:2/span 2;width:100%!important;padding:3px!important}
   .locale-button{flex:1 1 50%;padding:5px 7px!important}
+
+  .game-layout{grid-template-columns:minmax(0,1fr)!important;row-gap:10px!important}
   .board-header{margin-top:0!important}
+  .side-card--mission{width:min(330px,94vw)!important}
+  .right-rail{
+    width:100%!important;
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+  /* Brain Lab comes first on phone because it directly drives the economy loop. */
+  .right-rail .side-card--lab{order:1!important;width:min(330px,94vw)!important;margin:0 auto!important}
+  .right-rail .side-card--collection{order:2!important;width:min(330px,94vw)!important;margin:0 auto!important}
 }
 
 @media(max-width:420px){
