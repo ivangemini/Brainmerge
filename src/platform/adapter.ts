@@ -15,7 +15,11 @@ export interface PlatformAdapter {
   initialize(): Promise<void>;
   preferredLocale(): Locale | null;
   loadState(): Promise<unknown>;
-  saveState(state: GameState): Promise<void>;
+  /**
+   * Persist canonical state. `flush=true` is reserved for lifecycle boundaries
+   * such as pagehide where a debounced cloud write may otherwise never run.
+   */
+  saveState(state: GameState, flush?: boolean): Promise<void>;
   showInterstitial(reason: string): Promise<boolean>;
   showRewarded(reason: string): Promise<boolean>;
   setGameplayActive(active: boolean): void;
