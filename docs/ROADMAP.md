@@ -30,8 +30,9 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] HUD shows current coins and production/minute.
 - [ ] Board units communicate individual production without obscuring characters — implementation exists; full runtime board screenshot QA pending.
 - [x] Brain Box CTA shows dynamic price and current drop profile.
-- [x] Brain Lab keeps code-owned level/effect/cost/lock/affordable/max states and now uses approved upgrade artwork through a sprite presentation layer; component QA passed at 1440x900, 1024x576 and 390x844.
-- [x] Brain Lab/Mission/Collection remain accessible below 1100px; legacy side-card hiding was removed from the effective compact layout and phone order prioritizes Brain Lab before Collection.
+- [x] Brain Lab keeps code-owned level/effect/cost/lock/affordable/max states and uses approved upgrade artwork only as a sprite presentation layer.
+- [x] Responsive composition ownership is explicit: `mobile-runtime.css` owns panel layout/order; Brain Lab art no longer decides whether Mission/Collection/Lab are visible or where they appear.
+- [x] Brain Lab/Mission/Collection remain structurally reachable below 1180px and phone order prioritizes Brain Lab before Collection.
 - [x] Offline reward presentation is explicit, uses approved return artwork without flattening the live amount/Collect UI, and cannot be double-claimed.
 - [x] All new player-facing strings have EN/RU parity.
 
@@ -46,13 +47,14 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Approved standalone Toilet Buddy integrated.
 - [ ] Replace shared atlas T2-T8 with approved standalone character assets as they become available.
 - [ ] Full packaged-runtime screenshot QA at desktop 1440x900, compact landscape ~1024x576, and phone portrait/compact width.
-- [ ] Align Mission, Collection, Brain Box dock and HUD to approved Figma/art direction in the complete runtime; Brain Lab/offline component art integration is now validated separately.
+- [ ] Align Mission, Collection, Brain Box dock and HUD to approved Figma/art direction in the complete runtime; Brain Lab/offline component art integration is validated separately.
 - [ ] Verify tier badges, income labels, merge hints, discovery/reward feedback and no clipping at gameplay scale.
 
 ## P1 — UX, accessibility and input
 - [ ] Touch/mouse merge interactions regression-tested in a real runtime after economy UI expansion.
-- [ ] Keyboard escape/shortcut behavior verified in a real runtime as non-destructive.
+- [x] Keyboard source contract is non-destructive: Enter/Space on a focused board cell reuse select/move/merge, arrows move focus, focus survives code-driven rerenders, Escape clears selection, and the old global Space-to-buy shortcut is removed. Real browser smoke is still part of final QA.
 - [ ] Focus-visible, reduced-motion and coarse-pointer/touch-target hardening are implemented; final contrast/layout review remains part of full runtime QA.
+- [x] UI ownership regression tests guard stylesheet order, responsive panel reachability and code-owned Brain Lab state/actions.
 - [x] Full-board/deadlock/offline/upgrade-lock states have localized actionable explanations.
 
 ## P1 — Save/data robustness
@@ -64,7 +66,7 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 ## P1 — Release readiness
 - [ ] CI green on final release-candidate HEAD: TypeScript, tests, locale check, Yandex package and artifact-size gate.
 - [ ] Final package tested against real Yandex lifecycle/capability behavior.
-- [x] Package integrity now validates referenced files plus structural integrity of packaged WebP/PNG raster assets, preventing truncated art from passing the portal gate.
+- [x] Package integrity validates referenced files plus structural integrity of packaged WebP/PNG raster assets, preventing truncated art from passing the portal gate.
 - [ ] No hardcoded player-facing copy, secrets, debug controls or placeholder/broken art exposed.
 - [x] Session-state, architecture, progression, asset manifest and roadmap docs track the current economy/UI runtime baseline.
 - [ ] Release candidate receives one full fresh-save and migrated-save smoke pass before publication.
@@ -73,11 +75,12 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 1. [x] Economy and idle-production core.
 2. [x] Persistence/autosave + lifecycle hardening for time-based economy.
 3. [x] First-session simulation pacing + return-session guidance.
-4. [x] Approved Brain Lab/offline artwork integrated into existing code-driven components + compact accessibility regression fixed.
-5. [ ] Full economy/mission/board runtime screenshot + interaction QA and responsive correction.
-6. [ ] Remaining standalone character art integration when approved files are available.
-7. [ ] Final real-runtime accessibility/input/visual QA.
-8. [ ] Yandex real-SDK/release hardening and RC validation.
+4. [x] Approved Brain Lab/offline artwork integrated into existing code-driven components.
+5. [x] UI-layer responsibility cleanup + source-level keyboard/input hardening.
+6. [ ] Full economy/mission/board runtime screenshot + touch/mouse/keyboard interaction QA and responsive correction.
+7. [ ] Remaining standalone character art integration when approved files are available.
+8. [ ] Final real-runtime accessibility/contrast/visual QA.
+9. [ ] Yandex real-SDK/release hardening and RC validation.
 
 ## Guardrails
 - Core discovery remains merge-first: upgrades may accelerate rebuilding but cannot reveal an unseen tier.
@@ -86,4 +89,6 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - Prefer data-driven tuning tables over bespoke conditionals.
 - `Next move` is advisory derived state and must never auto-spend or create hidden progression.
 - Raster art decorates code-driven UI; prices, levels, locks, progress, localized text and hit areas remain runtime state/components rather than flattened images.
+- Presentation-art CSS must not own responsive panel visibility or ordering; responsive composition belongs to `mobile-runtime.css`.
+- Keyboard shortcuts must not spend currency unless the user is explicitly activating the corresponding focused purchase control.
 - Do not claim production readiness until all relevant gates above are actually validated.
