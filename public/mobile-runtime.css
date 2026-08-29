@@ -21,13 +21,18 @@
     justify-self:center!important;
     display:grid!important;
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-auto-rows:max-content!important;
+    align-items:start!important;
     gap:10px!important;
   }
   .right-rail .side-card{
     display:block!important;
     width:100%!important;
+    height:auto!important;
+    min-height:0!important;
     margin-top:0!important;
     justify-self:stretch!important;
+    align-self:start!important;
   }
 }
 
@@ -71,6 +76,8 @@
   .right-rail{
     width:100%!important;
     grid-template-columns:1fr!important;
+    grid-auto-rows:max-content!important;
+    align-items:start!important;
     gap:10px!important;
   }
   /* Brain Lab comes first on phone because it directly drives the economy loop. */
