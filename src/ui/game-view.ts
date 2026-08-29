@@ -27,6 +27,7 @@ import {
   isBoardFull,
   isDeadlocked,
   missionProgress as missionProgressForState,
+  nextActionHint,
   onboardingPhase,
   playerLevel,
   playerLevelProgress,
@@ -34,7 +35,7 @@ import {
   unitProductionPerMinute,
   upgradeRequiredDiscoveryTier
 } from '../core/game.js';
-import type { GameState, UpgradeId } from '../core/types.js';
+import type { GameState, NextActionHint, UpgradeId } from '../core/types.js';
 import type { Locale } from '../i18n/i18n.js';
 
 export interface GameViewActions {
@@ -61,9 +62,9 @@ function presentationStyle(family: FamilyDefinition): string {
   return `--unit-scale:${p.scale};--unit-y:${p.yPercent}%;--shadow-scale:${p.shadowScale};--collection-scale:${p.collectionScale}`;
 }
 
-function formatRate(value: number): string {
-  if (value >= 100 || Number.isInteger(value)) return Math.round(value).toLocaleString('en-US');
-  return value.toFixed(1);
+function formatRate(value: number, locale: Locale): string {
+  if (value >= 100 || Number.isInteger(value)) return Math.round(value).toLocaleString(locale);
+  return value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 function upgradeEffect(state: GameState, id: UpgradeId, t: Translator): string {
@@ -78,6 +79,17 @@ function upgradeEffect(state: GameState, id: UpgradeId, t: Translator): string {
     return t('upgrade.effect.income', { multiplier: incomeMultiplierForLevel(level).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') });
   }
   return t('upgrade.effect.offline', { hours: offlineHoursForLevel(level) });
+}
+
+function nextActionText(hint: NextActionHint, t: Translator): string {
+  if (hint.kind === 'offline') return t('nextAction.offline', { amount: hint.amount ?? 0 });
+  if (hint.kind === 'mission') return t('nextAction.mission', { amount: hint.amount ?? 0 });
+  if (hint.kind === 'rescue') return t('nextAction.rescue');
+  if (hint.kind === 'merge') return t('nextAction.merge');
+  if (hint.kind === 'upgrade') return t('nextAction.upgrade', { count: hint.upgradeCount ?? 1 });
+  if (hint.kind === 'box') return t('nextAction.box', { cost: hint.cost ?? 0 });
+  if (hint.kind === 'wait') return t('nextAction.wait', { cost: hint.cost ?? 0, minutes: hint.minutes ?? 1 });
+  return t('nextAction.complete');
 }
 
 export class GameView {
@@ -121,6 +133,7 @@ export class GameView {
     const boxBaseTier = brainBoxBaseTier(state);
     const boxLuckyPercent = Math.round(brainBoxLuckyChance(state) * 100);
     const production = productionPerMinute(state);
+    const guidance = nextActionHint(state);
 
     this.root.innerHTML = `
       <main class="game-shell ${newlyDiscovered ? 'has-new-discovery' : ''} ${missionAdvanced ? 'has-mission-advance' : ''}">
@@ -131,7 +144,7 @@ export class GameView {
           </div>
           <div class="hud-cluster">
             <div class="hud-pill hud-pill--coin"><span class="hud-icon">●</span><span class="hud-value">${state.coins.toLocaleString(locale)}</span><small>${t('hud.coins')}</small></div>
-            <div class="hud-pill hud-pill--income"><strong>+${formatRate(production)}</strong><small>${t('hud.perMinute')}</small></div>
+            <div class="hud-pill hud-pill--income"><strong>+${formatRate(production, locale)}</strong><small>${t('hud.perMinute')}</small></div>
             <div class="hud-pill hud-pill--level"><strong>${t('hud.level', { level })}</strong><span class="xp-track"><i style="width:${xpProgress}%"></i></span></div>
             <div class="hud-pill hud-pill--merge"><strong>${state.merges}</strong><small>${t('hud.merges')}</small></div>
             <div class="locale-switch" role="group" aria-label="${t('hud.language')}">
@@ -191,6 +204,10 @@ export class GameView {
               <button data-action="claim-offline">${t('offline.collect')}</button>
             </div>` : ''}
 
+            ${phase === 'complete' && state.pendingOfflineCoins === 0 ? `<div class="next-action next-action--${guidance.kind}" role="status">
+              <span>${t('nextAction.title')}</span><strong>${nextActionText(guidance, t)}</strong>
+            </div>` : ''}
+
             ${phase !== 'complete' ? `<div class="coach-card ${phase === 'spawn' ? 'coach-card--spawn' : ''}">
               <span class="coach-step">${phase === 'merge' ? '1/2' : '2/2'}</span>
               <div><strong>${t(`onboarding.${phase}Title`)}</strong><p>${t(`onboarding.${phase}Text`)}</p></div>
@@ -213,7 +230,7 @@ export class GameView {
                     const tutorial = tutorialIndexes.has(index);
                     const suggested = suggestedIndexes.has(index);
                     const style = family ? presentationStyle(family) : '';
-                    const unitRate = family ? formatRate(unitProductionPerMinute(state, family.id)) : '';
+                    const unitRate = family ? formatRate(unitProductionPerMinute(state, family.id), locale) : '';
                     return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''} ${suggested ? 'is-suggested-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}" data-chain-tier="${family.tier}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: family.tier })}; ${t('income.unit', { rate: unitRate })}` : t('board.emptyCell')}">
                       <span class="cell-gloss" aria-hidden="true"></span>
                       ${cell && asset ? `<span class="unit-shadow" aria-hidden="true"></span><span class="unit-visual"><img draggable="false" class="unit-art" src="${asset}" alt="" /></span>` : ''}
@@ -282,7 +299,7 @@ export class GameView {
                     : discoveryLocked
                       ? t('upgrade.lockedTier', { tier: requiredTier ?? 1 })
                       : t('upgrade.buy', { cost: cost ?? 0 });
-                  return `<div class="upgrade-card ${maxed ? 'is-maxed' : ''} ${discoveryLocked ? 'is-locked' : ''}">
+                  return `<div class="upgrade-card ${maxed ? 'is-maxed' : ''} ${discoveryLocked ? 'is-locked' : ''} ${affordable ? 'is-affordable' : ''}">
                     <div class="upgrade-card__top"><strong>${t(upgrade.titleKey)}</strong><span>${t('upgrade.level', { current: currentLevel, max: maxLevel })}</span></div>
                     <small>${t(upgrade.descriptionKey)}</small>
                     <div class="upgrade-effect">${upgradeEffect(state, id, t)}</div>
