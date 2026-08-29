@@ -1,42 +1,118 @@
 # Brainmerge — Gameplay and Progression Baseline
 
-## Core merge rule
-Brainmerge uses one sequential character chain. Brain Box creates only the bottom character. Two identical characters merge into exactly one next character.
+## Core loop
+Brainmerge is a merge-idle game, not a pure merge ladder. The current canonical loop is:
 
-Current chain:
-1. Toilet Buddy
-2. Camera Dude
-3. Sigma Rock
-4. Rizz Head
-5. Shark Sneakers
-6. Crocodile Bomber
-7. Coffee Ballerina
-8. Tung Wood
+1. board characters generate coins continuously;
+2. spend coins on Brain Boxes or permanent Brain Lab upgrades;
+3. use Brain Box drops as feed for the board;
+4. merge two identical characters into exactly one next-tier identity;
+5. the merged result produces more than both source pieces combined;
+6. first-time merge discoveries unlock the next character for Collection and future Brain Box rebuilding;
+7. return later to collect capped offline production and continue the same economy loop.
+
+The key player decision is no longer only "what can I merge?". Coins can be spent either on more immediate board feed or on upgrades that improve future efficiency.
+
+## Canonical character chain
+1. T1 Toilet Buddy
+2. T2 Camera Dude
+3. T3 Sigma Rock
+4. T4 Rizz Head
+5. T5 Shark Sneakers
+6. T6 Crocodile Bomber
+7. T7 Coffee Ballerina
+8. T8 Tung Wood
 
 Different characters never merge. T8 is terminal until the approved chain is extended.
 
-## First-session structure
-The opening board contains four T1 Toilet Buddies arranged as two immediately mergeable pairs. The onboarding teaches one merge, then one Brain Box spawn. After that, normal play takes over.
+## Merge-first discovery contract
+Brain Box may only drop tiers already discovered through merging. It can accelerate rebuilding but it cannot reveal a new character first.
 
-The persistent short-term loop is:
-1. inspect the board;
-2. merge the highest useful duplicate pair;
-3. open Brain Boxes when more T1 feed is needed;
-4. reveal a new character tier;
-5. claim the current mission reward;
-6. continue toward the next visible chain target.
+Example: if T4 is the highest discovered tier, Box upgrades may produce T1-T4 depending on the current base tier and Lucky Drop roll, but never T5. The first T5 must still be created by merging two T4 units.
 
-## Economy baseline
-- Paid Brain Box: 12 coins.
-- Rewarded Brain Box: free, still T1 only.
+This preserves the reveal value of the merge chain while allowing the economy to become faster over time.
+
+## Passive production
+Base production per board unit:
+
+| Tier | Coins/min |
+| --- | ---: |
+| T1 | 3 |
+| T2 | 7 |
+| T3 | 16 |
+| T4 | 36 |
+| T5 | 82 |
+| T6 | 185 |
+| T7 | 420 |
+| T8 | 950 |
+
+Every next tier produces more than twice the previous tier. Therefore merging two equal pieces is always production-positive instead of temporarily lowering income.
+
+The `Brain Income` upgrade multiplies the whole board:
+`x1.00 -> x1.15 -> x1.32 -> x1.52 -> x1.75 -> x2.00`.
+
+## Brain Box economy
+Paid Brain Box price is no longer flat.
+
+`price = ceil(20 × 1.045 ^ paidBoxes)`
+
+Only successful paid Box purchases increase `paidBoxes`. Rewarded Brain Boxes are free and do not increase the paid price.
+
+This makes repeated feed progressively more expensive and gives passive production/upgrades an actual economic role.
+
+## Brain Lab upgrades
+All upgrades use the same primary coin currency.
+
+### Base Drop Tier
+Levels raise the minimum Brain Box tier from T1 up to T4. A level is purchasable only after its target base tier has already been discovered.
+
+Costs: `600 / 3000 / 15000`.
+
+### Lucky Drop
+Adds a +1 tier roll to every Brain Box, still capped to the highest discovered tier.
+
+Chance by level: `0% / 5% / 10% / 16% / 23% / 30%`.
+Costs: `200 / 500 / 1200 / 3000 / 7500`.
+
+### Brain Income
+Global passive-production multiplier.
+
+Costs: `250 / 700 / 1800 / 5000 / 14000`.
+
+### Offline Storage
+Extends capped offline-production duration.
+
+Cap: `2h / 4h / 6h / 8h / 12h`.
+Costs: `300 / 900 / 2500 / 7000`.
+
+## Passive-income accounting
+Online production is accrued from elapsed time with a fractional coin remainder so frequent ticks do not lose value.
+
+When the app is hidden/closed, the next resume/load converts elapsed time into `pendingOfflineCoins`, capped by Offline Storage. Offline coins require an explicit collect action and cannot be collected twice.
+
+The accounting cursor never moves backwards during a runtime clock rollback, preventing duplicate elapsed-time credit.
+
+## Merge/discovery rewards
+Passive production is the long-running economy, but active play still has immediate rewards:
+
 - Merge reward: `4 × result tier` coins.
 - First-discovery bonuses: T3 +8, T4 +12, T5 +20, T6 +32, T7 +48, T8 +80.
-- Rescue refund: +5 coins when resolving a true deadlock.
+- Rescue refund: +5 coins on a true deadlock.
 
-Discovery bonuses are paid only when `maxDiscoveredTier` increases. Re-creating an already discovered tier receives only the normal merge reward.
+Discovery bonuses are paid only when `maxDiscoveredTier` increases.
+
+## First-session structure
+The opening board contains four T1 Toilet Buddies arranged as two ready pairs. The onboarding teaches:
+
+1. merge a highlighted pair;
+2. see that the result has higher production than the two sources;
+3. open the first Brain Box;
+4. understand that paid Box prices rise and coins can later be spent in Brain Lab.
+
+The target is to reach an early meaningful economic choice quickly, not to race to T8 in one uninterrupted session.
 
 ## First-cycle mission journey
-The current mission track is cumulative and sequential. Progress earned before a mission becomes active still counts, avoiding artificial grind resets.
+The mission track remains cumulative and sequential:
 
 | Goal | Requirement | Reward |
 | --- | --- | ---: |
@@ -49,34 +125,44 @@ The current mission track is cumulative and sequential. Progress earned before a
 | 7 | Discover T7 | 260 coins |
 | 8 | Discover T8 | 400 coins |
 
-The track deliberately alternates action goals and discovery milestones. It should feel like a guided first progression cycle, not a separate quest mode.
+Mission rewards accelerate decisions but are no longer the sole mechanism keeping paid spawns affordable; passive production supplies the persistent economy.
 
 ## Board pressure and deadlock
-When occupancy reaches roughly 72% and the player has no active selection, the UI highlights only the highest-tier available merge pair. This prevents noisy multi-pair hinting.
+At high occupancy the UI highlights only the highest-tier available merge pair.
 
 A deadlock exists only when the board is full and no legal merge exists. Rescue removes a terminal T8 blocker first. If a future ruleset permits a deadlock without terminal pieces, Rescue removes the highest-tier blocker rather than sacrificing lower-tier merge potential.
 
-## Collection contract
-`maxDiscoveredTier` is persistent. Once a tier is discovered, its Collection slot remains unlocked even after every copy of that character is consumed by later merges.
+## Save contract
+Current schema: v5.
 
-Collection states:
-- unlocked past tiers;
-- current highest discovery;
-- next undiscovered target;
-- locked future tiers.
+Persistent economy state includes:
+- `paidBoxes`;
+- upgrade levels;
+- fractional income remainder;
+- last accounted timestamp;
+- pending offline coins.
+
+Legacy v1-v4 saves migrate to v5 with safe economy defaults. Legacy users start at zero paid-box inflation because older saves cannot reliably distinguish paid and rewarded Box history.
 
 ## Progression safety rules
-- Do not introduce random higher-tier Brain Box drops into the base loop without an explicit economy redesign.
-- Do not make cross-character merges legal.
+- First discovery of a new tier remains merge-only.
+- Rewarded ads are optional acceleration and cannot be required for core progression.
+- Keep one primary currency until another currency is shown to create a useful decision.
+- Do not make merge production-negative.
 - Do not reset cumulative mission counters between goals.
-- Do not add a new currency merely to extend the current first cycle.
 - Do not delete useful low-tier pieces during deadlock recovery while terminal blockers are present.
-- Keep balance constants centralized and covered by deterministic smoke tests.
+- Keep economy tables centralized and deterministic.
+- Prestige/rebirth is deferred until this economy loop is validated in real sessions.
 
 ## Validation baseline
-Automated tests must prove that a deterministic paid-only run can:
-- progress from the starter board to T8;
-- complete all eight first-cycle goals;
-- avoid negative coins / mandatory rewarded ads;
-- preserve save migration and Collection discovery;
-- preserve deterministic deadlock/hint behavior.
+Automated tests must cover:
+- production-positive merge ladder;
+- escalating paid Box price and non-inflating rewarded Box;
+- discovery-capped Box upgrades;
+- upgrade costs/locks/max levels;
+- online fractional income;
+- capped explicit offline collection and no double claim;
+- clock rollback behavior;
+- save v1-v5 migration/sanitization;
+- deterministic progression from fresh save to T8 with simulated production time and no mandatory ads;
+- mission, Collection, deadlock and hint regressions.
