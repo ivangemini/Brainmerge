@@ -200,7 +200,7 @@ test('tuned paid economy can reach T8 without rewarded ads or coin starvation', 
       continue;
     }
     assert.ok(state.coins >= SPAWN_COST, `coin starvation before T${state.maxDiscoveredTier + 1}`);
-    state = spawnUnit(state, () => 0).state ?? spawnUnit(state, () => 0);
+    state = spawnUnit(state, () => 0);
   }
   assert.ok(guard < 500, 'economy smoke loop should converge');
   assert.equal(state.maxDiscoveredTier, MAX_RUNTIME_TIER);
