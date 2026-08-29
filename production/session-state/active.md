@@ -43,16 +43,22 @@ Convert the working vertical slice from a strong prototype into a production-loo
 - crowded-board guidance now highlights only that best merge pair, avoiding noisy all-pairs highlighting;
 - full-board-but-solvable and true-deadlock states now have distinct copy and visual treatment;
 - Rescue and crowded-board messaging updated in both EN/RU;
-- regression coverage added for highest-tier merge hints and preserving lower-tier progress during deadlock rescue.
+- regression coverage added for highest-tier merge hints and preserving lower-tier progress during deadlock rescue;
+- Brain Box paid cost tuned from 10 to 12 coins so low-tier spawning has meaningful cost without breaking free progression;
+- merge income centralized through `mergeRewardForTier()` at 4 coins per resulting tier;
+- one-time first-discovery bonuses added from T3 upward (T3 +8, T4 +12, T5 +20, T6 +32, T7 +48, T8 +80) to make major chain reveals economically meaningful;
+- discovery bonuses are paid only when `maxDiscoveredTier` advances, so repeated farming of an already-known tier receives base merge income only;
+- deterministic economy smoke coverage now proves the full paid T1 -> T8 route can converge without rewarded ads or coin starvation when the first mission reward is claimed.
 
 ## Intentional limits
 - Current chain ends at Tier 8 Tung Wood until more approved character identities are assigned beyond it.
 - Camera Dude through Tung Wood still rely on the shared atlas source until their approved standalone runtime assets are integrated.
 - Automatic interstitial placement is not enabled yet; adapter support exists, but cadence should be tuned against session flow rather than fired during active merging.
 - Character normalization remains subject to real screenshot QA as approved standalone art replaces atlas entries.
+- Economy tuning is intentionally simple and deterministic for the current vertical slice; no extra currencies, generators or energy system have been introduced.
 
 ## Next logical steps
-1. validate the chain-aware rescue/hint pass in CI and fix any compile/test/package regressions;
+1. validate the eight-tier economy pass in CI and fix any compile/test/package regressions;
 2. capture the updated real browser runtime at desktop 1440x900 and compact/mobile dimensions;
 3. compare chain strip, crowded-board hints, Collection states and first-session hierarchy against approved Figma targets;
 4. tune clipping/scale/baseline deltas found in real captures;
