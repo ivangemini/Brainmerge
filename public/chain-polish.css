@@ -45,6 +45,18 @@
 .cell[data-chain-tier='8']{border-color:#9f63ca!important;background:linear-gradient(180deg,rgba(255,255,255,.32),transparent 24%),radial-gradient(circle at 50% 48%,#d49bf0,#aa71d5 60%,#7b4ca7)!important;box-shadow:0 5px 0 #633886,0 0 0 2px rgba(255,225,122,.28),0 8px 15px rgba(77,48,98,.22),inset 0 3px 0 rgba(255,255,255,.32)!important}
 .cell[data-chain-tier='8']::after{content:'✦';position:absolute;z-index:3;right:8%;top:8%;color:#fff2a3;font-size:13px;text-shadow:0 0 6px rgba(255,231,119,.75);pointer-events:none}
 
+/* Crowded-board guidance: highlight only the best deterministic merge pair, never every duplicate. */
+.board-nudge{width:min(560px,calc(100% - 24px));margin:0 auto 8px;padding:7px 12px;display:flex;align-items:center;justify-content:center;gap:7px;border:2px solid #d8c15e;border-radius:999px;background:linear-gradient(180deg,#fffbe5,#f7edb7);color:#6f5c31;font-size:10px;font-weight:900;text-align:center;box-shadow:inset 0 2px rgba(255,255,255,.88),0 4px 8px rgba(99,76,36,.08)}
+.board-nudge span{color:#d69b19;font-size:13px;text-shadow:0 1px #fff}
+.cell.is-suggested-pair:not(.is-selected):not(.is-merge-target){border-color:#f6cf4c!important;box-shadow:0 0 0 3px rgba(255,244,168,.92),0 0 20px rgba(255,205,62,.42),0 5px 0 #b78422!important;animation:bmSuggestedPair 1.15s ease-in-out infinite alternate}
+@keyframes bmSuggestedPair{to{transform:translateY(-1px) scale(1.025);filter:brightness(1.045)}}
+.board-status--merge-ready{border-color:#78c9b7!important;background:linear-gradient(180deg,#effff9,#d9f3ea)!important;color:#3e6f64!important;box-shadow:inset 0 2px rgba(255,255,255,.82),0 5px 11px rgba(61,115,99,.10)!important}
+.board-status--danger{animation:bmDeadlockPulse 1.5s ease-in-out infinite alternate}
+@keyframes bmDeadlockPulse{to{box-shadow:0 0 0 3px rgba(229,79,68,.12),0 8px 18px rgba(164,59,52,.14)!important}}
+.rescue-button{position:relative;overflow:hidden}
+.rescue-button::after{content:'';position:absolute;inset:0;transform:translateX(-130%);background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.30) 48%,transparent 70%);animation:bmRescueSheen 2.2s ease-in-out infinite}
+@keyframes bmRescueSheen{55%,100%{transform:translateX(130%)}}
+
 .has-new-discovery .board-frame{animation:bmBoardDiscovery .58s ease-out}
 @keyframes bmBoardDiscovery{0%{filter:brightness(1);transform:scale(1)}35%{filter:brightness(1.08);transform:scale(1.008)}100%{filter:brightness(1);transform:scale(1)}}
 
@@ -57,9 +69,10 @@
   .chain-progress__arrow{font-size:15px}
   .discovery-toast{top:52px;min-width:230px;padding:9px 13px;font-size:11px}
   .collection-tier{min-width:22px;height:16px;font-size:7px}
+  .board-nudge{width:calc(100% - 10px);margin-bottom:6px;padding:6px 9px;font-size:9px}
 }
 
 @media(prefers-reduced-motion:reduce){
-  .discovery-toast,.has-new-discovery .board-frame{animation:none!important}
+  .discovery-toast,.has-new-discovery .board-frame,.cell.is-suggested-pair,.board-status--danger,.rescue-button::after{animation:none!important}
   .discovery-toast{opacity:1}
 }
