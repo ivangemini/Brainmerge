@@ -1,0 +1,65 @@
+/* Sequential-chain presentation layer. Loaded after legacy/code UI so it can safely correct atlas-era assumptions. */
+.board-zone{position:relative}
+
+.chain-progress{width:min(610px,calc(100% - 18px));margin:4px auto 10px;padding:8px 10px;display:grid;grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);align-items:center;gap:7px;border:2px solid rgba(120,82,68,.10);border-radius:18px;background:linear-gradient(180deg,rgba(255,252,242,.94),rgba(247,231,207,.92));box-shadow:inset 0 2px 0 rgba(255,255,255,.85),0 5px 12px rgba(91,62,50,.08)}
+.chain-progress__step{min-width:0;display:flex;flex-direction:column;gap:2px;padding:7px 10px;border-radius:13px}
+.chain-progress__step--current{background:linear-gradient(180deg,#e8fff8,#d3f0e8);border:2px solid #70cbb9;box-shadow:inset 0 2px #fff}
+.chain-progress__step--next{background:linear-gradient(180deg,#fff8d7,#ffe8aa);border:2px solid #efbd49;box-shadow:inset 0 2px rgba(255,255,255,.9)}
+.chain-progress__step--complete{background:linear-gradient(180deg,#f3e8ff,#e5d1f6);border:2px solid #aa70cf;box-shadow:inset 0 2px rgba(255,255,255,.9)}
+.chain-progress__label{font-size:8px;line-height:1;text-transform:uppercase;letter-spacing:.11em;font-weight:950;color:#806b6a}
+.chain-progress strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4f3a48;font-size:11px;line-height:1.1}
+.chain-progress strong b{display:inline-grid;place-items:center;min-width:26px;height:20px;margin-right:4px;padding:0 5px;border-radius:999px;background:#725184;color:#fff;font-size:9px;vertical-align:middle;box-shadow:inset 0 2px rgba(255,255,255,.25)}
+.chain-progress__arrow{display:grid;place-items:center;color:#8d6d77;font-size:20px;font-weight:950;filter:drop-shadow(0 1px #fff)}
+
+.discovery-toast{position:absolute;z-index:30;left:50%;top:66px;min-width:270px;max-width:90%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:4px solid #e99514;border-radius:999px;background:linear-gradient(180deg,#fff76a,#ffc829 52%,#f29a18);color:#67431f;font-size:13px;font-weight:950;text-align:center;box-shadow:inset 0 4px rgba(255,255,255,.55),inset 0 -4px rgba(180,80,10,.16),0 8px 0 rgba(205,112,14,.25),0 18px 28px rgba(82,52,36,.20);animation:bmDiscoveryToast 1.2s cubic-bezier(.18,.82,.22,1) both;pointer-events:none}
+.discovery-toast__spark{color:#fff;text-shadow:0 1px 3px #b86b11;font-size:17px}
+@keyframes bmDiscoveryToast{0%{opacity:0;transform:translate(-50%,18px) scale(.82)}18%{opacity:1;transform:translate(-50%,-4px) scale(1.04)}32%,82%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-8px) scale(.96)}}
+
+/* Fix the old collection atlas ordering after the game switched from parallel families to one canonical chain. */
+.collection-chip[data-family='camera-dude']{--char-x:0%;--char-y:0%}
+.collection-chip[data-family='toilet-buddy']{--char-x:33.333333%;--char-y:0%}
+.collection-chip[data-family='sigma-rock']{--char-x:66.666667%;--char-y:0%}
+.collection-chip[data-family='rizz-head']{--char-x:100%;--char-y:0%}
+.collection-chip[data-family='shark-sneakers']{--char-x:0%;--char-y:100%}
+.collection-chip[data-family='crocodile-bomber']{--char-x:33.333333%;--char-y:100%}
+.collection-chip[data-family='coffee-ballerina']{--char-x:66.666667%;--char-y:100%}
+.collection-chip[data-family='tung-wood']{--char-x:100%;--char-y:100%}
+
+.collection-chip{overflow:visible!important;transition:transform .16s ease,filter .16s ease,opacity .16s ease,border-color .16s ease,box-shadow .16s ease}
+.collection-chip::after{inset:8%!important}
+.collection-chip.is-current{z-index:3;transform:translateY(-2px) scale(1.055);border-color:#ffcb3f!important;box-shadow:0 0 0 3px #fff2a9,inset 0 2px 0 rgba(255,255,255,.82),0 7px 12px rgba(119,76,44,.16)!important}
+.collection-chip.is-next{opacity:.64;filter:grayscale(.18) saturate(.85);border-color:#b99bd4!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.76),0 0 0 2px rgba(180,139,211,.18),0 4px 8px rgba(69,43,81,.11)!important}
+.collection-chip.is-locked:not(.is-next){opacity:.28;filter:grayscale(.78) saturate(.45)}
+.collection-tier{position:absolute;z-index:7;left:-3px;top:-5px;min-width:25px;height:18px;padding:0 5px;display:grid;place-items:center;border:2px solid #63377d;border-radius:999px;background:linear-gradient(180deg,#b77ad2,#8550a3);color:#fff;font-size:8px;font-weight:950;line-height:1;text-shadow:0 1px #553067;box-shadow:inset 0 2px rgba(255,255,255,.25),0 2px 3px rgba(70,45,72,.15)}
+.collection-lock{position:absolute;z-index:8;right:3px;bottom:2px;width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:rgba(82,61,83,.76);color:#fff;font-size:11px;font-weight:950;box-shadow:0 2px 4px rgba(52,38,53,.18)}
+
+/* The approved Toilet Buddy standalone render must actually win over the legacy atlas crop. */
+.cell[data-family='toilet-buddy'] .unit-visual::before{display:none!important}
+.cell[data-family='toilet-buddy'] .unit-art{display:block!important;opacity:1!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;filter:saturate(1.04) contrast(1.02) drop-shadow(0 4px 3px rgba(58,44,52,.13))!important}
+.collection-chip[data-family='toilet-buddy']::after{display:none!important}
+.collection-chip[data-family='toilet-buddy'] img{display:block!important;opacity:1!important;width:100%!important;height:100%!important;padding:4px!important;object-fit:contain!important;object-position:center!important;transform:scale(var(--collection-scale,1));filter:saturate(1.04) contrast(1.02) drop-shadow(0 2px 1px rgba(57,45,51,.13))}
+
+/* Higher chain tiers read as increasingly valuable without inventing new art. */
+.cell[data-chain-tier='4'],.cell[data-chain-tier='5']{background:linear-gradient(180deg,rgba(255,255,255,.26),transparent 26%),radial-gradient(circle at 50% 50%,#6fe1d8,#43c6c7 60%,#22aab2)!important}
+.cell[data-chain-tier='6'],.cell[data-chain-tier='7']{border-color:#5da4d0!important;background:linear-gradient(180deg,rgba(255,255,255,.29),transparent 24%),radial-gradient(circle at 50% 48%,#84dbef,#60bddb 60%,#3c96c4)!important;box-shadow:0 5px 0 #2f77a2,0 7px 12px rgba(44,76,107,.18),inset 0 3px 0 rgba(255,255,255,.34)!important}
+.cell[data-chain-tier='8']{border-color:#9f63ca!important;background:linear-gradient(180deg,rgba(255,255,255,.32),transparent 24%),radial-gradient(circle at 50% 48%,#d49bf0,#aa71d5 60%,#7b4ca7)!important;box-shadow:0 5px 0 #633886,0 0 0 2px rgba(255,225,122,.28),0 8px 15px rgba(77,48,98,.22),inset 0 3px 0 rgba(255,255,255,.32)!important}
+.cell[data-chain-tier='8']::after{content:'✦';position:absolute;z-index:3;right:8%;top:8%;color:#fff2a3;font-size:13px;text-shadow:0 0 6px rgba(255,231,119,.75);pointer-events:none}
+
+.has-new-discovery .board-frame{animation:bmBoardDiscovery .58s ease-out}
+@keyframes bmBoardDiscovery{0%{filter:brightness(1);transform:scale(1)}35%{filter:brightness(1.08);transform:scale(1.008)}100%{filter:brightness(1);transform:scale(1)}}
+
+@media(max-width:700px){
+  .chain-progress{width:calc(100% - 8px);grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:4px;margin:2px auto 7px;padding:5px 6px;border-radius:14px}
+  .chain-progress__step{padding:5px 6px;border-radius:10px}
+  .chain-progress__label{font-size:7px}
+  .chain-progress strong{font-size:9px}
+  .chain-progress strong b{min-width:22px;height:17px;font-size:8px}
+  .chain-progress__arrow{font-size:15px}
+  .discovery-toast{top:52px;min-width:230px;padding:9px 13px;font-size:11px}
+  .collection-tier{min-width:22px;height:16px;font-size:7px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .discovery-toast,.has-new-discovery .board-frame{animation:none!important}
+  .discovery-toast{opacity:1}
+}
