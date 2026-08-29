@@ -2,17 +2,15 @@ import {
   BOARD_SIZE,
   DEADLOCK_RESCUE_REFUND,
   FAMILIES,
-  FIRST_MISSION_REWARD,
-  FIRST_MISSION_TARGET,
   MAX_RUNTIME_TIER,
+  MISSION_TRACK,
   SPAWN_COST,
   discoveryBonusForTier,
   familyById,
-  familyByTier,
   mergeRewardForTier,
   nextFamilyFor
 } from './catalog.js';
-import type { Cell, FamilyId, GameState, MergeResult, OnboardingPhase, Unit } from './types.js';
+import type { Cell, FamilyId, GameState, MergeResult, MissionDefinition, OnboardingPhase, Unit } from './types.js';
 
 let sequence = 0;
 
@@ -34,17 +32,16 @@ function normalizeLegacyUnit(candidate: unknown): Unit | null {
 
 export function createInitialState(): GameState {
   const cells: Cell[] = Array.from({ length: BOARD_SIZE }, () => null);
-  // Two ready Tier-1 pairs make the first session immediately understandable.
   for (let index = 0; index < 4; index += 1) cells[index] = createUnit('toilet-buddy');
   return {
-    version: 3,
+    version: 4,
     cells,
     coins: 100,
     xp: 0,
     merges: 0,
     spawns: 0,
     maxDiscoveredTier: 1,
-    missionClaimed: false,
+    missionIndex: 0,
     selectedIndex: null,
     messageKey: 'message.welcome'
   };
@@ -53,7 +50,7 @@ export function createInitialState(): GameState {
 export function sanitizeState(candidate: unknown): GameState | null {
   if (!candidate || typeof candidate !== 'object') return null;
   const state = candidate as Record<string, unknown>;
-  if ((state.version !== 1 && state.version !== 2 && state.version !== 3)
+  if ((state.version !== 1 && state.version !== 2 && state.version !== 3 && state.version !== 4)
     || !Array.isArray(state.cells)
     || state.cells.length !== BOARD_SIZE) return null;
   if (typeof state.coins !== 'number' || typeof state.xp !== 'number' || typeof state.merges !== 'number') return null;
@@ -70,23 +67,30 @@ export function sanitizeState(candidate: unknown): GameState | null {
   }
 
   const discoveredFromBoard = cells.reduce((highest, cell) => Math.max(highest, cell?.tier ?? 1), 1);
-  const savedDiscovered = state.version === 3 && typeof state.maxDiscoveredTier === 'number'
+  const savedDiscovered = (state.version === 3 || state.version === 4) && typeof state.maxDiscoveredTier === 'number'
     ? Math.max(1, Math.min(MAX_RUNTIME_TIER, Math.floor(state.maxDiscoveredTier)))
     : discoveredFromBoard;
-  const spawns = (state.version === 2 || state.version === 3) && typeof state.spawns === 'number'
+  const spawns = (state.version === 2 || state.version === 3 || state.version === 4) && typeof state.spawns === 'number'
     ? Math.max(0, Math.floor(state.spawns))
     : 0;
-  const missionClaimed = (state.version === 2 || state.version === 3) && state.missionClaimed === true;
+
+  let missionIndex = 0;
+  if (state.version === 4 && typeof state.missionIndex === 'number') {
+    missionIndex = Math.max(0, Math.min(MISSION_TRACK.length, Math.floor(state.missionIndex)));
+  } else if ((state.version === 2 || state.version === 3) && state.missionClaimed === true) {
+    // Preserve the old one-off mission as the first completed step in the new track.
+    missionIndex = 1;
+  }
 
   return {
-    version: 3,
+    version: 4,
     cells,
     coins: Math.max(0, Math.floor(state.coins)),
     xp: Math.max(0, Math.floor(state.xp)),
     merges: Math.max(0, Math.floor(state.merges)),
     spawns,
     maxDiscoveredTier: Math.max(discoveredFromBoard, savedDiscovered),
-    missionClaimed,
+    missionIndex,
     selectedIndex: null,
     messageKey: null
   };
@@ -102,7 +106,6 @@ export function spawnUnit(state: GameState, _random = Math.random, free = false)
   if (target === undefined) return state;
 
   const cells = state.cells.slice();
-  // Core Brain Box always feeds the bottom of the chain. Higher characters are earned by merging.
   cells[target] = createUnit('toilet-buddy');
   return {
     ...state,
@@ -168,7 +171,7 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
       xp: state.xp + nextFamily.tier * 8,
       coins: state.coins + coinReward,
       maxDiscoveredTier: Math.max(state.maxDiscoveredTier, nextFamily.tier),
-      messageKey: 'message.merged'
+      messageKey: firstDiscovery ? 'message.discovered' : 'message.merged'
     },
     changed: true,
     merged: true
@@ -195,11 +198,6 @@ export function findFirstMergePair(state: GameState): readonly [number, number] 
   return null;
 }
 
-/**
- * Returns the highest-tier merge currently available. This is presentation-safe:
- * it does not mutate state and gives the UI a deterministic pair to hint when the
- * board is crowded or the player stalls.
- */
 export function findBestMergePair(state: GameState): readonly [number, number] | null {
   let best: readonly [number, number] | null = null;
   let bestTier = -1;
@@ -233,14 +231,8 @@ export function isDeadlocked(state: GameState): boolean {
 export function rescueDeadlock(state: GameState): GameState {
   if (!isDeadlocked(state)) return state;
 
-  // In a sequential chain, terminal pieces are the actual deadlock blockers:
-  // they can occupy cells forever but can never merge. Preserve lower-tier
-  // pieces whenever possible because they still carry future merge potential.
   const terminalIndex = state.cells.findIndex((cell) => cell?.tier === MAX_RUNTIME_TIER);
   let targetIndex = terminalIndex;
-
-  // Defensive fallback for a future ruleset where a deadlock could exist
-  // without terminal pieces: clear the highest tier, not the weakest progress.
   if (targetIndex < 0) {
     let highestTier = Number.NEGATIVE_INFINITY;
     state.cells.forEach((cell, index) => {
@@ -263,18 +255,44 @@ export function rescueDeadlock(state: GameState): GameState {
   };
 }
 
+export function activeMission(state: GameState): MissionDefinition | null {
+  return MISSION_TRACK[state.missionIndex] ?? null;
+}
+
+export function missionValue(state: GameState, mission: MissionDefinition): number {
+  if (mission.kind === 'merges') return state.merges;
+  if (mission.kind === 'spawns') return state.spawns;
+  return state.maxDiscoveredTier;
+}
+
+export function missionProgress(state: GameState, mission: MissionDefinition): number {
+  return Math.min(mission.target, missionValue(state, mission));
+}
+
+export function canClaimCurrentMission(state: GameState): boolean {
+  const mission = activeMission(state);
+  return Boolean(mission && missionValue(state, mission) >= mission.target);
+}
+
+export function claimCurrentMission(state: GameState): GameState {
+  const mission = activeMission(state);
+  if (!mission || !canClaimCurrentMission(state)) return state;
+  return {
+    ...state,
+    coins: state.coins + mission.reward,
+    missionIndex: Math.min(MISSION_TRACK.length, state.missionIndex + 1),
+    messageKey: state.missionIndex + 1 >= MISSION_TRACK.length ? 'message.missionTrackComplete' : 'message.missionClaimed'
+  };
+}
+
+/** Compatibility wrappers for older call sites/tests while the UI moved to the full track. */
 export function canClaimFirstMission(state: GameState): boolean {
-  return state.merges >= FIRST_MISSION_TARGET && !state.missionClaimed;
+  return state.missionIndex === 0 && canClaimCurrentMission(state);
 }
 
 export function claimFirstMission(state: GameState): GameState {
-  if (!canClaimFirstMission(state)) return state;
-  return {
-    ...state,
-    coins: state.coins + FIRST_MISSION_REWARD,
-    missionClaimed: true,
-    messageKey: 'message.missionClaimed'
-  };
+  if (state.missionIndex !== 0) return state;
+  return claimCurrentMission(state);
 }
 
 export function onboardingPhase(state: GameState): OnboardingPhase {
