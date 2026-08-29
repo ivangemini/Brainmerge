@@ -5,35 +5,43 @@ import {
   FIRST_MISSION_REWARD,
   FIRST_MISSION_TARGET,
   MAX_RUNTIME_TIER,
-  SPAWN_COST
+  SPAWN_COST,
+  familyById,
+  familyByTier,
+  nextFamilyFor
 } from './catalog.js';
 import type { Cell, FamilyId, GameState, MergeResult, OnboardingPhase, Unit } from './types.js';
 
 let sequence = 0;
 
-function createUnit(familyId: FamilyId, tier = 1): Unit {
+function createUnit(familyId: FamilyId): Unit {
+  const family = familyById.get(familyId);
+  if (!family) throw new Error(`Unknown family: ${familyId}`);
   sequence += 1;
-  return { id: `${familyId}-${Date.now().toString(36)}-${sequence.toString(36)}`, familyId, tier };
+  return { id: `${familyId}-${Date.now().toString(36)}-${sequence.toString(36)}`, familyId, tier: family.tier };
+}
+
+function normalizeLegacyUnit(candidate: unknown): Unit | null {
+  if (!candidate || typeof candidate !== 'object') return null;
+  const unit = candidate as Partial<Unit>;
+  if (typeof unit.id !== 'string' || typeof unit.familyId !== 'string') return null;
+  const family = FAMILIES.find((entry) => entry.id === unit.familyId);
+  if (!family) return null;
+  return { id: unit.id, familyId: family.id, tier: family.tier };
 }
 
 export function createInitialState(): GameState {
   const cells: Cell[] = Array.from({ length: BOARD_SIZE }, () => null);
-  const starters: FamilyId[] = [
-    'shark-sneakers', 'shark-sneakers',
-    'tung-wood', 'tung-wood',
-    'camera-dude', 'camera-dude',
-    'coffee-ballerina', 'coffee-ballerina'
-  ];
-  starters.forEach((familyId, index) => {
-    cells[index] = createUnit(familyId);
-  });
+  // Two ready Tier-1 pairs make the first session immediately understandable.
+  for (let index = 0; index < 4; index += 1) cells[index] = createUnit('toilet-buddy');
   return {
-    version: 2,
+    version: 3,
     cells,
     coins: 100,
     xp: 0,
     merges: 0,
     spawns: 0,
+    maxDiscoveredTier: 1,
     missionClaimed: false,
     selectedIndex: null,
     messageKey: 'message.welcome'
@@ -43,51 +51,57 @@ export function createInitialState(): GameState {
 export function sanitizeState(candidate: unknown): GameState | null {
   if (!candidate || typeof candidate !== 'object') return null;
   const state = candidate as Record<string, unknown>;
-  if ((state.version !== 1 && state.version !== 2) || !Array.isArray(state.cells) || state.cells.length !== BOARD_SIZE) return null;
+  if ((state.version !== 1 && state.version !== 2 && state.version !== 3)
+    || !Array.isArray(state.cells)
+    || state.cells.length !== BOARD_SIZE) return null;
   if (typeof state.coins !== 'number' || typeof state.xp !== 'number' || typeof state.merges !== 'number') return null;
 
-  const validCells = state.cells.every((cell) => {
-    if (cell === null) return true;
-    if (!cell || typeof cell !== 'object') return false;
-    const unit = cell as Partial<Unit>;
-    return typeof unit.id === 'string'
-      && FAMILIES.some((family) => family.id === unit.familyId)
-      && typeof unit.tier === 'number'
-      && Number.isInteger(unit.tier)
-      && unit.tier >= 1
-      && unit.tier <= MAX_RUNTIME_TIER;
-  });
-  if (!validCells) return null;
+  const cells: Cell[] = [];
+  for (const cell of state.cells) {
+    if (cell === null) {
+      cells.push(null);
+      continue;
+    }
+    const normalized = normalizeLegacyUnit(cell);
+    if (!normalized) return null;
+    cells.push(normalized);
+  }
 
-  const spawns = state.version === 2 && typeof state.spawns === 'number' ? Math.max(0, Math.floor(state.spawns)) : 0;
-  const missionClaimed = state.version === 2 && state.missionClaimed === true;
+  const discoveredFromBoard = cells.reduce((highest, cell) => Math.max(highest, cell?.tier ?? 1), 1);
+  const savedDiscovered = state.version === 3 && typeof state.maxDiscoveredTier === 'number'
+    ? Math.max(1, Math.min(MAX_RUNTIME_TIER, Math.floor(state.maxDiscoveredTier)))
+    : discoveredFromBoard;
+  const spawns = (state.version === 2 || state.version === 3) && typeof state.spawns === 'number'
+    ? Math.max(0, Math.floor(state.spawns))
+    : 0;
+  const missionClaimed = (state.version === 2 || state.version === 3) && state.missionClaimed === true;
 
   return {
-    version: 2,
-    cells: state.cells as Cell[],
+    version: 3,
+    cells,
     coins: Math.max(0, Math.floor(state.coins)),
     xp: Math.max(0, Math.floor(state.xp)),
     merges: Math.max(0, Math.floor(state.merges)),
     spawns,
+    maxDiscoveredTier: Math.max(discoveredFromBoard, savedDiscovered),
     missionClaimed,
     selectedIndex: null,
     messageKey: null
   };
 }
 
-export function spawnUnit(state: GameState, random = Math.random, free = false): GameState {
+export function spawnUnit(state: GameState, _random = Math.random, free = false): GameState {
   const cost = free ? 0 : SPAWN_COST;
   if (state.coins < cost) return { ...state, messageKey: 'message.notEnoughCoins' };
   const emptyIndexes = state.cells.flatMap((cell, index) => (cell === null ? [index] : []));
   if (emptyIndexes.length === 0) return { ...state, messageKey: 'message.boardFull' };
 
-  const familyIndex = Math.min(FAMILIES.length - 1, Math.floor(random() * FAMILIES.length));
-  const family = FAMILIES[familyIndex];
   const target = emptyIndexes[0];
-  if (!family || target === undefined) return state;
+  if (target === undefined) return state;
 
   const cells = state.cells.slice();
-  cells[target] = createUnit(family.id, 1);
+  // Core Brain Box always feeds the bottom of the chain. Higher characters are earned by merging.
+  cells[target] = createUnit('toilet-buddy');
   return {
     ...state,
     cells,
@@ -118,7 +132,7 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
     };
   }
 
-  if (target.familyId !== source.familyId || target.tier !== source.tier) {
+  if (target.familyId !== source.familyId) {
     return {
       state: { ...state, selectedIndex: null, messageKey: 'message.cannotMerge' },
       changed: false,
@@ -127,7 +141,8 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
     };
   }
 
-  if (source.tier >= MAX_RUNTIME_TIER) {
+  const nextFamily = nextFamilyFor(source.familyId);
+  if (!nextFamily) {
     return {
       state: { ...state, selectedIndex: null, messageKey: 'message.nextFormNeeded' },
       changed: false,
@@ -136,17 +151,17 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
     };
   }
 
-  const nextTier = source.tier + 1;
   cells[from] = null;
-  cells[to] = createUnit(source.familyId, nextTier);
+  cells[to] = createUnit(nextFamily.id);
   return {
     state: {
       ...state,
       cells,
       selectedIndex: null,
       merges: state.merges + 1,
-      xp: state.xp + nextTier * 8,
-      coins: state.coins + nextTier * 4,
+      xp: state.xp + nextFamily.tier * 8,
+      coins: state.coins + nextFamily.tier * 4,
+      maxDiscoveredTier: Math.max(state.maxDiscoveredTier, nextFamily.tier),
       messageKey: 'message.merged'
     },
     changed: true,
@@ -160,7 +175,7 @@ export function selectCell(state: GameState, index: number | null): GameState {
 }
 
 export function canMerge(a: Cell, b: Cell): boolean {
-  return Boolean(a && b && a.familyId === b.familyId && a.tier === b.tier && a.tier < MAX_RUNTIME_TIER);
+  return Boolean(a && b && a.familyId === b.familyId && nextFamilyFor(a.familyId));
 }
 
 export function findFirstMergePair(state: GameState): readonly [number, number] | null {
