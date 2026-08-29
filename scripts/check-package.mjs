@@ -47,6 +47,63 @@ async function walk(target) {
   return files;
 }
 
+function validateWebp(buffer, relative) {
+  if (buffer.length < 20) return `${relative}: WebP file is too short`;
+  if (buffer.toString('ascii', 0, 4) !== 'RIFF' || buffer.toString('ascii', 8, 12) !== 'WEBP') {
+    return `${relative}: invalid RIFF/WEBP signature`;
+  }
+
+  const declaredBytes = buffer.readUInt32LE(4) + 8;
+  if (declaredBytes !== buffer.length) {
+    return `${relative}: RIFF declares ${declaredBytes} bytes but file contains ${buffer.length}`;
+  }
+
+  let cursor = 12;
+  let chunks = 0;
+  while (cursor < buffer.length) {
+    if (cursor + 8 > buffer.length) return `${relative}: truncated WebP chunk header at byte ${cursor}`;
+    const chunkSize = buffer.readUInt32LE(cursor + 4);
+    const payloadEnd = cursor + 8 + chunkSize;
+    if (payloadEnd > buffer.length) return `${relative}: WebP chunk at byte ${cursor} overruns file boundary`;
+    cursor = payloadEnd + (chunkSize % 2);
+    chunks += 1;
+  }
+
+  if (cursor !== buffer.length) return `${relative}: malformed WebP chunk padding`;
+  if (chunks === 0) return `${relative}: WebP contains no chunks`;
+  return null;
+}
+
+function validatePng(buffer, relative) {
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (buffer.length < 33 || !buffer.subarray(0, 8).equals(signature)) return `${relative}: invalid PNG signature`;
+
+  let cursor = 8;
+  let sawIhdr = false;
+  let sawIend = false;
+  while (cursor < buffer.length) {
+    if (cursor + 12 > buffer.length) return `${relative}: truncated PNG chunk header at byte ${cursor}`;
+    const chunkSize = buffer.readUInt32BE(cursor);
+    const type = buffer.toString('ascii', cursor + 4, cursor + 8);
+    const end = cursor + 12 + chunkSize;
+    if (end > buffer.length) return `${relative}: PNG ${type} chunk overruns file boundary`;
+    if (!sawIhdr && type !== 'IHDR') return `${relative}: PNG first chunk must be IHDR`;
+    if (type === 'IHDR') sawIhdr = true;
+    if (type === 'IEND') {
+      if (chunkSize !== 0) return `${relative}: PNG IEND chunk must be empty`;
+      sawIend = true;
+      cursor = end;
+      break;
+    }
+    cursor = end;
+  }
+
+  if (!sawIhdr) return `${relative}: PNG is missing IHDR`;
+  if (!sawIend) return `${relative}: PNG is missing IEND`;
+  if (cursor !== buffer.length) return `${relative}: trailing bytes after PNG IEND`;
+  return null;
+}
+
 if (!await exists(distPath)) throw new Error('dist/ does not exist; package the game before running integrity check');
 const files = await walk(distPath);
 const relativeFiles = new Set(files.map((file) => path.relative(distPath, file).replaceAll(path.sep, '/')));
@@ -83,6 +140,15 @@ for (const file of files.filter((entry) => entry.endsWith('.js'))) {
   if (/\bdebugger\s*;/.test(js)) failures.push(`debugger statement found in ${path.relative(distPath, file)}`);
 }
 
+for (const file of files.filter((entry) => /\.(?:webp|png)$/i.test(entry))) {
+  const relative = path.relative(distPath, file).replaceAll(path.sep, '/');
+  const buffer = await readFile(file);
+  const failure = file.toLowerCase().endsWith('.webp')
+    ? validateWebp(buffer, relative)
+    : validatePng(buffer, relative);
+  if (failure) failures.push(failure);
+}
+
 const [en, ru] = await Promise.all([
   JSON.parse(await readFile(path.join(distPath, 'locales/en.json'), 'utf8')),
   JSON.parse(await readFile(path.join(distPath, 'locales/ru.json'), 'utf8'))
@@ -94,5 +160,6 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`Package integrity OK: platform=${platform}, files=${files.length}, htmlRefs=${htmlReferences.length}`);
+  const rasterCount = files.filter((entry) => /\.(?:webp|png)$/i.test(entry)).length;
+  console.log(`Package integrity OK: platform=${platform}, files=${files.length}, htmlRefs=${htmlReferences.length}, rasters=${rasterCount}`);
 }
