@@ -130,7 +130,7 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
   const rawLastAccrual = state.version === 5 && typeof state.lastAccrualAt === 'number' && Number.isFinite(state.lastAccrualAt)
     ? Math.max(0, Math.floor(state.lastAccrualAt))
     : safeNow;
-  // A future timestamp must not freeze production or create negative rewards after clock rollback.
+  // A future persisted timestamp is normalized at load so corrupted clocks do not freeze progression.
   const lastAccrualAt = rawLastAccrual > safeNow ? safeNow : rawLastAccrual;
   const incomeRemainder = state.version === 5 && typeof state.incomeRemainder === 'number' && Number.isFinite(state.incomeRemainder)
     ? Math.max(0, Math.min(0.999999, state.incomeRemainder))
@@ -299,14 +299,15 @@ function accrueForSeconds(state: GameState, elapsedSeconds: number, destination:
 
 export function accrueOnlineIncome(state: GameState, now = Date.now()): GameState {
   const safeNow = Math.max(0, Math.floor(now));
-  if (safeNow <= state.lastAccrualAt) return { ...state, lastAccrualAt: safeNow };
+  // Never move the accounting cursor backwards: a device clock rollback must not let elapsed time be credited twice later.
+  if (safeNow <= state.lastAccrualAt) return state;
   const elapsedSeconds = (safeNow - state.lastAccrualAt) / 1000;
   return { ...accrueForSeconds(state, elapsedSeconds, 'coins'), lastAccrualAt: safeNow };
 }
 
 export function accrueOfflineIncome(state: GameState, now = Date.now()): GameState {
   const safeNow = Math.max(0, Math.floor(now));
-  if (safeNow <= state.lastAccrualAt) return { ...state, lastAccrualAt: safeNow };
+  if (safeNow <= state.lastAccrualAt) return state;
   const elapsedSeconds = (safeNow - state.lastAccrualAt) / 1000;
   const capSeconds = offlineHoursForLevel(state.upgrades.offline) * 60 * 60;
   const creditedSeconds = Math.min(elapsedSeconds, capSeconds);
