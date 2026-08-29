@@ -6,8 +6,10 @@ import {
   FIRST_MISSION_TARGET,
   MAX_RUNTIME_TIER,
   SPAWN_COST,
+  discoveryBonusForTier,
   familyById,
   familyByTier,
+  mergeRewardForTier,
   nextFamilyFor
 } from './catalog.js';
 import type { Cell, FamilyId, GameState, MergeResult, OnboardingPhase, Unit } from './types.js';
@@ -151,6 +153,10 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
     };
   }
 
+  const firstDiscovery = nextFamily.tier > state.maxDiscoveredTier;
+  const coinReward = mergeRewardForTier(nextFamily.tier)
+    + (firstDiscovery ? discoveryBonusForTier(nextFamily.tier) : 0);
+
   cells[from] = null;
   cells[to] = createUnit(nextFamily.id);
   return {
@@ -160,7 +166,7 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
       selectedIndex: null,
       merges: state.merges + 1,
       xp: state.xp + nextFamily.tier * 8,
-      coins: state.coins + nextFamily.tier * 4,
+      coins: state.coins + coinReward,
       maxDiscoveredTier: Math.max(state.maxDiscoveredTier, nextFamily.tier),
       messageKey: 'message.merged'
     },
