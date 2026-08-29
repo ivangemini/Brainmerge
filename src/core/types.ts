@@ -28,17 +28,43 @@ export interface MissionDefinition {
   textKey: string;
 }
 
+export type UpgradeId = 'boxBaseTier' | 'luckyDrop' | 'income' | 'offline';
+
+export interface UpgradeLevels {
+  boxBaseTier: number;
+  luckyDrop: number;
+  income: number;
+  offline: number;
+}
+
+export interface UpgradeDefinition {
+  id: UpgradeId;
+  titleKey: string;
+  descriptionKey: string;
+  costs: readonly number[];
+}
+
 export interface GameState {
-  version: 4;
+  version: 5;
   cells: Cell[];
   coins: number;
   xp: number;
   merges: number;
+  /** All Brain Box openings, including rewarded. Used by mission progress. */
   spawns: number;
+  /** Paid Brain Box purchases only. Drives escalating paid-box price. */
+  paidBoxes: number;
   /** Highest core merge tier ever created; keeps Collection discovery persistent. */
   maxDiscoveredTier: number;
   /** Index of the active mission in the deterministic first-cycle mission track. */
   missionIndex: number;
+  upgrades: UpgradeLevels;
+  /** Fractional passive income carried between deterministic accrual ticks. */
+  incomeRemainder: number;
+  /** Last timestamp already accounted for by online/offline passive income. */
+  lastAccrualAt: number;
+  /** Offline production waiting for an explicit player collect action. */
+  pendingOfflineCoins: number;
   selectedIndex: number | null;
   messageKey: string | null;
 }
