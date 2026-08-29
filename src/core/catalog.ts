@@ -1,4 +1,4 @@
-import type { FamilyId } from './types.js';
+import type { FamilyId, MissionDefinition } from './types.js';
 
 export interface UnitPresentation {
   /** Perceived runtime size relative to the Shark Sneakers baseline. */
@@ -28,9 +28,26 @@ export const BOARD_SIZE = BOARD_COLUMNS * BOARD_ROWS;
  * self-sustaining with merge income while still making coins meaningful.
  */
 export const SPAWN_COST = 12;
-export const FIRST_MISSION_TARGET = 6;
-export const FIRST_MISSION_REWARD = 80;
 export const DEADLOCK_RESCUE_REFUND = 5;
+
+/**
+ * Deterministic first-cycle goals. They intentionally alternate actions and
+ * discovery milestones so the player always has one clear short-term target
+ * without adding another currency or meta screen.
+ */
+export const MISSION_TRACK: readonly MissionDefinition[] = [
+  { id: 'merge-6', kind: 'merges', target: 6, reward: 80, titleKey: 'mission.merge6.title', textKey: 'mission.merge6.text' },
+  { id: 'discover-4', kind: 'discover', target: 4, reward: 100, titleKey: 'mission.discover4.title', textKey: 'mission.discover4.text' },
+  { id: 'spawn-12', kind: 'spawns', target: 12, reward: 90, titleKey: 'mission.spawn12.title', textKey: 'mission.spawn12.text' },
+  { id: 'discover-5', kind: 'discover', target: 5, reward: 130, titleKey: 'mission.discover5.title', textKey: 'mission.discover5.text' },
+  { id: 'merge-30', kind: 'merges', target: 30, reward: 150, titleKey: 'mission.merge30.title', textKey: 'mission.merge30.text' },
+  { id: 'discover-6', kind: 'discover', target: 6, reward: 190, titleKey: 'mission.discover6.title', textKey: 'mission.discover6.text' },
+  { id: 'discover-7', kind: 'discover', target: 7, reward: 260, titleKey: 'mission.discover7.title', textKey: 'mission.discover7.text' },
+  { id: 'discover-8', kind: 'discover', target: 8, reward: 400, titleKey: 'mission.discover8.title', textKey: 'mission.discover8.text' }
+] as const;
+
+export const FIRST_MISSION_TARGET = MISSION_TRACK[0]!.target;
+export const FIRST_MISSION_REWARD = MISSION_TRACK[0]!.reward;
 
 /** One-time rewards for first discovering a tier. Tier 2 is already effectively gifted by the starter board. */
 export const DISCOVERY_BONUS_BY_TIER: Readonly<Record<number, number>> = {
