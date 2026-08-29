@@ -15,22 +15,24 @@ import {
   sanitizeState,
   spawnUnit
 } from '../build/core/game.js';
-import { assetForUnit, BOARD_SIZE, FAMILIES, FIRST_MISSION_REWARD, visualFormForTier } from '../build/core/catalog.js';
+import { BOARD_SIZE, FAMILIES, FIRST_MISSION_REWARD, MAX_RUNTIME_TIER, nextFamilyFor } from '../build/core/catalog.js';
 import { localeFromLanguage } from '../build/i18n/i18n.js';
 
-test('visual form changes every three tiers', () => {
-  assert.equal(visualFormForTier(1), 1);
-  assert.equal(visualFormForTier(3), 1);
-  assert.equal(visualFormForTier(4), 2);
-  assert.equal(visualFormForTier(6), 2);
-  assert.equal(visualFormForTier(7), 3);
-});
-
-test('approved Toilet Buddy Form A is used for tiers 1-3', () => {
-  const expected = './public/assets/characters/toilet-buddy-form-a.webp';
-  assert.equal(assetForUnit('toilet-buddy', 1), expected);
-  assert.equal(assetForUnit('toilet-buddy', 2), expected);
-  assert.equal(assetForUnit('toilet-buddy', 3), expected);
+test('core progression is one ordered eight-character merge chain', () => {
+  assert.deepEqual(FAMILIES.map((family) => family.id), [
+    'toilet-buddy',
+    'camera-dude',
+    'sigma-rock',
+    'rizz-head',
+    'shark-sneakers',
+    'crocodile-bomber',
+    'coffee-ballerina',
+    'tung-wood'
+  ]);
+  assert.equal(MAX_RUNTIME_TIER, 8);
+  assert.equal(nextFamilyFor('toilet-buddy')?.id, 'camera-dude');
+  assert.equal(nextFamilyFor('coffee-ballerina')?.id, 'tung-wood');
+  assert.equal(nextFamilyFor('tung-wood'), null);
 });
 
 test('runtime character presentation stays inside safe normalization bounds', () => {
@@ -42,22 +44,25 @@ test('runtime character presentation stays inside safe normalization bounds', ()
   }
 });
 
-test('matching family and tier merge into next tier', () => {
+test('two identical characters merge into the next character identity', () => {
   const state = createInitialState();
   const result = moveOrMerge(state, 0, 1);
   assert.equal(result.merged, true);
   assert.equal(result.state.cells[0], null);
+  assert.equal(result.state.cells[1]?.familyId, 'camera-dude');
   assert.equal(result.state.cells[1]?.tier, 2);
+  assert.equal(result.state.maxDiscoveredTier, 2);
   assert.equal(result.state.merges, 1);
 });
 
-test('different units do not merge', () => {
-  const state = createInitialState();
-  const result = moveOrMerge(state, 0, 2);
+test('different characters do not merge', () => {
+  const base = createInitialState();
+  const camera = moveOrMerge(base, 0, 1).state;
+  const result = moveOrMerge(camera, 1, 2);
   assert.equal(result.merged, false);
   assert.equal(result.reason, 'mismatch');
-  assert.equal(result.state.cells[0]?.familyId, 'shark-sneakers');
-  assert.equal(result.state.cells[2]?.familyId, 'tung-wood');
+  assert.equal(result.state.cells[1]?.familyId, 'camera-dude');
+  assert.equal(result.state.cells[2]?.familyId, 'toilet-buddy');
 });
 
 test('unit can move into empty cell', () => {
@@ -65,48 +70,67 @@ test('unit can move into empty cell', () => {
   const result = moveOrMerge(state, 0, 10);
   assert.equal(result.changed, true);
   assert.equal(result.state.cells[0], null);
-  assert.equal(result.state.cells[10]?.familyId, 'shark-sneakers');
+  assert.equal(result.state.cells[10]?.familyId, 'toilet-buddy');
 });
 
-test('paid spawn consumes coins and increments spawn count', () => {
+test('paid Brain Box always spawns the bottom of the chain', () => {
   const state = createInitialState();
-  const next = spawnUnit(state, () => 0);
+  const next = spawnUnit(state, () => 0.99);
   assert.equal(next.coins, 90);
   assert.equal(next.spawns, 1);
-  assert.equal(next.cells[8]?.familyId, 'camera-dude');
+  assert.equal(next.cells[4]?.familyId, 'toilet-buddy');
+  assert.equal(next.cells[4]?.tier, 1);
 });
 
-test('rewarded spawn is free but still counts as spawn', () => {
+test('rewarded spawn is free but still feeds Tier 1', () => {
   const state = createInitialState();
-  const next = spawnUnit(state, () => 0, true);
+  const next = spawnUnit(state, () => 0.5, true);
   assert.equal(next.coins, state.coins);
   assert.equal(next.spawns, 1);
-  assert.equal(next.cells[8]?.familyId, 'camera-dude');
+  assert.equal(next.cells[4]?.familyId, 'toilet-buddy');
 });
 
-test('initial state always has a merge', () => {
+test('initial state always has an immediate merge', () => {
   const state = createInitialState();
+  assert.equal(state.cells.filter(Boolean).length, 4);
+  assert.ok(state.cells.filter(Boolean).every((cell) => cell?.familyId === 'toilet-buddy'));
   assert.equal(hasAnyMerge(state), true);
   assert.equal(isBoardFull(state), false);
 });
 
-test('version 1 save migrates to version 2 defaults', () => {
+test('legacy v2 save migrates families onto canonical chain tiers', () => {
   const current = createInitialState();
+  const cells = current.cells.slice();
+  cells[0] = { id: 'legacy-shark', familyId: 'shark-sneakers', tier: 1 };
   const legacy = {
-    version: 1,
-    cells: current.cells,
+    version: 2,
+    cells,
     coins: 55,
     xp: 22,
     merges: 3,
+    spawns: 4,
+    missionClaimed: false,
     selectedIndex: 1,
     messageKey: 'message.moved'
   };
   const migrated = sanitizeState(legacy);
-  assert.equal(migrated?.version, 2);
+  assert.equal(migrated?.version, 3);
   assert.equal(migrated?.coins, 55);
-  assert.equal(migrated?.spawns, 0);
-  assert.equal(migrated?.missionClaimed, false);
+  assert.equal(migrated?.spawns, 4);
+  assert.equal(migrated?.cells[0]?.familyId, 'shark-sneakers');
+  assert.equal(migrated?.cells[0]?.tier, 5);
+  assert.equal(migrated?.maxDiscoveredTier, 5);
   assert.equal(migrated?.selectedIndex, null);
+});
+
+test('collection discovery persists after lower characters are consumed', () => {
+  const first = moveOrMerge(createInitialState(), 0, 1).state;
+  const second = moveOrMerge(first, 2, 3).state;
+  const third = moveOrMerge(second, 1, 3).state;
+  assert.equal(third.cells[3]?.familyId, 'sigma-rock');
+  assert.equal(third.maxDiscoveredTier, 3);
+  const restored = sanitizeState(third);
+  assert.equal(restored?.maxDiscoveredTier, 3);
 });
 
 test('first mission reward can only be claimed once', () => {
@@ -121,9 +145,9 @@ test('first mission reward can only be claimed once', () => {
 
 test('deadlock rescue only activates on a full board with no merge', () => {
   const base = createInitialState();
-  const families = ['camera-dude', 'toilet-buddy', 'sigma-rock', 'rizz-head', 'shark-sneakers', 'crocodile-bomber', 'coffee-ballerina', 'tung-wood'];
-  const cells = Array.from({ length: BOARD_SIZE }, (_, index) => ({ id: `u-${index}`, familyId: families[index % families.length], tier: 3 }));
-  const deadlocked = { ...base, cells };
+  const top = FAMILIES[FAMILIES.length - 1];
+  const cells = Array.from({ length: BOARD_SIZE }, (_, index) => ({ id: `top-${index}`, familyId: top.id, tier: top.tier }));
+  const deadlocked = { ...base, cells, maxDiscoveredTier: top.tier };
   assert.equal(isDeadlocked(deadlocked), true);
   const rescued = rescueDeadlock(deadlocked);
   assert.equal(rescued.cells.filter(Boolean).length, BOARD_SIZE - 1);
