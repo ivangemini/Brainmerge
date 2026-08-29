@@ -67,7 +67,7 @@ export class GameView {
     const missionClaimable = canClaimFirstMission(state);
     const missionProgress = Math.min(state.merges, FIRST_MISSION_TARGET);
     const xpProgress = Math.round(playerLevelProgress(state.xp) * 100);
-    const bestFamily = familyByTier.get(state.maxDiscoveredTier) ?? FAMILIES[0];
+    const bestFamily = familyByTier.get(state.maxDiscoveredTier) ?? FAMILIES[0]!;
     const nextFamily = familyByTier.get(state.maxDiscoveredTier + 1) ?? null;
     const newlyDiscovered = this.lastDiscoveredTier !== null && state.maxDiscoveredTier > this.lastDiscoveredTier
       ? bestFamily
