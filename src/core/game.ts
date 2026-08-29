@@ -189,6 +189,29 @@ export function findFirstMergePair(state: GameState): readonly [number, number] 
   return null;
 }
 
+/**
+ * Returns the highest-tier merge currently available. This is presentation-safe:
+ * it does not mutate state and gives the UI a deterministic pair to hint when the
+ * board is crowded or the player stalls.
+ */
+export function findBestMergePair(state: GameState): readonly [number, number] | null {
+  let best: readonly [number, number] | null = null;
+  let bestTier = -1;
+  for (let i = 0; i < state.cells.length; i += 1) {
+    const a = state.cells[i];
+    if (!a) continue;
+    for (let j = i + 1; j < state.cells.length; j += 1) {
+      const b = state.cells[j] ?? null;
+      if (!canMerge(a, b)) continue;
+      if (a.tier > bestTier) {
+        best = [i, j] as const;
+        bestTier = a.tier;
+      }
+    }
+  }
+  return best;
+}
+
 export function hasAnyMerge(state: GameState): boolean {
   return findFirstMergePair(state) !== null;
 }
@@ -203,14 +226,25 @@ export function isDeadlocked(state: GameState): boolean {
 
 export function rescueDeadlock(state: GameState): GameState {
   if (!isDeadlocked(state)) return state;
-  let lowestTier = Number.POSITIVE_INFINITY;
-  let targetIndex = -1;
-  state.cells.forEach((cell, index) => {
-    if (cell && cell.tier < lowestTier) {
-      lowestTier = cell.tier;
-      targetIndex = index;
-    }
-  });
+
+  // In a sequential chain, terminal pieces are the actual deadlock blockers:
+  // they can occupy cells forever but can never merge. Preserve lower-tier
+  // pieces whenever possible because they still carry future merge potential.
+  const terminalIndex = state.cells.findIndex((cell) => cell?.tier === MAX_RUNTIME_TIER);
+  let targetIndex = terminalIndex;
+
+  // Defensive fallback for a future ruleset where a deadlock could exist
+  // without terminal pieces: clear the highest tier, not the weakest progress.
+  if (targetIndex < 0) {
+    let highestTier = Number.NEGATIVE_INFINITY;
+    state.cells.forEach((cell, index) => {
+      if (cell && cell.tier > highestTier) {
+        highestTier = cell.tier;
+        targetIndex = index;
+      }
+    });
+  }
+
   if (targetIndex < 0) return state;
   const cells = state.cells.slice();
   cells[targetIndex] = null;
