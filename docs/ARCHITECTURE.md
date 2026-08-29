@@ -9,12 +9,29 @@ Use dependency-light browser TypeScript + DOM/CSS. Keep deterministic gameplay/e
 - `src/i18n/` + `locales/` — EN/RU localization and locale normalization.
 - `src/platform/` — portal adapters, persistence, ads and lifecycle capability detection.
 - `src/feedback/` — non-authoritative audio/particle feedback.
-- `public/assets/` — runtime art derived from approved character assets.
+- `public/assets/` — runtime art derived from approved character/UI assets.
+- `public/code-ui.css` — primary code-first component geometry and structural skin.
 - `public/chain-polish.css` — sequential-chain presentation states.
 - `public/mission-journey.css` — first-cycle mission presentation.
-- `public/economy-loop.css` — production, offline reward and Brain Lab presentation.
+- `public/economy-loop.css` — production, offline reward and Brain Lab component styling.
+- `public/upgrade-art.css` — approved Brain Lab/offline raster presentation only; it must not own responsive panel visibility/order or live state.
 - `public/return-loop.css` — computed return-session/next-action presentation.
-- `public/accessibility.css` — focus-visible, coarse-pointer and touch-gesture hardening.
+- `public/mobile-runtime.css` — final responsive composition authority for compact/tablet/phone layouts.
+- `public/accessibility.css` — final focus-visible, coarse-pointer, touch-gesture and reduced-motion interaction layer.
+
+## UI ownership contract
+`GameView` owns live DOM structure and derives visible state from `GameState`: prices, levels, progress, lock reasons, affordability, labels, buttons and hit areas remain code-owned. Raster assets decorate those components; they never replace live UI with flattened screenshots.
+
+CSS responsibilities are intentionally layered:
+1. base/component geometry is code-driven;
+2. feature/polish layers may change appearance and feature-specific states;
+3. art layers may size/crop/filter approved raster assets but must not decide whether production components exist or where whole panels are ordered;
+4. `mobile-runtime.css` owns final responsive panel composition and ordering;
+5. `accessibility.css` is last so interaction affordances cannot be accidentally hidden by visual polish.
+
+`tests/ui-contract.test.mjs` protects this contract. It verifies stylesheet order, keeps upgrade art out of responsive composition, requires Mission/Collection/Brain Lab to remain reachable at compact breakpoints, and checks that Brain Lab state/actions still originate from code.
+
+The board is keyboard-operable without hidden economy actions. Enter/Space on a focused cell reuses the same select/move/merge path as pointer input; arrow keys move focus by board geometry; focus is restored after code-driven DOM rerenders; Escape clears selection. There is no global Space shortcut that spends coins.
 
 ## Canonical state ownership
 `GameState` is the only authoritative progression/economy snapshot. UI never owns currency, production, upgrade or discovery truth. Platform adapters persist the same state; they do not modify gameplay rules.
@@ -111,7 +128,7 @@ Common runtime depends only on `PlatformAdapter`.
 `index.html` uses an `auto` platform hint. Distribution packages may explicitly select Yandex or use `?platform=yandex` for integration testing. Future portals add adapters rather than gameplay forks.
 
 ## Current gameplay runtime
-- 6x5 touch/mouse board;
+- 6x5 touch/mouse/keyboard board;
 - one canonical T1 -> T8 character chain;
 - two identical characters merge into the next identity;
 - per-tier passive coin production with every merge production-positive;
@@ -128,7 +145,7 @@ Common runtime depends only on `PlatformAdapter`.
 - save migration through v5;
 - periodic autosave and lifecycle cloud flush;
 - EN/RU player-facing string parity;
-- responsive touch/mouse UI, focus-visible/coarse-pointer hardening and reduced-motion handling.
+- responsive code-driven UI, focus-visible/coarse-pointer hardening and reduced-motion handling.
 
 ## Current content boundary
 The chain ends at T8 Tung Wood. Toilet Buddy has approved standalone runtime art. Camera Dude through Tung Wood still use the shared character atlas until their approved standalone assets are integrated.
