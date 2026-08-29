@@ -58,7 +58,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     id: 'shark-sneakers',
     nameKey: 'character.sharkSneakers',
     assetByForm: { 1: BASE_CHARACTER_ATLAS },
-    presentation: { scale: 1.04, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
+    presentation: { scale: 0.90, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
   },
   {
     id: 'crocodile-bomber',
