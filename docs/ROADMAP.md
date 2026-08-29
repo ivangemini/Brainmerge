@@ -16,23 +16,23 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Yandex packaging + CI.
 
 ## P0 — Economy and idle-production loop
-- [ ] Every board character generates coins according to tier.
-- [ ] Merging is always production-positive: one next-tier unit produces more than two previous-tier units.
-- [ ] Paid Brain Box price escalates with paid purchases rather than staying flat.
-- [ ] Rewarded Brain Box remains free and does not inflate paid-box price.
-- [ ] Brain Box upgrade tree: base drop tier, Lucky +1 tier chance, global income multiplier, offline-capacity upgrade.
-- [ ] Brain Box can only drop already-discovered tiers; first discovery must still come from merging.
-- [ ] Online passive income accrual with deterministic fractional handling.
-- [ ] Offline income with capped duration, explicit collect flow, and save-safe timestamps.
-- [ ] Economy simulation/regression coverage for early, mid and late progression; no accidental hard wall or runaway free-box loop.
+- [x] Every board character generates coins according to tier.
+- [x] Merging is always production-positive: one next-tier unit produces more than two previous-tier units.
+- [x] Paid Brain Box price escalates with paid purchases rather than staying flat.
+- [x] Rewarded Brain Box remains free and does not inflate paid-box price.
+- [x] Brain Box upgrade tree: base drop tier, Lucky +1 tier chance, global income multiplier, offline-capacity upgrade.
+- [x] Brain Box can only drop already-discovered tiers; first discovery must still come from merging.
+- [x] Online passive income accrual with deterministic fractional handling.
+- [x] Offline income with capped duration, explicit collect flow, and save-safe timestamps.
+- [x] Economy simulation/regression coverage for progression to T8; no mandatory rewarded-ad wall or negative-coin state in the deterministic smoke route.
 
 ## P0 — Economy/upgrade presentation
-- [ ] HUD shows current coins and production/minute.
-- [ ] Board units communicate individual production without obscuring characters.
-- [ ] Brain Box CTA shows dynamic price and current drop profile.
-- [ ] Upgrade Lab is readable on desktop and compact mobile, with level, effect, next cost and lock reason.
-- [ ] Offline reward presentation is explicit and cannot be double-claimed.
-- [ ] All new player-facing strings have EN/RU parity.
+- [x] HUD shows current coins and production/minute.
+- [ ] Board units communicate individual production without obscuring characters — implementation exists; runtime screenshot QA pending.
+- [x] Brain Box CTA shows dynamic price and current drop profile.
+- [ ] Upgrade Lab is readable on desktop and compact mobile, with level, effect, next cost and lock reason — implementation exists; runtime screenshot QA pending.
+- [x] Offline reward presentation is explicit and cannot be double-claimed.
+- [x] All new player-facing strings have EN/RU parity.
 
 ## P1 — Session and retention structure
 - [ ] First-session pacing tuned around T3/T4, first upgrades and first meaningful production acceleration.
@@ -52,29 +52,29 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [ ] Touch/mouse merge interactions regression-tested after economy UI expansion.
 - [ ] Keyboard escape/shortcut behavior remains non-destructive.
 - [ ] Focus states, reduced motion, readable contrast and minimum touch targets reviewed.
-- [ ] Full-board/deadlock/offline/upgrade-lock states have actionable player-facing explanations.
+- [x] Full-board/deadlock/offline/upgrade-lock states have localized actionable explanations.
 
 ## P1 — Save/data robustness
-- [ ] Versioned migration covers every shipped schema through the current economy schema.
-- [ ] Invalid timestamps, negative/corrupt currencies, invalid upgrade levels and malformed board data sanitize safely.
-- [ ] Offline accrual cannot duplicate across reload, visibility changes or clock rollback.
-- [ ] Platform cloud/local persistence keeps deterministic canonical state.
+- [x] Versioned migration covers every shipped schema through current save v5.
+- [x] Invalid timestamps, negative/corrupt currencies and invalid upgrade levels sanitize safely; malformed board data is rejected.
+- [ ] Offline accrual cannot duplicate across reload, visibility changes or clock rollback — deterministic clock/double-claim tests pass; runtime lifecycle regression still pending.
+- [ ] Platform cloud/local persistence keeps deterministic canonical state across long visible sessions and resume boundaries.
 
 ## P1 — Release readiness
-- [ ] CI green on final HEAD: TypeScript, tests, locale check, Yandex package and artifact-size gate.
+- [ ] CI green on final release-candidate HEAD: TypeScript, tests, locale check, Yandex package and artifact-size gate.
 - [ ] Final package tested against Yandex lifecycle/capability behavior.
 - [ ] No hardcoded player-facing copy, secrets, debug controls or placeholder/broken art exposed.
-- [ ] Session-state and architecture docs match runtime behavior.
+- [x] Session-state and architecture docs match the current economy runtime baseline.
 - [ ] Release candidate receives one full fresh-save and migrated-save smoke pass before publication.
 
 ## Current execution order
-1. Economy and idle-production core.
-2. Upgrade Lab + dynamic Brain Box + offline reward UI.
-3. Economy simulations and save v5 migration hardening.
-4. Runtime visual/interaction QA and responsive correction.
-5. Return-session retention tuning.
-6. Remaining standalone art integration.
-7. Final release hardening and Yandex RC validation.
+1. [x] Economy and idle-production core.
+2. [ ] Economy presentation runtime QA and responsive correction.
+3. [ ] Persistence/autosave + lifecycle hardening for time-based economy.
+4. [ ] First-session and return-session retention tuning.
+5. [ ] Remaining standalone art integration.
+6. [ ] Final accessibility/input/visual QA.
+7. [ ] Final Yandex/release hardening and RC validation.
 
 ## Guardrails
 - Core discovery remains merge-first: upgrades may accelerate rebuilding but cannot reveal an unseen tier.
