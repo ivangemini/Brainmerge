@@ -44,6 +44,17 @@ export interface UpgradeDefinition {
   costs: readonly number[];
 }
 
+export type NextActionKind = 'offline' | 'mission' | 'rescue' | 'merge' | 'upgrade' | 'box' | 'wait' | 'complete';
+
+export interface NextActionHint {
+  kind: NextActionKind;
+  amount?: number;
+  cost?: number;
+  minutes?: number;
+  upgradeCount?: number;
+  nextTier?: number;
+}
+
 export interface GameState {
   version: 5;
   cells: Cell[];
