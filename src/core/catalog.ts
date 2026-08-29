@@ -28,6 +28,7 @@ export const FIRST_MISSION_REWARD = 80;
 export const DEADLOCK_RESCUE_REFUND = 5;
 
 const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
+const TOILET_BUDDY_FORM_A = './public/assets/characters/toilet-buddy-form-a.webp';
 
 export const FAMILIES: readonly FamilyDefinition[] = [
   {
@@ -39,7 +40,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
   {
     id: 'toilet-buddy',
     nameKey: 'character.toiletBuddy',
-    assetByForm: { 1: BASE_CHARACTER_ATLAS },
+    assetByForm: { 1: TOILET_BUDDY_FORM_A },
     presentation: { scale: 1, yPercent: 0, shadowScale: 0.9, collectionScale: 1 }
   },
   {

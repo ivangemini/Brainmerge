@@ -24,17 +24,19 @@ Convert the working vertical slice from a strong prototype into a production-loo
 - richer material pass for board frame/tray/cells, HUD, mission/collection cards, Brain Box dock and interaction states;
 - graceful missing-art fallback so corrupt assets do not render browser broken-image chrome;
 - reduced-motion handling and responsive desktop/mobile layout;
-- 14 deterministic logic/localization/presentation tests expected after this pass;
+- user-approved Toilet Buddy Tier 1 source integrated as canonical Form A art for tiers 1–3 via `public/assets/characters/toilet-buddy-form-a.webp`;
+- Toilet Buddy source cleaned to transparent background and normalized on a 256x256 runtime canvas;
+- deterministic regression coverage added for the Toilet Buddy Form A asset mapping;
 - balance smoke simulation: 5,000 greedy runs reached the first 6-merge mission in 100% of runs, averaging ~5.55 paid spawns after the starter merges.
 
 ## Intentional limits
 - Tier 4+ gameplay is blocked until approved Form B art is supplied; no fake recolor/placeholder evolution is used.
 - Automatic interstitial placement is not enabled yet; adapter support exists, but cadence should be tuned against session flow rather than fired during active merging.
-- Character normalization is tuned from current Form A assets and remains subject to screenshot QA as new art arrives.
+- Character normalization remains subject to real screenshot QA as approved standalone art replaces atlas entries.
 
 ## Next logical steps
 1. run CI and capture the updated real browser runtime at desktop 1440x900;
 2. compare runtime against Figma and adjust the largest remaining visual deltas;
-3. fix/replace any corrupt runtime character source (notably Toilet Buddy if its WebP remains invalid);
-4. integrate approved Form B character art as soon as Gemini generations arrive;
+3. integrate the next approved Tier-1/Form-A standalone character assets as they are supplied;
+4. integrate approved Form B character art as soon as the evolution renders are approved;
 5. only then expand retention/meta content beyond the validated core merge session.

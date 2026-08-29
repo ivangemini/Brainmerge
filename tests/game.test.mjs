@@ -15,7 +15,7 @@ import {
   sanitizeState,
   spawnUnit
 } from '../build/core/game.js';
-import { BOARD_SIZE, FAMILIES, FIRST_MISSION_REWARD, visualFormForTier } from '../build/core/catalog.js';
+import { assetForUnit, BOARD_SIZE, FAMILIES, FIRST_MISSION_REWARD, visualFormForTier } from '../build/core/catalog.js';
 import { localeFromLanguage } from '../build/i18n/i18n.js';
 
 test('visual form changes every three tiers', () => {
@@ -24,6 +24,13 @@ test('visual form changes every three tiers', () => {
   assert.equal(visualFormForTier(4), 2);
   assert.equal(visualFormForTier(6), 2);
   assert.equal(visualFormForTier(7), 3);
+});
+
+test('approved Toilet Buddy Form A is used for tiers 1-3', () => {
+  const expected = './public/assets/characters/toilet-buddy-form-a.webp';
+  assert.equal(assetForUnit('toilet-buddy', 1), expected);
+  assert.equal(assetForUnit('toilet-buddy', 2), expected);
+  assert.equal(assetForUnit('toilet-buddy', 3), expected);
 });
 
 test('runtime character presentation stays inside safe normalization bounds', () => {
