@@ -34,8 +34,8 @@ let state: GameState = createInitialState();
 let adBusy = false;
 const feedback = new AudioFeedback();
 
-function cellElement(index: number): Element | null {
-  return root.querySelector(`[data-cell="${index}"]`);
+function cellElement(index: number): HTMLElement | null {
+  return root.querySelector<HTMLElement>(`[data-cell="${index}"]`);
 }
 
 function settleOnline(now = Date.now()): void {
