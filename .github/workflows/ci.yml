@@ -16,8 +16,17 @@ jobs:
       - run: npm install
       - run: npm test
       - run: npm run package:yandex
+      - name: Install Chromium for packaged runtime smoke
+        run: npx playwright install --with-deps chromium
+      - name: Run packaged runtime smoke
+        run: npm run smoke:runtime
       - uses: actions/upload-artifact@v4
         with:
           name: brainmerge-yandex
           path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brainmerge-runtime-screenshots
+          path: runtime-artifacts/
           if-no-files-found: error
