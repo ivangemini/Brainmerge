@@ -64,6 +64,11 @@
 .offline-reward>div{position:relative;z-index:1;padding-left:78px}.offline-reward>button{position:relative;z-index:2}
 
 /* Art-scale adjustments only. Responsive composition belongs to mobile-runtime.css. */
+@media(min-width:1181px){
+  .upgrade-card::before{top:7px;left:7px;width:42px;height:42px;border-radius:12px}
+  .upgrade-card__top,.upgrade-card>.upgrade-effect{margin-left:48px}
+  .upgrade-card.is-maxed::after{top:4px;left:37px;width:16px;height:16px;font-size:9px}
+}
 @media(max-width:700px){
   .side-card--lab{padding:52px 12px 14px!important}
   .upgrade-card{min-height:104px}
