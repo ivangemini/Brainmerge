@@ -5,6 +5,7 @@ import {
   MAX_BOX_BASE_TIER_LEVEL,
   MAX_RUNTIME_TIER,
   MISSION_TRACK,
+  UPGRADE_DEFINITIONS,
   brainBoxCostForPurchases,
   discoveryBonusForTier,
   familyById,
@@ -23,6 +24,7 @@ import type {
   GameState,
   MergeResult,
   MissionDefinition,
+  NextActionHint,
   OnboardingPhase,
   Unit,
   UpgradeId,
@@ -130,7 +132,6 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
   const rawLastAccrual = state.version === 5 && typeof state.lastAccrualAt === 'number' && Number.isFinite(state.lastAccrualAt)
     ? Math.max(0, Math.floor(state.lastAccrualAt))
     : safeNow;
-  // A future persisted timestamp is normalized at load so corrupted clocks do not freeze progression.
   const lastAccrualAt = rawLastAccrual > safeNow ? safeNow : rawLastAccrual;
   const incomeRemainder = state.version === 5 && typeof state.incomeRemainder === 'number' && Number.isFinite(state.incomeRemainder)
     ? Math.max(0, Math.min(0.999999, state.incomeRemainder))
@@ -146,7 +147,6 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
     xp: Math.max(0, Math.floor(state.xp)),
     merges: Math.max(0, Math.floor(state.merges)),
     spawns,
-    // Legacy saves start at zero paid-box inflation rather than being punished for unknown rewarded-box history.
     paidBoxes: state.version === 5 && typeof state.paidBoxes === 'number' && Number.isFinite(state.paidBoxes)
       ? Math.max(0, Math.floor(state.paidBoxes))
       : 0,
@@ -184,7 +184,6 @@ export function spawnUnit(state: GameState, random = Math.random, free = false):
 
   const baseTier = brainBoxBaseTier(state);
   const luckyTier = random() < brainBoxLuckyChance(state) ? baseTier + 1 : baseTier;
-  // Critical progression guard: boxes may rebuild known tiers but can never reveal a new tier first.
   const spawnTier = Math.max(1, Math.min(luckyTier, state.maxDiscoveredTier, MAX_RUNTIME_TIER));
   const family = familyByTier.get(spawnTier) ?? FAMILIES[0]!;
   const cells = state.cells.slice();
@@ -299,7 +298,6 @@ function accrueForSeconds(state: GameState, elapsedSeconds: number, destination:
 
 export function accrueOnlineIncome(state: GameState, now = Date.now()): GameState {
   const safeNow = Math.max(0, Math.floor(now));
-  // Never move the accounting cursor backwards: a device clock rollback must not let elapsed time be credited twice later.
   if (safeNow <= state.lastAccrualAt) return state;
   const elapsedSeconds = (safeNow - state.lastAccrualAt) / 1000;
   return { ...accrueForSeconds(state, elapsedSeconds, 'coins'), lastAccrualAt: safeNow };
@@ -340,6 +338,12 @@ export function canPurchaseUpgrade(state: GameState, id: UpgradeId): boolean {
   if (cost === null || state.coins < cost) return false;
   const requiredTier = upgradeRequiredDiscoveryTier(id, currentLevel);
   return requiredTier === null || state.maxDiscoveredTier >= requiredTier;
+}
+
+export function affordableUpgradeIds(state: GameState): UpgradeId[] {
+  return UPGRADE_DEFINITIONS
+    .map((upgrade) => upgrade.id)
+    .filter((id) => canPurchaseUpgrade(state, id));
 }
 
 export function purchaseUpgrade(state: GameState, id: UpgradeId): GameState {
@@ -464,6 +468,30 @@ export function claimCurrentMission(state: GameState): GameState {
     missionIndex: Math.min(MISSION_TRACK.length, state.missionIndex + 1),
     messageKey: state.missionIndex + 1 >= MISSION_TRACK.length ? 'message.missionTrackComplete' : 'message.missionClaimed'
   };
+}
+
+export function nextActionHint(state: GameState): NextActionHint {
+  if (state.pendingOfflineCoins > 0) return { kind: 'offline', amount: state.pendingOfflineCoins };
+  const mission = activeMission(state);
+  if (mission && canClaimCurrentMission(state)) return { kind: 'mission', amount: mission.reward };
+  if (isDeadlocked(state)) return { kind: 'rescue' };
+  if (findBestMergePair(state)) return { kind: 'merge' };
+
+  const readyUpgrades = affordableUpgradeIds(state);
+  if (readyUpgrades.length > 0) return { kind: 'upgrade', upgradeCount: readyUpgrades.length };
+
+  if (state.maxDiscoveredTier >= MAX_RUNTIME_TIER && mission === null) return { kind: 'complete' };
+
+  const cost = currentBrainBoxCost(state);
+  if (!isBoardFull(state) && state.coins >= cost) return { kind: 'box', cost };
+
+  const rate = productionPerMinute(state);
+  if (!isBoardFull(state) && rate > 0) {
+    const missing = Math.max(0, cost - state.coins);
+    return { kind: 'wait', cost, minutes: Math.max(1, Math.ceil(missing / rate)) };
+  }
+
+  return { kind: 'complete', nextTier: Math.min(MAX_RUNTIME_TIER, state.maxDiscoveredTier + 1) };
 }
 
 export function canClaimFirstMission(state: GameState): boolean {
