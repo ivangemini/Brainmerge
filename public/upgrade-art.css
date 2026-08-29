@@ -1,0 +1,91 @@
+/* Brain Lab approved art integration.
+ * Keeps upgrade logic/layout code-driven; art is a sprite presentation layer only.
+ * Atlas order: Base Drop, Lucky +1, Global Income, Offline Capacity, Offline Reward.
+ */
+:root{--upgrade-ui-atlas:url('./assets/ui/upgrade-ui-atlas.webp')}
+
+.upgrade-card{position:relative;isolation:isolate;min-height:112px;overflow:hidden}
+.upgrade-card::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  top:8px;
+  left:8px;
+  width:54px;
+  height:54px;
+  border-radius:15px;
+  background-image:var(--upgrade-ui-atlas),linear-gradient(145deg,rgba(255,255,255,.82),rgba(238,225,245,.82));
+  background-repeat:no-repeat,no-repeat;
+  background-size:500% 100%,100% 100%;
+  background-position:0 0,center;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.82),0 4px 9px rgba(71,46,81,.12);
+  pointer-events:none;
+  transition:transform .16s ease,filter .16s ease,opacity .16s ease;
+}
+.upgrade-card:nth-child(1)::before{background-position:0 0,center}
+.upgrade-card:nth-child(2)::before{background-position:25% 0,center}
+.upgrade-card:nth-child(3)::before{background-position:50% 0,center}
+.upgrade-card:nth-child(4)::before{background-position:75% 0,center}
+.upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{position:relative;z-index:1;margin-left:61px}
+.upgrade-card>button{position:relative;z-index:2}
+.upgrade-card.is-affordable::before{transform:translateY(-2px) scale(1.045);filter:saturate(1.08) brightness(1.04);box-shadow:inset 0 2px 0 rgba(255,255,255,.9),0 7px 14px rgba(126,80,151,.18)}
+.upgrade-card.is-locked::before{filter:grayscale(.72) saturate(.5);opacity:.55}
+.upgrade-card.is-maxed::before{filter:saturate(.82) brightness(1.06);opacity:.88}
+.upgrade-card.is-maxed::after{
+  content:"✓";
+  position:absolute;
+  z-index:3;
+  top:5px;
+  left:51px;
+  width:18px;
+  height:18px;
+  display:grid;
+  place-items:center;
+  border:2px solid rgba(255,255,255,.9);
+  border-radius:50%;
+  background:#54b979;
+  color:#fff;
+  font-size:10px;
+  font-weight:950;
+  box-shadow:0 2px 5px rgba(44,116,72,.2);
+}
+
+/* The supplied offline reward render decorates the existing explicit reward/Collect flow. */
+.offline-reward{position:relative;isolation:isolate;overflow:hidden;min-height:78px}
+.offline-reward::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:6px;
+  top:50%;
+  width:82px;
+  height:82px;
+  transform:translateY(-50%);
+  background-image:var(--upgrade-ui-atlas);
+  background-repeat:no-repeat;
+  background-size:500% 100%;
+  background-position:100% 0;
+  filter:drop-shadow(0 5px 5px rgba(58,94,73,.16));
+  pointer-events:none;
+}
+.offline-reward>div{position:relative;z-index:1;padding-left:78px}
+.offline-reward>button{position:relative;z-index:2}
+
+@media(max-width:700px){
+  .upgrade-card{min-height:104px}
+  .upgrade-card::before{width:46px;height:46px;left:7px;top:7px;border-radius:13px}
+  .upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{margin-left:51px}
+  .upgrade-card.is-maxed::after{left:42px}
+  .offline-reward{min-height:66px}
+  .offline-reward::before{width:66px;height:66px;left:4px}
+  .offline-reward>div{padding-left:60px}
+}
+@media(max-width:420px){
+  .upgrade-card{min-height:110px}
+  .upgrade-card::before{width:52px;height:52px}
+  .upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{margin-left:58px}
+  .upgrade-card.is-maxed::after{left:48px}
+  .offline-reward::before{width:58px;height:58px;opacity:.94}
+  .offline-reward>div{padding-left:52px}
+}
+@media(prefers-reduced-motion:reduce){.upgrade-card::before{transition:none!important}}
