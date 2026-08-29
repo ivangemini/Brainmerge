@@ -71,6 +71,13 @@
 .offline-reward>div{position:relative;z-index:1;padding-left:78px}
 .offline-reward>button{position:relative;z-index:2}
 
+/* Old polish layers intentionally hid every side card below 1100px. That predates Brain Lab.
+ * Restore the already code-driven Mission/Collection/Lab components instead of replacing them
+ * with image-only mobile UI. The existing responsive rail remains the layout authority. */
+@media(max-width:1100px){
+  .side-card--mission,.right-rail .side-card{display:block}
+  .right-rail .side-card--collection,.right-rail .side-card--lab{grid-row:auto}
+}
 @media(max-width:700px){
   .upgrade-card{min-height:104px}
   .upgrade-card::before{width:46px;height:46px;left:7px;top:7px;border-radius:13px}
@@ -79,6 +86,8 @@
   .offline-reward{min-height:66px}
   .offline-reward::before{width:66px;height:66px;left:4px}
   .offline-reward>div{padding-left:60px}
+  .right-rail .side-card--lab{order:1}
+  .right-rail .side-card--collection{order:2}
 }
 @media(max-width:420px){
   .upgrade-card{min-height:110px}
