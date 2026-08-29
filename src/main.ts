@@ -1,3 +1,4 @@
+import { BOARD_COLUMNS } from './core/catalog.js';
 import {
   accrueOfflineIncome,
   accrueOnlineIncome,
@@ -41,6 +42,18 @@ function settleOnline(now = Date.now()): void {
   state = accrueOnlineIncome(state, now);
 }
 
+function activateCell(index: number): void {
+  settleOnline();
+  if (state.selectedIndex !== null && state.selectedIndex !== index) {
+    const from = state.selectedIndex;
+    const result = moveOrMerge(state, from, index);
+    update(result.state);
+    if (result.merged) feedback.trigger('merge', cellElement(index));
+    return;
+  }
+  update(selectCell(state, state.selectedIndex === index ? null : index), false);
+}
+
 const view = new GameView(root, {
   spawn: () => {
     settleOnline();
@@ -77,17 +90,7 @@ const view = new GameView(root, {
     if (next !== state && next.cells.some((cell, index) => cell !== state.cells[index])) feedback.trigger('rescue');
     update(next);
   },
-  select: (index) => {
-    settleOnline();
-    if (state.selectedIndex !== null && state.selectedIndex !== index) {
-      const from = state.selectedIndex;
-      const result = moveOrMerge(state, from, index);
-      update(result.state);
-      if (result.merged) feedback.trigger('merge', cellElement(index));
-      return;
-    }
-    update(selectCell(state, state.selectedIndex === index ? null : index), false);
-  },
+  select: (index) => activateCell(index),
   moveOrMerge: (from, to) => {
     settleOnline();
     const result = moveOrMerge(state, from, to);
@@ -183,13 +186,30 @@ window.addEventListener('keydown', (event) => {
     update(selectCell(state, null), false);
   }
   if (event.key.toLowerCase() === 'm' && event.target === document.body) feedback.toggleMute();
-  if (event.code === 'Space' && event.target === document.body) {
+});
+
+// Board buttons are fully keyboard-operable. Enter/Space follows the exact same
+// select/move/merge path as pointer input; arrow keys only move focus and never spend currency.
+root.addEventListener('keydown', (event) => {
+  const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-cell]') : null;
+  if (!target) return;
+  const index = Number(target.dataset.cell);
+  if (!Number.isInteger(index) || index < 0 || index >= state.cells.length) return;
+
+  if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
-    settleOnline();
-    const beforePaidBoxes = state.paidBoxes;
-    const next = spawnUnit(state);
-    if (next.paidBoxes > beforePaidBoxes) feedback.trigger('spawn');
-    update(next);
+    activateCell(index);
+    return;
+  }
+
+  let nextIndex: number | null = null;
+  if (event.key === 'ArrowLeft' && index % BOARD_COLUMNS > 0) nextIndex = index - 1;
+  if (event.key === 'ArrowRight' && index % BOARD_COLUMNS < BOARD_COLUMNS - 1 && index + 1 < state.cells.length) nextIndex = index + 1;
+  if (event.key === 'ArrowUp' && index >= BOARD_COLUMNS) nextIndex = index - BOARD_COLUMNS;
+  if (event.key === 'ArrowDown' && index + BOARD_COLUMNS < state.cells.length) nextIndex = index + BOARD_COLUMNS;
+  if (nextIndex !== null) {
+    event.preventDefault();
+    cellElement(nextIndex)?.focus();
   }
 });
 
