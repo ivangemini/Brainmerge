@@ -2,17 +2,41 @@ import {
   BOARD_SIZE,
   DEADLOCK_RESCUE_REFUND,
   FAMILIES,
+  MAX_BOX_BASE_TIER_LEVEL,
   MAX_RUNTIME_TIER,
   MISSION_TRACK,
-  SPAWN_COST,
+  brainBoxCostForPurchases,
   discoveryBonusForTier,
   familyById,
+  familyByTier,
+  incomeMultiplierForLevel,
+  luckyDropChanceForLevel,
+  maxUpgradeLevel,
   mergeRewardForTier,
-  nextFamilyFor
+  nextFamilyFor,
+  offlineHoursForLevel,
+  upgradeCost
 } from './catalog.js';
-import type { Cell, FamilyId, GameState, MergeResult, MissionDefinition, OnboardingPhase, Unit } from './types.js';
+import type {
+  Cell,
+  FamilyId,
+  GameState,
+  MergeResult,
+  MissionDefinition,
+  OnboardingPhase,
+  Unit,
+  UpgradeId,
+  UpgradeLevels
+} from './types.js';
 
 let sequence = 0;
+
+const DEFAULT_UPGRADES: UpgradeLevels = {
+  boxBaseTier: 0,
+  luckyDrop: 0,
+  income: 0,
+  offline: 0
+};
 
 function createUnit(familyId: FamilyId): Unit {
   const family = familyById.get(familyId);
@@ -30,27 +54,48 @@ function normalizeLegacyUnit(candidate: unknown): Unit | null {
   return { id: unit.id, familyId: family.id, tier: family.tier };
 }
 
-export function createInitialState(): GameState {
+function sanitizeUpgradeLevel(id: UpgradeId, candidate: unknown): number {
+  if (typeof candidate !== 'number' || !Number.isFinite(candidate)) return 0;
+  return Math.max(0, Math.min(maxUpgradeLevel(id), Math.floor(candidate)));
+}
+
+function sanitizeUpgrades(candidate: unknown): UpgradeLevels {
+  if (!candidate || typeof candidate !== 'object') return { ...DEFAULT_UPGRADES };
+  const raw = candidate as Partial<Record<UpgradeId, unknown>>;
+  return {
+    boxBaseTier: Math.min(MAX_BOX_BASE_TIER_LEVEL, sanitizeUpgradeLevel('boxBaseTier', raw.boxBaseTier)),
+    luckyDrop: sanitizeUpgradeLevel('luckyDrop', raw.luckyDrop),
+    income: sanitizeUpgradeLevel('income', raw.income),
+    offline: sanitizeUpgradeLevel('offline', raw.offline)
+  };
+}
+
+export function createInitialState(now = Date.now()): GameState {
   const cells: Cell[] = Array.from({ length: BOARD_SIZE }, () => null);
   for (let index = 0; index < 4; index += 1) cells[index] = createUnit('toilet-buddy');
   return {
-    version: 4,
+    version: 5,
     cells,
     coins: 100,
     xp: 0,
     merges: 0,
     spawns: 0,
+    paidBoxes: 0,
     maxDiscoveredTier: 1,
     missionIndex: 0,
+    upgrades: { ...DEFAULT_UPGRADES },
+    incomeRemainder: 0,
+    lastAccrualAt: Math.max(0, Math.floor(now)),
+    pendingOfflineCoins: 0,
     selectedIndex: null,
     messageKey: 'message.welcome'
   };
 }
 
-export function sanitizeState(candidate: unknown): GameState | null {
+export function sanitizeState(candidate: unknown, now = Date.now()): GameState | null {
   if (!candidate || typeof candidate !== 'object') return null;
   const state = candidate as Record<string, unknown>;
-  if ((state.version !== 1 && state.version !== 2 && state.version !== 3 && state.version !== 4)
+  if ((state.version !== 1 && state.version !== 2 && state.version !== 3 && state.version !== 4 && state.version !== 5)
     || !Array.isArray(state.cells)
     || state.cells.length !== BOARD_SIZE) return null;
   if (typeof state.coins !== 'number' || typeof state.xp !== 'number' || typeof state.merges !== 'number') return null;
@@ -67,37 +112,69 @@ export function sanitizeState(candidate: unknown): GameState | null {
   }
 
   const discoveredFromBoard = cells.reduce((highest, cell) => Math.max(highest, cell?.tier ?? 1), 1);
-  const savedDiscovered = (state.version === 3 || state.version === 4) && typeof state.maxDiscoveredTier === 'number'
+  const savedDiscovered = (state.version === 3 || state.version === 4 || state.version === 5) && typeof state.maxDiscoveredTier === 'number'
     ? Math.max(1, Math.min(MAX_RUNTIME_TIER, Math.floor(state.maxDiscoveredTier)))
     : discoveredFromBoard;
-  const spawns = (state.version === 2 || state.version === 3 || state.version === 4) && typeof state.spawns === 'number'
+  const spawns = (state.version === 2 || state.version === 3 || state.version === 4 || state.version === 5) && typeof state.spawns === 'number'
     ? Math.max(0, Math.floor(state.spawns))
     : 0;
 
   let missionIndex = 0;
-  if (state.version === 4 && typeof state.missionIndex === 'number') {
+  if ((state.version === 4 || state.version === 5) && typeof state.missionIndex === 'number') {
     missionIndex = Math.max(0, Math.min(MISSION_TRACK.length, Math.floor(state.missionIndex)));
   } else if ((state.version === 2 || state.version === 3) && state.missionClaimed === true) {
-    // Preserve the old one-off mission as the first completed step in the new track.
     missionIndex = 1;
   }
 
+  const safeNow = Math.max(0, Math.floor(now));
+  const rawLastAccrual = state.version === 5 && typeof state.lastAccrualAt === 'number' && Number.isFinite(state.lastAccrualAt)
+    ? Math.max(0, Math.floor(state.lastAccrualAt))
+    : safeNow;
+  // A future timestamp must not freeze production or create negative rewards after clock rollback.
+  const lastAccrualAt = rawLastAccrual > safeNow ? safeNow : rawLastAccrual;
+  const incomeRemainder = state.version === 5 && typeof state.incomeRemainder === 'number' && Number.isFinite(state.incomeRemainder)
+    ? Math.max(0, Math.min(0.999999, state.incomeRemainder))
+    : 0;
+  const pendingOfflineCoins = state.version === 5 && typeof state.pendingOfflineCoins === 'number' && Number.isFinite(state.pendingOfflineCoins)
+    ? Math.max(0, Math.floor(state.pendingOfflineCoins))
+    : 0;
+
   return {
-    version: 4,
+    version: 5,
     cells,
     coins: Math.max(0, Math.floor(state.coins)),
     xp: Math.max(0, Math.floor(state.xp)),
     merges: Math.max(0, Math.floor(state.merges)),
     spawns,
+    // Legacy saves start at zero paid-box inflation rather than being punished for unknown rewarded-box history.
+    paidBoxes: state.version === 5 && typeof state.paidBoxes === 'number' && Number.isFinite(state.paidBoxes)
+      ? Math.max(0, Math.floor(state.paidBoxes))
+      : 0,
     maxDiscoveredTier: Math.max(discoveredFromBoard, savedDiscovered),
     missionIndex,
+    upgrades: state.version === 5 ? sanitizeUpgrades(state.upgrades) : { ...DEFAULT_UPGRADES },
+    incomeRemainder,
+    lastAccrualAt,
+    pendingOfflineCoins,
     selectedIndex: null,
     messageKey: null
   };
 }
 
-export function spawnUnit(state: GameState, _random = Math.random, free = false): GameState {
-  const cost = free ? 0 : SPAWN_COST;
+export function currentBrainBoxCost(state: GameState): number {
+  return brainBoxCostForPurchases(state.paidBoxes);
+}
+
+export function brainBoxBaseTier(state: GameState): number {
+  return Math.max(1, Math.min(1 + state.upgrades.boxBaseTier, state.maxDiscoveredTier, MAX_RUNTIME_TIER));
+}
+
+export function brainBoxLuckyChance(state: GameState): number {
+  return luckyDropChanceForLevel(state.upgrades.luckyDrop);
+}
+
+export function spawnUnit(state: GameState, random = Math.random, free = false): GameState {
+  const cost = free ? 0 : currentBrainBoxCost(state);
   if (state.coins < cost) return { ...state, messageKey: 'message.notEnoughCoins' };
   const emptyIndexes = state.cells.flatMap((cell, index) => (cell === null ? [index] : []));
   if (emptyIndexes.length === 0) return { ...state, messageKey: 'message.boardFull' };
@@ -105,15 +182,24 @@ export function spawnUnit(state: GameState, _random = Math.random, free = false)
   const target = emptyIndexes[0];
   if (target === undefined) return state;
 
+  const baseTier = brainBoxBaseTier(state);
+  const luckyTier = random() < brainBoxLuckyChance(state) ? baseTier + 1 : baseTier;
+  // Critical progression guard: boxes may rebuild known tiers but can never reveal a new tier first.
+  const spawnTier = Math.max(1, Math.min(luckyTier, state.maxDiscoveredTier, MAX_RUNTIME_TIER));
+  const family = familyByTier.get(spawnTier) ?? FAMILIES[0]!;
   const cells = state.cells.slice();
-  cells[target] = createUnit('toilet-buddy');
+  cells[target] = createUnit(family.id);
+
   return {
     ...state,
     cells,
     coins: state.coins - cost,
     spawns: state.spawns + 1,
+    paidBoxes: state.paidBoxes + (free ? 0 : 1),
     selectedIndex: null,
-    messageKey: free ? 'message.rewardedSpawn' : 'message.spawned'
+    messageKey: free
+      ? (spawnTier > 1 ? 'message.rewardedSpawnBoosted' : 'message.rewardedSpawn')
+      : (spawnTier > 1 ? 'message.spawnedBoosted' : 'message.spawned')
   };
 }
 
@@ -175,6 +261,100 @@ export function moveOrMerge(state: GameState, from: number, to: number): MergeRe
     },
     changed: true,
     merged: true
+  };
+}
+
+export function productionPerMinute(state: GameState): number {
+  const base = state.cells.reduce((sum, cell) => {
+    if (!cell) return sum;
+    return sum + (familyById.get(cell.familyId)?.incomePerMinute ?? 0);
+  }, 0);
+  return base * incomeMultiplierForLevel(state.upgrades.income);
+}
+
+export function unitProductionPerMinute(state: GameState, familyId: FamilyId): number {
+  const family = familyById.get(familyId);
+  if (!family) return 0;
+  return family.incomePerMinute * incomeMultiplierForLevel(state.upgrades.income);
+}
+
+function accrueForSeconds(state: GameState, elapsedSeconds: number, destination: 'coins' | 'offline'): GameState {
+  const seconds = Math.max(0, elapsedSeconds);
+  const gross = productionPerMinute(state) / 60 * seconds + state.incomeRemainder;
+  const wholeCoins = Math.max(0, Math.floor(gross));
+  const incomeRemainder = Math.max(0, Math.min(0.999999, gross - wholeCoins));
+  if (destination === 'offline') {
+    return {
+      ...state,
+      pendingOfflineCoins: state.pendingOfflineCoins + wholeCoins,
+      incomeRemainder
+    };
+  }
+  return {
+    ...state,
+    coins: state.coins + wholeCoins,
+    incomeRemainder
+  };
+}
+
+export function accrueOnlineIncome(state: GameState, now = Date.now()): GameState {
+  const safeNow = Math.max(0, Math.floor(now));
+  if (safeNow <= state.lastAccrualAt) return { ...state, lastAccrualAt: safeNow };
+  const elapsedSeconds = (safeNow - state.lastAccrualAt) / 1000;
+  return { ...accrueForSeconds(state, elapsedSeconds, 'coins'), lastAccrualAt: safeNow };
+}
+
+export function accrueOfflineIncome(state: GameState, now = Date.now()): GameState {
+  const safeNow = Math.max(0, Math.floor(now));
+  if (safeNow <= state.lastAccrualAt) return { ...state, lastAccrualAt: safeNow };
+  const elapsedSeconds = (safeNow - state.lastAccrualAt) / 1000;
+  const capSeconds = offlineHoursForLevel(state.upgrades.offline) * 60 * 60;
+  const creditedSeconds = Math.min(elapsedSeconds, capSeconds);
+  const next = accrueForSeconds(state, creditedSeconds, 'offline');
+  return {
+    ...next,
+    lastAccrualAt: safeNow,
+    messageKey: next.pendingOfflineCoins > state.pendingOfflineCoins ? 'message.offlineReady' : state.messageKey
+  };
+}
+
+export function claimOfflineIncome(state: GameState): GameState {
+  if (state.pendingOfflineCoins <= 0) return state;
+  return {
+    ...state,
+    coins: state.coins + state.pendingOfflineCoins,
+    pendingOfflineCoins: 0,
+    messageKey: 'message.offlineClaimed'
+  };
+}
+
+export function upgradeRequiredDiscoveryTier(id: UpgradeId, currentLevel: number): number | null {
+  if (id !== 'boxBaseTier') return null;
+  return Math.min(MAX_RUNTIME_TIER, Math.max(2, Math.floor(currentLevel) + 2));
+}
+
+export function canPurchaseUpgrade(state: GameState, id: UpgradeId): boolean {
+  const currentLevel = state.upgrades[id];
+  const cost = upgradeCost(id, currentLevel);
+  if (cost === null || state.coins < cost) return false;
+  const requiredTier = upgradeRequiredDiscoveryTier(id, currentLevel);
+  return requiredTier === null || state.maxDiscoveredTier >= requiredTier;
+}
+
+export function purchaseUpgrade(state: GameState, id: UpgradeId): GameState {
+  const currentLevel = state.upgrades[id];
+  const cost = upgradeCost(id, currentLevel);
+  if (cost === null) return { ...state, messageKey: 'message.upgradeMaxed' };
+  const requiredTier = upgradeRequiredDiscoveryTier(id, currentLevel);
+  if (requiredTier !== null && state.maxDiscoveredTier < requiredTier) {
+    return { ...state, messageKey: 'message.upgradeLocked' };
+  }
+  if (state.coins < cost) return { ...state, messageKey: 'message.notEnoughCoins' };
+  return {
+    ...state,
+    coins: state.coins - cost,
+    upgrades: { ...state.upgrades, [id]: currentLevel + 1 },
+    messageKey: 'message.upgradePurchased'
   };
 }
 
@@ -285,7 +465,6 @@ export function claimCurrentMission(state: GameState): GameState {
   };
 }
 
-/** Compatibility wrappers for older call sites/tests while the UI moved to the full track. */
 export function canClaimFirstMission(state: GameState): boolean {
   return state.missionIndex === 0 && canClaimCurrentMission(state);
 }
