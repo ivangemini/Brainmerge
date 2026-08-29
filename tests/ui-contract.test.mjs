@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, upgradeArt, mobileRuntime, gameView] = await Promise.all([
+const [html, upgradeArt, mobileRuntime, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/mobile-runtime.css', import.meta.url), 'utf8'),
-  readFile(new URL('../src/ui/game-view.ts', import.meta.url), 'utf8')
+  readFile(new URL('../src/ui/game-view.ts', import.meta.url), 'utf8'),
+  readFile(new URL('../src/main.ts', import.meta.url), 'utf8')
 ]);
 
 test('responsive composition loads after art presentation layers', () => {
@@ -41,4 +42,15 @@ test('Brain Lab state and actions stay code-owned', () => {
   assert.match(gameView, /upgradeRequiredDiscoveryTier\(id, currentLevel\)/);
   assert.match(gameView, /data-upgrade=\\"\$\{id\}\\"/);
   assert.match(gameView, /purchaseUpgrade\(button\.dataset\.upgrade as UpgradeId\)/);
+});
+
+test('keyboard board controls reuse gameplay actions without hidden spending shortcut', () => {
+  assert.match(main, /function activateCell\(index: number\)/);
+  assert.match(main, /root\.addEventListener\('keydown'/);
+  assert.match(main, /event\.key === 'Enter' \|\| event\.key === ' '/);
+  assert.match(main, /ArrowLeft/);
+  assert.match(main, /ArrowRight/);
+  assert.match(main, /ArrowUp/);
+  assert.match(main, /ArrowDown/);
+  assert.doesNotMatch(main, /event\.code === 'Space'/, 'global Space must not buy a paid Brain Box');
 });
