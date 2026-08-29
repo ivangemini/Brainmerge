@@ -43,15 +43,18 @@ function settleOnline(now = Date.now()): void {
 }
 
 function activateCell(index: number): void {
+  const restoreKeyboardFocus = document.activeElement instanceof HTMLElement && document.activeElement.matches('[data-cell]');
   settleOnline();
   if (state.selectedIndex !== null && state.selectedIndex !== index) {
     const from = state.selectedIndex;
     const result = moveOrMerge(state, from, index);
     update(result.state);
     if (result.merged) feedback.trigger('merge', cellElement(index));
+    if (restoreKeyboardFocus) cellElement(index)?.focus();
     return;
   }
   update(selectCell(state, state.selectedIndex === index ? null : index), false);
+  if (restoreKeyboardFocus) cellElement(index)?.focus();
 }
 
 const view = new GameView(root, {
