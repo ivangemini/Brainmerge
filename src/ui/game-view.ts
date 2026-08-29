@@ -7,6 +7,7 @@ import {
   FIRST_MISSION_TARGET,
   SPAWN_COST,
   familyById,
+  familyByTier,
   type FamilyDefinition
 } from '../core/catalog.js';
 import {
@@ -49,6 +50,7 @@ export class GameView {
   private dragMoved = false;
   private dragStartX = 0;
   private dragStartY = 0;
+  private lastDiscoveredTier: number | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -65,9 +67,14 @@ export class GameView {
     const missionClaimable = canClaimFirstMission(state);
     const missionProgress = Math.min(state.merges, FIRST_MISSION_TARGET);
     const xpProgress = Math.round(playerLevelProgress(state.xp) * 100);
+    const bestFamily = familyByTier.get(state.maxDiscoveredTier) ?? FAMILIES[0];
+    const nextFamily = familyByTier.get(state.maxDiscoveredTier + 1) ?? null;
+    const newlyDiscovered = this.lastDiscoveredTier !== null && state.maxDiscoveredTier > this.lastDiscoveredTier
+      ? bestFamily
+      : null;
 
     this.root.innerHTML = `
-      <main class="game-shell">
+      <main class="game-shell ${newlyDiscovered ? 'has-new-discovery' : ''}">
         <header class="topbar">
           <div class="brand-block">
             <div class="brand">${t('app.title')}</div>
@@ -101,9 +108,26 @@ export class GameView {
           </aside>
 
           <section class="board-zone">
+            ${newlyDiscovered ? `<div class="discovery-toast" role="status" aria-live="polite">
+              <span class="discovery-toast__spark">✦</span>
+              <span>${t('chain.discovery', { tier: newlyDiscovered.tier, character: t(newlyDiscovered.nameKey) })}</span>
+              <span class="discovery-toast__spark">✦</span>
+            </div>` : ''}
+
             <div class="board-header">
               <div class="board-heading"><span class="eyebrow">${t('board.title')}</span><p>${t('board.hint')}</p></div>
               <div class="message ${state.messageKey ? 'is-visible' : ''}" role="status">${state.messageKey ? t(state.messageKey) : ''}</div>
+            </div>
+
+            <div class="chain-progress" aria-label="${t('chain.progressLabel')}">
+              <div class="chain-progress__step chain-progress__step--current">
+                <span class="chain-progress__label">${t('chain.best')}</span>
+                <strong><b>T${bestFamily.tier}</b> ${t(bestFamily.nameKey)}</strong>
+              </div>
+              <span class="chain-progress__arrow" aria-hidden="true">→</span>
+              ${nextFamily
+                ? `<div class="chain-progress__step chain-progress__step--next"><span class="chain-progress__label">${t('chain.next')}</span><strong><b>T${nextFamily.tier}</b> ${t(nextFamily.nameKey)}</strong></div>`
+                : `<div class="chain-progress__step chain-progress__step--complete"><span class="chain-progress__label">${t('chain.status')}</span><strong>${t('chain.complete')}</strong></div>`}
             </div>
 
             ${phase !== 'complete' ? `<div class="coach-card ${phase === 'spawn' ? 'coach-card--spawn' : ''}">
@@ -125,7 +149,7 @@ export class GameView {
                     const asset = cell ? assetForUnit(cell.familyId) : null;
                     const tutorial = tutorialIndexes.has(index);
                     const style = family ? presentationStyle(family) : '';
-                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: family.tier })}` : t('board.emptyCell')}">
+                    return `<button class="cell tone-${index % 4} ${occupied ? 'is-occupied' : ''} ${selected ? 'is-selected' : ''} ${mergeTarget ? 'is-merge-target' : ''} ${tutorial ? 'is-tutorial-pair' : ''}" data-cell="${index}" ${family ? `data-family="${family.id}" data-chain-tier="${family.tier}"` : ''} style="${style}" aria-label="${cell && family ? `${t(family.nameKey)} ${t('tier.label', { tier: family.tier })}` : t('board.emptyCell')}">
                       <span class="cell-gloss" aria-hidden="true"></span>
                       ${cell && asset ? `<span class="unit-shadow" aria-hidden="true"></span><span class="unit-visual"><img draggable="false" class="unit-art" src="${asset}" alt="" /></span>` : ''}
                       ${family ? `<span class="tier-badge">${t('tier.label', { tier: family.tier })}</span>` : ''}
@@ -156,14 +180,24 @@ export class GameView {
             <div class="side-card__eyebrow">${t('action.collection')}</div>
             <h2>${t('panel.collectionTitle')}</h2>
             <p>${t('panel.collectionHint')}</p>
-            <div class="collection-grid">
-              ${FAMILIES.map((family) => `<div class="collection-chip ${family.tier <= state.maxDiscoveredTier ? 'is-unlocked' : ''}" title="${t(family.nameKey)}" style="${presentationStyle(family)}"><img src="${family.asset}" alt=""/></div>`).join('')}
+            <div class="collection-grid" aria-label="${t('chain.progressLabel')}">
+              ${FAMILIES.map((family) => {
+                const unlocked = family.tier <= state.maxDiscoveredTier;
+                const current = family.tier === state.maxDiscoveredTier;
+                const next = family.tier === state.maxDiscoveredTier + 1;
+                return `<div class="collection-chip ${unlocked ? 'is-unlocked' : 'is-locked'} ${current ? 'is-current' : ''} ${next ? 'is-next' : ''}" data-family="${family.id}" data-chain-tier="${family.tier}" title="${unlocked ? t(family.nameKey) : t('chain.lockedTier', { tier: family.tier })}" style="${presentationStyle(family)}">
+                  <img src="${family.asset}" alt=""/>
+                  <span class="collection-tier">T${family.tier}</span>
+                  ${!unlocked ? `<span class="collection-lock" aria-hidden="true">?</span>` : ''}
+                </div>`;
+              }).join('')}
             </div>
             <div class="collection-count"><span>${state.maxDiscoveredTier}</span>/${FAMILIES.length}</div>
           </aside>
         </section>
       </main>`;
 
+    this.lastDiscoveredTier = state.maxDiscoveredTier;
     this.bindInteractions();
   }
 
