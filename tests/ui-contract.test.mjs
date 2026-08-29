@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, upgradeArt, mobileRuntime, gameView, main] = await Promise.all([
+const [html, upgradeArt, economyLoop, mobileRuntime, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),
+  readFile(new URL('../public/economy-loop.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/mobile-runtime.css', import.meta.url), 'utf8'),
   readFile(new URL('../src/ui/game-view.ts', import.meta.url), 'utf8'),
   readFile(new URL('../src/main.ts', import.meta.url), 'utf8')
@@ -38,6 +39,14 @@ test('responsive runtime keeps all production panels reachable without equal-hei
   assert.match(mobileRuntime, /\.right-rail \.side-card[\s\S]*align-self:start!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card--lab\{order:1!important/);
   assert.match(mobileRuntime, /\.right-rail \.side-card--collection\{order:2!important/);
+});
+
+test('economy layer does not re-own responsive page composition', () => {
+  assert.doesNotMatch(economyLoop, /\.right-rail\{width:min\(720px/);
+  assert.doesNotMatch(economyLoop, /\.right-rail\{width:100%/);
+  assert.doesNotMatch(economyLoop, /\.side-card--lab\{width:min\(330px/);
+  assert.match(economyLoop, /\.unit-income[\s\S]*font-size:8px/);
+  assert.match(economyLoop, /white-space:nowrap/);
 });
 
 test('Brain Lab state and actions stay code-owned', () => {
