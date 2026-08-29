@@ -1,14 +1,18 @@
 import {
+  accrueOfflineIncome,
+  accrueOnlineIncome,
   claimCurrentMission,
+  claimOfflineIncome,
   createInitialState,
   isBoardFull,
   moveOrMerge,
+  purchaseUpgrade,
   rescueDeadlock,
   sanitizeState,
   selectCell,
   spawnUnit
 } from './core/game.js';
-import type { GameState } from './core/types.js';
+import type { GameState, UpgradeId } from './core/types.js';
 import { AudioFeedback } from './feedback/audio-feedback.js';
 import { detectLocale, loadLocale, translate, type Locale } from './i18n/i18n.js';
 import type { PlatformAdapter } from './platform/adapter.js';
@@ -30,25 +34,48 @@ function cellElement(index: number): Element | null {
   return root.querySelector(`[data-cell="${index}"]`);
 }
 
+function settleOnline(now = Date.now()): void {
+  state = accrueOnlineIncome(state, now);
+}
+
 const view = new GameView(root, {
   spawn: () => {
+    settleOnline();
+    const beforePaidBoxes = state.paidBoxes;
     const next = spawnUnit(state);
-    if (next !== state && next.coins !== state.coins) feedback.trigger('spawn');
+    if (next.paidBoxes > beforePaidBoxes) feedback.trigger('spawn');
     update(next);
   },
   rewardedSpawn: () => { void handleRewardedSpawn(); },
   claimMission: () => {
+    settleOnline();
     const beforeIndex = state.missionIndex;
     const next = claimCurrentMission(state);
     if (next.missionIndex > beforeIndex) feedback.trigger('reward');
     update(next);
   },
+  claimOffline: () => {
+    settleOnline();
+    const hadReward = state.pendingOfflineCoins > 0;
+    const next = claimOfflineIncome(state);
+    if (hadReward && next.pendingOfflineCoins === 0) feedback.trigger('reward');
+    update(next);
+  },
+  purchaseUpgrade: (id: UpgradeId) => {
+    settleOnline();
+    const beforeLevel = state.upgrades[id];
+    const next = purchaseUpgrade(state, id);
+    if (next.upgrades[id] > beforeLevel) feedback.trigger('reward');
+    update(next);
+  },
   rescueDeadlock: () => {
+    settleOnline();
     const next = rescueDeadlock(state);
     if (next !== state && next.cells.some((cell, index) => cell !== state.cells[index])) feedback.trigger('rescue');
     update(next);
   },
   select: (index) => {
+    settleOnline();
     if (state.selectedIndex !== null && state.selectedIndex !== index) {
       const from = state.selectedIndex;
       const result = moveOrMerge(state, from, index);
@@ -59,11 +86,13 @@ const view = new GameView(root, {
     update(selectCell(state, state.selectedIndex === index ? null : index), false);
   },
   moveOrMerge: (from, to) => {
+    settleOnline();
     const result = moveOrMerge(state, from, to);
     update(result.state);
     if (result.merged) feedback.trigger('merge', cellElement(to));
   },
   setLocale: async (nextLocale) => {
+    settleOnline();
     await loadLocale(nextLocale);
     locale = nextLocale;
     document.documentElement.lang = nextLocale;
@@ -87,15 +116,18 @@ function update(next: GameState, persist = true): void {
 }
 
 async function handleRewardedSpawn(): Promise<void> {
+  settleOnline();
   if (adBusy || isBoardFull(state) || !platform.capabilities.rewardedAds) return;
   adBusy = true;
   render();
   const rewarded = await platform.showRewarded('brain-box');
   adBusy = false;
+  settleOnline();
   if (rewarded) {
+    const beforeSpawns = state.spawns;
     const next = spawnUnit(state, Math.random, true);
     update(next);
-    feedback.trigger('reward');
+    if (next.spawns > beforeSpawns) feedback.trigger('reward');
     return;
   }
   state = { ...state, messageKey: 'message.rewardUnavailable' };
@@ -115,27 +147,57 @@ async function boot(): Promise<void> {
   await Promise.all([loadLocale('en'), loadLocale('ru'), loadLocale(locale)]);
   document.documentElement.lang = locale;
 
-  const saved = sanitizeState(await platform.loadState());
-  if (saved) state = saved;
+  const now = Date.now();
+  const saved = sanitizeState(await platform.loadState(), now);
+  if (saved) state = accrueOfflineIncome(saved, now);
+  else state = createInitialState(now);
   render();
+  void platform.saveState(state);
 }
 
+window.setInterval(() => {
+  if (document.hidden) return;
+  const next = accrueOnlineIncome(state, Date.now());
+  if (next.coins !== state.coins || next.incomeRemainder !== state.incomeRemainder) {
+    state = next;
+    render();
+  } else {
+    state = next;
+  }
+}, 5000);
+
 window.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') update(selectCell(state, null), false);
+  if (event.key === 'Escape') {
+    settleOnline();
+    update(selectCell(state, null), false);
+  }
   if (event.key.toLowerCase() === 'm' && event.target === document.body) feedback.toggleMute();
   if (event.code === 'Space' && event.target === document.body) {
     event.preventDefault();
+    settleOnline();
+    const beforePaidBoxes = state.paidBoxes;
     const next = spawnUnit(state);
-    if (next !== state && next.coins !== state.coins) feedback.trigger('spawn');
+    if (next.paidBoxes > beforePaidBoxes) feedback.trigger('spawn');
     update(next);
   }
 });
 
 document.addEventListener('visibilitychange', () => {
-  platform.setGameplayActive(!document.hidden);
+  const now = Date.now();
+  if (document.hidden) {
+    settleOnline(now);
+    platform.setGameplayActive(false);
+    void platform.saveState(state);
+    return;
+  }
+  state = accrueOfflineIncome(state, now);
+  platform.setGameplayActive(true);
+  render();
+  void platform.saveState(state);
 });
 
 window.addEventListener('pagehide', () => {
+  settleOnline();
   platform.setGameplayActive(false);
   void platform.saveState(state);
 });
