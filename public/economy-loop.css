@@ -13,6 +13,21 @@
 
 .offline-reward{width:min(610px,calc(100% - 18px));margin:0 auto 10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:3px solid #6fc49a;border-radius:18px;background:linear-gradient(180deg,#eefff5,#d8f3e5);box-shadow:inset 0 2px rgba(255,255,255,.9),0 7px 14px rgba(58,116,84,.10)}.offline-reward>div{min-width:0;display:grid;gap:2px}.offline-reward__eyebrow{text-transform:uppercase;letter-spacing:.09em;color:#4a8764;font-size:8px;font-weight:950}.offline-reward strong{color:#326b4e;font-size:16px}.offline-reward small{color:#658374;font-size:9px;line-height:1.25}.offline-reward button{flex:0 0 auto;min-width:92px;height:38px;border:0;border-radius:12px;background:linear-gradient(180deg,#6dd49b,#43b978);color:#fff;font-size:10px;font-weight:950;cursor:pointer;box-shadow:inset 0 2px rgba(255,255,255,.35),0 4px 0 #2b8b59}
 
+/* The three-column desktop rail is intentionally narrow. Keep the same live upgrade component,
+ * but collapse explanatory copy there so the actionable title/effect/cost hierarchy fits beside
+ * the board instead of creating a long secondary page. Wider compact/mobile rails retain copy. */
+@media(min-width:1181px){
+  .side-card--lab>p{font-size:10px!important;line-height:1.2!important;margin-bottom:7px!important}
+  .upgrade-list{gap:5px}
+  .upgrade-card{min-height:86px;padding:7px}
+  .upgrade-card__top{gap:5px}
+  .upgrade-card__top strong{font-size:10px}
+  .upgrade-card__top span{padding:2px 5px;font-size:7px}
+  .upgrade-card>small{display:none}
+  .upgrade-effect{margin:4px 0 5px;font-size:9px;line-height:1.1}
+  .upgrade-card button{min-height:28px;font-size:8px}
+}
+
 /* Responsive page composition belongs to mobile-runtime.css. Economy keeps only
  * component-internal density adjustments here. */
 @media(max-width:700px){.hud-pill--income{min-width:78px}.hud-pill--income strong{font-size:13px}.upgrade-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.upgrade-card{padding:8px}.upgrade-card>small{display:none}.unit-income{left:1px;bottom:1px;padding:2px 4px;font-size:7px;border-width:1px}.box-profile{font-size:8px;margin-top:7px}.offline-reward{width:calc(100% - 8px);padding:8px 9px;border-width:2px}.offline-reward strong{font-size:13px}.offline-reward small{display:none}.offline-reward button{min-width:80px;height:34px}}
