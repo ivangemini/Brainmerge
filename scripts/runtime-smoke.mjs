@@ -55,14 +55,23 @@ await new Promise((resolve) => server.listen(4173, '127.0.0.1', resolve));
 
 const browser = await chromium.launch({ headless: true });
 const viewports = [
-  { name: 'desktop', width: 1440, height: 900 },
-  { name: 'compact', width: 1024, height: 576 },
-  { name: 'mobile', width: 390, height: 844 }
+  { name: 'desktop', width: 1440, height: 900, touch: false },
+  { name: 'compact', width: 1024, height: 576, touch: false },
+  { name: 'mobile', width: 390, height: 844, touch: true }
 ];
+
+async function waitForOneMerge(page, label) {
+  await page.waitForFunction(() => document.querySelector('.hud-pill--merge strong')?.textContent?.trim() === '1');
+  const tier = await page.locator('.cell[data-family="camera-dude"]').count();
+  assert(tier === 1, `${label}: merge did not create exactly one Camera Dude`);
+}
 
 try {
   for (const viewport of viewports) {
-    const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height } });
+    const context = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+      hasTouch: viewport.touch
+    });
     const page = await context.newPage();
     const pageErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -123,40 +132,54 @@ try {
       assert(snapshot.labRect.top < snapshot.collectionRect.top, 'mobile: Brain Lab must appear before Collection');
     }
 
-    // Exercise the real code-driven keyboard merge path on a fresh save.
+    // Exercise the same pointer handlers a player uses. Desktop/compact use mouse clicks;
+    // phone uses an actual touch-capable context and tap events.
+    if (viewport.touch) {
+      await page.locator('[data-cell="0"]').tap();
+      await page.locator('[data-cell="1"]').tap();
+      await waitForOneMerge(page, `${viewport.name} touch`);
+    } else {
+      await page.locator('[data-cell="0"]').click();
+      await page.locator('[data-cell="1"]').click();
+      await waitForOneMerge(page, `${viewport.name} mouse`);
+    }
+
+    const pointerSprite = await page.evaluate(() => {
+      const cameraVisual = document.querySelector('.cell[data-family="camera-dude"] .unit-visual');
+      if (!(cameraVisual instanceof HTMLElement)) return null;
+      const pseudo = getComputedStyle(cameraVisual, '::before');
+      const box = cameraVisual.getBoundingClientRect();
+      return {
+        backgroundImage: pseudo.backgroundImage,
+        position: pseudo.position,
+        display: pseudo.display,
+        width: box.width,
+        height: box.height
+      };
+    });
+    assert(pointerSprite, `${viewport.name}: merged T2 has no board sprite slot`);
+    assert(pointerSprite.backgroundImage !== 'none', `${viewport.name}: merged T2 sprite background is missing`);
+    assert(pointerSprite.position === 'absolute', `${viewport.name}: merged T2 sprite is not absolutely anchored`);
+    assert(pointerSprite.display !== 'none', `${viewport.name}: merged T2 sprite is hidden`);
+    assert(pointerSprite.width > 0 && pointerSprite.height > 0, `${viewport.name}: merged T2 sprite slot has no geometry`);
+
+    await page.screenshot({ path: new URL(`${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
+
+    // Reset local persistence and exercise a separate code-driven keyboard path.
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
     await page.locator('[data-cell="0"]').focus();
     await page.keyboard.press('Enter');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
-    await page.waitForFunction(() => document.querySelector('.hud-pill--merge strong')?.textContent?.trim() === '1');
-    const keyboardState = await page.evaluate(() => {
-      const activeCell = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.cell : null;
-      const cameraVisual = document.querySelector('.cell[data-family="camera-dude"] .unit-visual');
-      if (!(cameraVisual instanceof HTMLElement)) return { activeCell, cameraSprite: null };
-      const pseudo = getComputedStyle(cameraVisual, '::before');
-      const box = cameraVisual.getBoundingClientRect();
-      return {
-        activeCell,
-        cameraSprite: {
-          backgroundImage: pseudo.backgroundImage,
-          position: pseudo.position,
-          display: pseudo.display,
-          width: box.width,
-          height: box.height
-        }
-      };
-    });
-    assert(keyboardState.activeCell === '1', `${viewport.name}: keyboard focus was not restored to merge target`);
-    assert(keyboardState.cameraSprite, `${viewport.name}: merged T2 has no board sprite slot`);
-    assert(keyboardState.cameraSprite.backgroundImage !== 'none', `${viewport.name}: merged T2 sprite background is missing`);
-    assert(keyboardState.cameraSprite.position === 'absolute', `${viewport.name}: merged T2 sprite is not absolutely anchored`);
-    assert(keyboardState.cameraSprite.display !== 'none', `${viewport.name}: merged T2 sprite is hidden`);
-    assert(keyboardState.cameraSprite.width > 0 && keyboardState.cameraSprite.height > 0, `${viewport.name}: merged T2 sprite slot has no geometry`);
+    await waitForOneMerge(page, `${viewport.name} keyboard`);
+    const activeCell = await page.evaluate(() => document.activeElement instanceof HTMLElement ? document.activeElement.dataset.cell : null);
+    assert(activeCell === '1', `${viewport.name}: keyboard focus was not restored to merge target`);
 
-    await page.screenshot({ path: new URL(`${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
     await context.close();
   }
-  console.log('Packaged runtime smoke OK: desktop, compact, mobile');
+  console.log('Packaged runtime smoke OK: desktop mouse, compact mouse, mobile touch, keyboard');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
