@@ -1,14 +1,12 @@
 /* Brain Lab approved art integration.
  * Existing Brain Lab markup/logic remains the component source of truth.
- * The supplied art is presentation only. Semantic selectors bind each sprite
- * to the upgrade id already emitted by the code, so reordering cards cannot
- * silently swap their visuals.
+ * Supplied raster art is presentation only: it never owns layout, prices,
+ * levels, lock states, hit areas or responsive visibility.
  * Atlas order: Base Drop, Lucky +1, Global Income, Offline Capacity, Offline Reward.
  */
 :root{--upgrade-ui-atlas:url('./assets/ui/upgrade-ui-atlas.webp')}
 
-/* Brain Lab uses the same code-drawn raised-panel grammar as Mission/Collection.
- * The panel itself is not a raster screenshot: geometry, header and states stay CSS/DOM-owned. */
+/* Raised Brain Lab skin. Geometry stays CSS/DOM-owned rather than flattened into art. */
 .side-card--lab{
   padding:54px 12px 14px!important;
   border:7px solid #49bdb8!important;
@@ -19,18 +17,9 @@
 }
 .side-card--lab::before{inset:7px!important;border-radius:23px!important;border:2px solid rgba(255,255,255,.54)!important;box-shadow:inset 0 0 0 1px rgba(75,58,89,.06)!important;background:none!important}
 .side-card--lab .side-card__eyebrow{
-  position:absolute!important;
-  z-index:4!important;
-  top:-13px!important;
-  left:20px!important;
-  right:20px!important;
-  height:48px!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  border:4px solid #168f98!important;
-  border-radius:21px!important;
-  color:#fff!important;
+  position:absolute!important;z-index:4!important;top:-13px!important;left:20px!important;right:20px!important;height:48px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  border:4px solid #168f98!important;border-radius:21px!important;color:#fff!important;
   background:linear-gradient(180deg,#71e7dd,#42cbc4 55%,#24aba9)!important;
   box-shadow:inset 0 4px 0 rgba(255,255,255,.38),inset 0 -4px 0 rgba(21,113,119,.18),0 6px 8px rgba(54,101,108,.18)!important;
   text-shadow:0 2px rgba(24,108,113,.44)!important;
@@ -39,28 +28,17 @@
 
 .upgrade-card{position:relative;isolation:isolate;min-height:112px;overflow:hidden}
 .upgrade-card::before{
-  content:"";
-  position:absolute;
-  z-index:0;
-  top:8px;
-  left:8px;
-  width:54px;
-  height:54px;
-  border-radius:15px;
+  content:"";position:absolute;z-index:0;top:8px;left:8px;width:54px;height:54px;border-radius:15px;
   background-image:var(--upgrade-ui-atlas),linear-gradient(145deg,rgba(255,255,255,.82),rgba(238,225,245,.82));
-  background-repeat:no-repeat,no-repeat;
-  background-size:500% 100%,100% 100%;
-  background-position:0 0,center;
+  background-repeat:no-repeat,no-repeat;background-size:500% 100%,100% 100%;background-position:0 0,center;
   box-shadow:inset 0 2px 0 rgba(255,255,255,.82),0 4px 9px rgba(71,46,81,.12);
-  pointer-events:none;
-  transition:transform .16s ease,filter .16s ease,opacity .16s ease;
+  pointer-events:none;transition:transform .16s ease,filter .16s ease,opacity .16s ease;
 }
-/* Legacy positional fallback for engines without :has(). */
+/* Positional values are a graceful fallback; semantic :has() binding is authoritative. */
 .upgrade-card:nth-child(1)::before{background-position:0 0,center}
 .upgrade-card:nth-child(2)::before{background-position:25% 0,center}
 .upgrade-card:nth-child(3)::before{background-position:50% 0,center}
 .upgrade-card:nth-child(4)::before{background-position:75% 0,center}
-/* Semantic binding follows the existing data-upgrade actions emitted by GameView. */
 .upgrade-card:has(button[data-upgrade='boxBaseTier'])::before{background-position:0 0,center}
 .upgrade-card:has(button[data-upgrade='luckyDrop'])::before{background-position:25% 0,center}
 .upgrade-card:has(button[data-upgrade='income'])::before{background-position:50% 0,center}
@@ -71,70 +49,32 @@
 .upgrade-card.is-locked::before{filter:grayscale(.72) saturate(.5);opacity:.55}
 .upgrade-card.is-maxed::before{filter:saturate(.82) brightness(1.06);opacity:.88}
 .upgrade-card.is-maxed::after{
-  content:"✓";
-  position:absolute;
-  z-index:3;
-  top:5px;
-  left:51px;
-  width:18px;
-  height:18px;
-  display:grid;
-  place-items:center;
-  border:2px solid rgba(255,255,255,.9);
-  border-radius:50%;
-  background:#54b979;
-  color:#fff;
-  font-size:10px;
-  font-weight:950;
+  content:"✓";position:absolute;z-index:3;top:5px;left:51px;width:18px;height:18px;display:grid;place-items:center;
+  border:2px solid rgba(255,255,255,.9);border-radius:50%;background:#54b979;color:#fff;font-size:10px;font-weight:950;
   box-shadow:0 2px 5px rgba(44,116,72,.2);
 }
 
-/* Offline art decorates the already explicit reward/Collect component. */
+/* Offline art decorates the existing explicit amount + Collect component. */
 .offline-reward{position:relative;isolation:isolate;overflow:hidden;min-height:78px}
 .offline-reward::before{
-  content:"";
-  position:absolute;
-  z-index:0;
-  left:6px;
-  top:50%;
-  width:82px;
-  height:82px;
-  transform:translateY(-50%);
-  background-image:var(--upgrade-ui-atlas);
-  background-repeat:no-repeat;
-  background-size:500% 100%;
-  background-position:100% 0;
-  filter:drop-shadow(0 5px 5px rgba(58,94,73,.16));
-  pointer-events:none;
+  content:"";position:absolute;z-index:0;left:6px;top:50%;width:82px;height:82px;transform:translateY(-50%);
+  background-image:var(--upgrade-ui-atlas);background-repeat:no-repeat;background-size:500% 100%;background-position:100% 0;
+  filter:drop-shadow(0 5px 5px rgba(58,94,73,.16));pointer-events:none;
 }
-.offline-reward>div{position:relative;z-index:1;padding-left:78px}
-.offline-reward>button{position:relative;z-index:2}
+.offline-reward>div{position:relative;z-index:1;padding-left:78px}.offline-reward>button{position:relative;z-index:2}
 
-/* Old polish layers intentionally hid every side card below 1100px. That predates Brain Lab.
- * Restore the already code-driven Mission/Collection/Lab components instead of replacing them
- * with image-only mobile UI. The existing responsive rail remains the layout authority. */
-@media(max-width:1100px){
-  .side-card--mission,.right-rail .side-card{display:block}
-  .right-rail .side-card--collection,.right-rail .side-card--lab{grid-row:auto}
-}
+/* Art-scale adjustments only. Responsive composition belongs to mobile-runtime.css. */
 @media(max-width:700px){
   .side-card--lab{padding:52px 12px 14px!important}
   .upgrade-card{min-height:104px}
   .upgrade-card::before{width:46px;height:46px;left:7px;top:7px;border-radius:13px}
   .upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{margin-left:51px}
   .upgrade-card.is-maxed::after{left:42px}
-  .offline-reward{min-height:66px}
-  .offline-reward::before{width:66px;height:66px;left:4px}
-  .offline-reward>div{padding-left:60px}
-  .right-rail .side-card--lab{order:1}
-  .right-rail .side-card--collection{order:2}
+  .offline-reward{min-height:66px}.offline-reward::before{width:66px;height:66px;left:4px}.offline-reward>div{padding-left:60px}
 }
 @media(max-width:420px){
-  .upgrade-card{min-height:110px}
-  .upgrade-card::before{width:52px;height:52px}
-  .upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{margin-left:58px}
-  .upgrade-card.is-maxed::after{left:48px}
-  .offline-reward::before{width:58px;height:58px;opacity:.94}
-  .offline-reward>div{padding-left:52px}
+  .upgrade-card{min-height:110px}.upgrade-card::before{width:52px;height:52px}
+  .upgrade-card__top,.upgrade-card>small,.upgrade-card>.upgrade-effect{margin-left:58px}.upgrade-card.is-maxed::after{left:48px}
+  .offline-reward::before{width:58px;height:58px;opacity:.94}.offline-reward>div{padding-left:52px}
 }
 @media(prefers-reduced-motion:reduce){.upgrade-card::before{transition:none!important}}
