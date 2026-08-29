@@ -82,7 +82,7 @@ try {
         const element = document.querySelector(selector);
         if (!(element instanceof HTMLElement)) return null;
         const box = element.getBoundingClientRect();
-        return { top: box.top, bottom: box.bottom, width: box.width, height: box.height };
+        return { top: box.top, bottom: box.bottom, left: box.left, width: box.width, height: box.height };
       };
       const brokenImages = [...document.images]
         .filter((image) => image.complete && image.naturalWidth === 0)
@@ -115,6 +115,7 @@ try {
 
     if (viewport.name === 'compact') {
       assert(snapshot.labRect && snapshot.collectionRect, 'compact: missing rail geometry');
+      assert(Math.abs(snapshot.labRect.top - snapshot.collectionRect.top) <= 2, `compact: Brain Lab and Collection must share the same rail row (${snapshot.labRect.top} vs ${snapshot.collectionRect.top})`);
       assert(snapshot.collectionRect.height < snapshot.labRect.height, `compact: Collection still stretches to Brain Lab height (${snapshot.collectionRect.height} >= ${snapshot.labRect.height})`);
     }
     if (viewport.name === 'mobile') {
@@ -128,8 +129,29 @@ try {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => document.querySelector('.hud-pill--merge strong')?.textContent?.trim() === '1');
-    const activeCell = await page.evaluate(() => document.activeElement instanceof HTMLElement ? document.activeElement.dataset.cell : null);
-    assert(activeCell === '1', `${viewport.name}: keyboard focus was not restored to merge target`);
+    const keyboardState = await page.evaluate(() => {
+      const activeCell = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.cell : null;
+      const cameraVisual = document.querySelector('.cell[data-family="camera-dude"] .unit-visual');
+      if (!(cameraVisual instanceof HTMLElement)) return { activeCell, cameraSprite: null };
+      const pseudo = getComputedStyle(cameraVisual, '::before');
+      const box = cameraVisual.getBoundingClientRect();
+      return {
+        activeCell,
+        cameraSprite: {
+          backgroundImage: pseudo.backgroundImage,
+          position: pseudo.position,
+          display: pseudo.display,
+          width: box.width,
+          height: box.height
+        }
+      };
+    });
+    assert(keyboardState.activeCell === '1', `${viewport.name}: keyboard focus was not restored to merge target`);
+    assert(keyboardState.cameraSprite, `${viewport.name}: merged T2 has no board sprite slot`);
+    assert(keyboardState.cameraSprite.backgroundImage !== 'none', `${viewport.name}: merged T2 sprite background is missing`);
+    assert(keyboardState.cameraSprite.position === 'absolute', `${viewport.name}: merged T2 sprite is not absolutely anchored`);
+    assert(keyboardState.cameraSprite.display !== 'none', `${viewport.name}: merged T2 sprite is hidden`);
+    assert(keyboardState.cameraSprite.width > 0 && keyboardState.cameraSprite.height > 0, `${viewport.name}: merged T2 sprite slot has no geometry`);
 
     await page.screenshot({ path: new URL(`${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
     await context.close();
