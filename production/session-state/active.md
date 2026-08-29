@@ -1,67 +1,91 @@
 # Active Session — Brainmerge
 
 ## Current objective
-Turn the validated sequential merge core into a production-looking, self-guided first progression cycle with clear short-term goals, stable economy, save migration and strong browser/mobile presentation.
+Drive Brainmerge to production-ready state using `docs/ROADMAP.md`, completing the next unfinished production block autonomously, validating it, then continuing to the next viable block.
 
-## Completed
+The current gameplay direction is merge-idle rather than pure merge: characters produce coins, coins fund either more Brain Boxes or permanent efficiency upgrades, and first discovery of every new tier still happens through merging.
+
+## Completed foundation
 - dependency-light browser TypeScript runtime;
-- deterministic 6x5 merge-board core;
-- paid spawn, move, drag/drop and tap-to-select merge flow;
-- one sequential eight-character core chain: Toilet Buddy -> Camera Dude -> Sigma Rock -> Rizz Head -> Shark Sneakers -> Crocodile Bomber -> Coffee Ballerina -> Tung Wood;
-- standard and rewarded Brain Box feed only T1 Toilet Buddy; higher characters are earned only through merging;
-- successful merge replaces two identical characters with the next character identity;
-- first session starts with two ready Toilet Buddy pairs for immediate readable discovery;
-- persistent `maxDiscoveredTier` Collection progression;
-- save schema upgraded to version 4 with migration from legacy v1/v2/v3 saves;
-- legacy family/tier cells normalize onto canonical chain tiers;
-- old `missionClaimed=true` maps to mission step 2 so the original first-mission reward is not lost on migration;
-- coins, XP/level, Collection preview and deterministic progression state;
-- EN/RU localization parity maintained;
-- two-step first-session onboarding that highlights a merge pair then Brain Box;
-- eight-step cumulative first-cycle mission journey added: 6 merges -> T4 -> 12 spawns -> T5 -> 30 merges -> T6 -> T7 -> T8;
-- mission rewards tuned at 80 / 100 / 90 / 130 / 150 / 190 / 260 / 400 coins;
-- mission progress earned before a mission activates still counts, avoiding artificial counter resets;
-- mission panel now shows goal X/8, journey dots, current progress, reward-ready state and final completion state;
-- localized mission-advance and full-journey completion feedback added;
-- first-cycle mission presentation isolated in `public/mission-journey.css`, responsive and reduced-motion safe;
-- true-deadlock detection and chain-aware Rescue that frees a terminal/top-tier blocker first;
-- deterministic `findBestMergePair` chooses the highest-value available merge;
-- crowded-board guidance highlights only that best merge pair;
-- full-board-but-solvable and true-deadlock states have distinct copy and visual treatment;
-- platform factory + local adapter + Yandex Games adapter;
-- Yandex locale, safe storage, debounced cloud save, rewarded/fullscreen ads and LoadingAPI/GameplayAPI integration;
-- procedural merge/spawn/reward/rescue audio + particle feedback and mute control;
-- portal packager + Yandex CI artifact with package-size gate;
-- Figma first-session and deadlock/rescue production targets;
-- per-character runtime presentation normalization for scale, baseline and contact shadow;
-- richer material pass for board frame/tray/cells, HUD, mission/collection cards, Brain Box dock and interaction states;
-- graceful missing-art fallback;
-- reduced-motion handling and responsive desktop/mobile layout;
-- approved Toilet Buddy integrated as canonical standalone Tier-1 art via `public/assets/characters/toilet-buddy-form-a.webp`;
-- Collection atlas ordering corrected after chain reorder;
-- standalone Toilet Buddy actually wins over the legacy atlas crop on board and Collection;
-- higher chain tiers receive lightweight reusable value treatment without fabricated art;
-- Brain Box paid cost tuned to 12 coins;
-- merge income centralized at 4 coins per resulting tier;
-- one-time first-discovery bonuses: T3 +8, T4 +12, T5 +20, T6 +32, T7 +48, T8 +80;
-- first-discovery messaging is distinct from ordinary repeat merges;
-- comprehensive deterministic tests cover chain order, merge identity, spawn rules, discovery bonuses, best-merge hints, deadlock Rescue, onboarding, localization, save migration, mission progression and economy;
-- full-cycle smoke test now requires a paid-only run to reach T8 AND complete all eight mission goals without rewarded ads or negative coins;
-- canonical gameplay/economy/mission contract documented in `docs/GAMEPLAY_AND_PROGRESSION.md`;
-- architecture documentation updated to current save v4 and sequential progression boundaries.
+- deterministic 6x5 merge board with touch/mouse and tap/drag flows;
+- one sequential T1-T8 chain: Toilet Buddy -> Camera Dude -> Sigma Rock -> Rizz Head -> Shark Sneakers -> Crocodile Bomber -> Coffee Ballerina -> Tung Wood;
+- identical-character merge -> exactly one next-tier identity;
+- persistent `maxDiscoveredTier` Collection;
+- two ready T1 pairs on fresh save;
+- cumulative eight-step first-cycle mission journey;
+- best-merge crowded-board hint;
+- chain-aware true-deadlock Rescue;
+- merge/discovery instant coin rewards;
+- EN/RU localization architecture and current parity;
+- local + Yandex platform adapters, rewarded/fullscreen capability paths, lifecycle calls and persistence;
+- procedural merge/spawn/reward/rescue feedback;
+- Yandex packaging + CI artifact/size gate;
+- approved standalone T1 Toilet Buddy runtime art and shared-atlas fallback for T2-T8;
+- responsive/reduced-motion presentation layers for chain, missions and existing board UI.
 
-## Intentional limits
-- Current chain ends at T8 Tung Wood until more approved character identities are assigned.
-- Camera Dude through Tung Wood still rely on the shared atlas until approved standalone runtime assets are integrated.
-- Automatic interstitial cadence remains disabled; adapter support exists, but placement should follow real session QA rather than fire during active merging.
-- Character normalization remains subject to real screenshot QA as standalone art replaces atlas entries.
-- No extra currency, generator, energy system, random high-tier drops or cross-character merges were introduced.
-- The eight-step mission journey is the current first-cycle baseline, not an infinite quest/live-ops system.
+## Production economy / idle loop implemented
+- save schema upgraded to **v5** with migration from every previous shipped schema v1-v4;
+- every character now has centralized passive production:
+  - T1 3/min;
+  - T2 7/min;
+  - T3 16/min;
+  - T4 36/min;
+  - T5 82/min;
+  - T6 185/min;
+  - T7 420/min;
+  - T8 950/min;
+- every next tier produces more than two previous-tier pieces combined, so a merge is always production-positive;
+- paid Brain Box pricing is now `ceil(20 × 1.045 ^ paidBoxes)`;
+- rewarded Brain Box is free and never increments `paidBoxes` or paid-box inflation;
+- Brain Boxes can rebuild discovered tiers but are capped to `maxDiscoveredTier`, so they can never reveal a new character first;
+- Brain Lab upgrade tree added:
+  - Base Drop Tier: T1 -> T4, discovery-gated, costs 600 / 3000 / 15000;
+  - Lucky Drop: +1-tier chance 0 / 5 / 10 / 16 / 23 / 30%, costs 200 / 500 / 1200 / 3000 / 7500;
+  - Brain Income: x1 / 1.15 / 1.32 / 1.52 / 1.75 / 2 production, costs 250 / 700 / 1800 / 5000 / 14000;
+  - Offline Storage: 2 / 4 / 6 / 8 / 12h cap, costs 300 / 900 / 2500 / 7000;
+- online passive income uses elapsed time plus fractional `incomeRemainder` rather than frame count;
+- actions settle elapsed production before changing board composition or income multiplier, preventing retroactive higher-rate earnings;
+- hide/pagehide settles and persists state;
+- resume/load converts elapsed time into capped `pendingOfflineCoins`;
+- offline production uses an explicit Collect action and cannot be double-claimed;
+- runtime accounting cursor never moves backward, blocking duplicate income after device clock rollback;
+- invalid/negative paid-box, upgrade, pending-income, remainder and timestamp fields sanitize safely;
+- legacy players begin at zero paid-box inflation because old schemas cannot distinguish paid/rewarded Box history;
+- HUD now shows total production/min;
+- occupied board cells show their individual production rate;
+- paid Brain Box CTA shows dynamic price;
+- Brain Box profile shows base tier, Lucky chance and paid-purchase count;
+- Brain Lab displays level/effect/cost/lock/max states for all four upgrades;
+- offline reward banner shows pending amount and explicit Collect CTA;
+- new economy UI has responsive desktop/compact/mobile CSS in `public/economy-loop.css`;
+- all new player-facing economy/upgrade/offline copy added in EN/RU.
 
-## Next logical steps
-1. validate the complete save-v4 / mission-journey / full-cycle economy pass in CI and fix every regression;
-2. perform real browser screenshot QA at desktop 1440x900, compact landscape and narrow mobile;
-3. compare mission journey, chain strip, crowded-board guidance, Collection and first-session hierarchy against approved Figma targets;
-4. correct real clipping/scale/baseline/touch-layout deltas found by runtime capture;
-5. integrate approved standalone Camera Dude through Tung Wood art as available;
-6. only after runtime visual QA is clean, add the next retention layer (return-session goals / daily structure) without destabilizing the core chain.
+## Validation completed
+- CI #84 on commit `3673c332524ffe599e9fa111ebbb00beb981da14` completed successfully;
+- TypeScript build passed;
+- EN/RU locale parity passed;
+- deterministic gameplay/economy tests passed;
+- Yandex package passed;
+- artifact upload passed;
+- tests cover production-positive tier ladder, escalating paid Box price, rewarded Box non-inflation, discovery-capped upgraded drops, upgrade locks/costs, online fractional accrual, capped explicit offline reward, no double claim, clock rollback protection, v1-v5 migration/sanitization, missions, Collection, deadlock/hints and a simulated fresh-save -> T8 run without mandatory rewarded ads or negative coins.
+
+## Canonical documents
+- `docs/ROADMAP.md` — production-ready roadmap and execution order.
+- `docs/GAMEPLAY_AND_PROGRESSION.md` — current merge-idle/economy contract.
+- `docs/ARCHITECTURE.md` — current v5 state/time/platform architecture.
+- `docs/ART_BIBLE.md` — visual source of truth together with approved Figma targets.
+
+## Intentional limits / blockers
+- T2-T8 still use the shared atlas until approved standalone assets are available; do not fabricate replacements.
+- Real browser screenshot QA at 1440x900, compact landscape and narrow mobile is still required before declaring presentation production-ready.
+- Automatic interstitial cadence remains disabled until real session pacing is reviewed.
+- Prestige/rebirth remains deferred until the new production economy and return-session pacing are validated; do not add it merely to extend progression.
+- One primary currency (coins) remains intentional.
+
+## Next execution blocks
+1. harden persistence for the new time-based economy with periodic visible-session autosave and regression coverage around save snapshots/resume boundaries;
+2. update `docs/ROADMAP.md` completion state after the validated economy block;
+3. perform real runtime visual/interaction QA when a browser capture path is available and correct Upgrade Lab/offline/production-label layout deltas;
+4. build the return-session retention layer around offline reward + an actionable next goal without adding a second currency;
+5. integrate approved standalone T2-T8 assets as they become available;
+6. complete final Yandex/release hardening and fresh-save + migrated-save release-candidate smoke passes.
