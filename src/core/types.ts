@@ -17,9 +17,19 @@ export interface Unit {
 
 export type Cell = Unit | null;
 export type OnboardingPhase = 'merge' | 'spawn' | 'complete';
+export type MissionKind = 'merges' | 'discover' | 'spawns';
+
+export interface MissionDefinition {
+  id: string;
+  kind: MissionKind;
+  target: number;
+  reward: number;
+  titleKey: string;
+  textKey: string;
+}
 
 export interface GameState {
-  version: 3;
+  version: 4;
   cells: Cell[];
   coins: number;
   xp: number;
@@ -27,7 +37,8 @@ export interface GameState {
   spawns: number;
   /** Highest core merge tier ever created; keeps Collection discovery persistent. */
   maxDiscoveredTier: number;
-  missionClaimed: boolean;
+  /** Index of the active mission in the deterministic first-cycle mission track. */
+  missionIndex: number;
   selectedIndex: number | null;
   messageKey: string | null;
 }
