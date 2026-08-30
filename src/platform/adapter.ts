@@ -12,7 +12,10 @@ export interface PlatformCapabilities {
 export interface PlatformAdapter {
   readonly id: string;
   readonly capabilities: PlatformCapabilities;
+  /** Initialize the platform SDK and persistence services only. */
   initialize(): Promise<void>;
+  /** Signal only after locale, save restoration and the first interactive render are complete. */
+  gameReady(): Promise<void>;
   preferredLocale(): Locale | null;
   loadState(): Promise<unknown>;
   /**
