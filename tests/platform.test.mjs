@@ -20,6 +20,7 @@ function createHarness() {
   };
   const timers = new Map();
   let timerId = 0;
+  let readyCalls = 0;
   const gameplay = [];
   const sdk = {
     environment: { i18n: { lang: 'ru' } },
@@ -30,7 +31,7 @@ function createHarness() {
       showRewardedVideo() {}
     },
     features: {
-      LoadingAPI: { ready() {} },
+      LoadingAPI: { ready() { readyCalls += 1; } },
       GameplayAPI: {
         start() { gameplay.push('start'); },
         stop() { gameplay.push('stop'); }
@@ -52,6 +53,7 @@ function createHarness() {
     cloudWrites,
     storageMap,
     gameplay,
+    readyCalls() { return readyCalls; },
     setCloudData(data) { cloudData = data; },
     runTimers() {
       const callbacks = [...timers.values()];
@@ -73,13 +75,31 @@ async function withWindow(windowMock, callback) {
   }
 }
 
-test('Yandex adapter debounces ordinary cloud saves but flushes latest state immediately at lifecycle boundary', async () => {
+test('Yandex adapter delays Game Ready and gameplay start until the rendered game explicitly signals readiness', async () => {
   const harness = createHarness();
   await withWindow(harness.windowMock, async () => {
     const adapter = new YandexPlatformAdapter();
     await adapter.initialize();
     assert.equal(adapter.preferredLocale(), 'ru');
-    assert.ok(harness.gameplay.includes('start'));
+    assert.equal(harness.readyCalls(), 0, 'SDK initialization must not claim the game is already interactive');
+    assert.deepEqual(harness.gameplay, [], 'gameplay must not start before first interactive render');
+
+    await adapter.gameReady();
+    assert.equal(harness.readyCalls(), 1);
+    assert.deepEqual(harness.gameplay, ['start']);
+
+    await adapter.gameReady();
+    assert.equal(harness.readyCalls(), 1, 'Game Ready must be emitted once');
+    assert.deepEqual(harness.gameplay, ['start'], 'duplicate readiness must not duplicate GameplayAPI.start');
+  });
+});
+
+test('Yandex adapter debounces ordinary cloud saves but flushes latest state immediately at lifecycle boundary', async () => {
+  const harness = createHarness();
+  await withWindow(harness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
 
     const first = { ...createInitialState(1000), coins: 111 };
     const latest = { ...first, coins: 222, paidBoxes: 3 };
