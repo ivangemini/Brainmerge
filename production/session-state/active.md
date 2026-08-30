@@ -65,6 +65,17 @@ Controlled-state matrix additionally verifies:
 - all four maxed upgrades + completed mission track;
 - T7 -> T8 discovery and Collection unlock.
 
+## Packaged RC accessibility/migration gate
+`scripts/rc-smoke.mjs` is now a separate CI release gate on the same packaged `dist/`.
+
+It verifies:
+- keyboard Tab reaches a merge-board cell and the focused cell exposes a visible >=3px focus outline;
+- Chromium reduced-motion mode is active and tutorial attention animations collapse to <=1ms effective duration;
+- visible phone/coarse-pointer controls checked by the gate are at least 44x44 px;
+- a real legacy v2 payload injected into localStorage before boot migrates through the packaged application, renders canonical Shark Sneakers as T5, preserves at least T1-T5 Collection discovery, persists save v5, sets maxDiscoveredTier=5, preserves mission compatibility at missionIndex=1 and clears stale selectedIndex.
+
+The first two RC-gate failures were defects in the test harness, not the game: a global `URL` name was shadowed, then Chromium canonicalized `.001ms` to `1e-06s`. Both assertions were corrected without weakening the requirements. CI #175 is the first run where the complete RC gate passes.
+
 ## Runtime visual review corrections
 Real CI screenshots, not isolated asset previews, drove the latest corrections:
 1. Compact Collection no longer stretches to Brain Lab height or inherits stale grid-row placement.
@@ -73,6 +84,17 @@ Real CI screenshots, not isolated asset previews, drove the latest corrections:
 4. On phone, the fixed audio control moved from the bottom viewport anchor that overlapped Mission into a free system-control pocket below the HUD.
 5. Per-character `presentation.scale`, shadow scale and Collection scale were moderately re-tuned from runtime captures toward the Art Bible 72-82% useful visual-occupancy target. Gameplay hitboxes/rules are unchanged.
 6. Trivial sub-minute reload/resume gaps no longer produce +1/+2-style offline reward banners.
+
+## Yandex SDK lifecycle hardening
+The adapter contract now separates SDK initialization from Game Ready reporting:
+- `initialize()` initializes SDK/storage/player only;
+- `gameReady()` is emitted after locale loading, save restoration and the first complete interactive render;
+- Yandex `LoadingAPI.ready()` is called from `gameReady()`, not early during SDK initialization;
+- `GameplayAPI.start()` follows Game Ready and remains paired with `stop()` across visibility/ad lifecycle events;
+- Game Ready is idempotent and deterministic tests reject duplicate ready/start calls;
+- cloud debounce, latest-state flush, storage fallback and write-race protections remain intact.
+
+This hardens the code against Yandex moderation timing requirements, but it is not a substitute for a real Yandex portal/debug-panel smoke.
 
 ## Keyboard/input hardening
 - global Space cannot buy a paid Brain Box;
@@ -86,11 +108,11 @@ Real CI screenshots, not isolated asset previews, drove the latest corrections:
 Tutorial cells pulse continuously by design. Playwright uses forced pointer input for those cells so it exercises the real handlers without waiting for impossible visual stability.
 
 ## Latest validation
-- static suite: 50 passing tests after discovery-feedback contract coverage;
-- CI #155: first complete controlled-state matrix green;
-- CI #157: sub-minute offline-reward suppression green;
-- CI #163 on `1a3141ddd3e2a09ac20116834ddb8f85f7778bac`: fully green — TypeScript/tests, EN/RU parity, Yandex package/integrity, packaged release audit, Playwright Chromium fresh + state-matrix smoke, package artifact and screenshot artifact uploads.
-- latest documentation commit follows #163 and does not alter runtime behavior.
+- deterministic/static suite: 51 passing tests, including Yandex Game Ready timing/idempotence;
+- Yandex package + release audit remain green;
+- main packaged runtime smoke remains green after the platform lifecycle changes;
+- CI #175 on `2e497e879724807c42dd13fbab492017b28b3209`: packaged runtime smoke and packaged RC focus/reduced-motion/touch-target/v2-migration smoke both passed; artifact upload followed successfully.
+- documentation commits after #175 change project truth only and must still receive their own CI before being treated as final RC HEAD.
 
 ## Figma source of truth
 Known Brainmerge Figma file key: `lIFT4QEPhnsFfSrRD8WFad`.
@@ -99,11 +121,10 @@ The connector successfully identified page `Characters — Approved`. Deeper nod
 ## Remaining gates
 1. Full approved-Figma/art-direction comparison once node reads are available; align remaining Mission/Collection/Brain Box/HUD deltas and record final visual acceptance.
 2. Replace T2-T8 shared atlas entries with approved standalone assets when actual files are supplied; do not fabricate replacements.
-3. Final focus-visible/contrast/reduced-motion/coarse-pointer visual review.
-4. Real Yandex SDK lifecycle/capability smoke.
-5. Full packaged fresh-save + migrated-save release-candidate smoke.
-6. Final RC HEAD CI after all remaining gates.
-7. Decide on additional daily/return goals only if real session QA justifies them; no second currency is currently justified.
+3. Final artistic contrast/focus review against approved targets.
+4. Real Yandex portal/debug-panel lifecycle/capability smoke, including Game Ready/GamePlay indicators and real ad/storage behavior.
+5. Final RC HEAD CI after all remaining gates.
+6. Decide on additional daily/return goals only if real session QA justifies them; no second currency is currently justified.
 
 ## Source of truth
 - `docs/ROADMAP.md`
