@@ -1,174 +1,275 @@
 # Brainmerge Architecture — Browser Production Runtime
 
 ## Decision
-Use dependency-light browser TypeScript + DOM/CSS. Keep deterministic gameplay/economy/save rules independent from rendering and portal SDKs so the same canonical state can run on local web, Yandex Games and future web portals through adapters.
+Use dependency-light browser TypeScript + DOM/CSS. Keep deterministic gameplay/economy/save/meta rules independent from rendering and portal SDKs so the same canonical state can run on local web, Yandex Games and future web portals through adapters.
+
+The architecture now supports three product layers:
+
+1. core T1-T18 merge-idle run;
+2. permanent Collection/Prestige meta;
+3. isolated data-driven Campaign stages and bosses.
 
 ## Boundaries
-- `src/core/` — deterministic merge, progression, economy, idle-income, next-action guidance and save rules; no DOM or platform SDKs.
-- `src/ui/` — board/HUD/mission/upgrade rendering and pointer/touch interaction.
+- `src/core/` — deterministic merge, progression, economy, idle income, Collection, Prestige, Campaign definitions/state transitions and save rules; no DOM or platform SDKs.
+- `src/ui/` — board/HUD/mission/upgrade/Collection/Campaign/Prestige rendering and input wiring.
 - `src/i18n/` + `locales/` — EN/RU localization and locale normalization.
-- `src/platform/` — portal adapters, persistence, ads and lifecycle capability detection.
-- `src/feedback/` — non-authoritative audio/particle feedback.
-- `public/assets/` — runtime art derived from approved character/UI assets.
-- `public/code-ui.css` — primary code-first component geometry and structural skin.
-- `public/chain-polish.css` — sequential-chain presentation states and character sprite-state corrections.
-- `public/mission-journey.css` — first-cycle mission presentation.
-- `public/economy-loop.css` — production, offline reward and Brain Lab component styling; it does not own page-level responsive rail composition.
-- `public/upgrade-art.css` — approved Brain Lab/offline raster presentation only; it must not own responsive panel visibility/order or live state.
-- `public/return-loop.css` — computed return-session/next-action presentation.
-- `public/mobile-runtime.css` — final responsive composition authority for compact/tablet/phone layouts.
-- `public/accessibility.css` — final focus-visible, coarse-pointer, touch-gesture and reduced-motion interaction layer.
+- `src/platform/` — portal adapters, persistence, ads and lifecycle capabilities.
+- `src/feedback/` — non-authoritative audio/particle/game-feel feedback.
+- `public/assets/characters/` — production character atlas plus retained source/reference renders.
+- `public/assets/ui/` — production UI icons/atlases and future campaign/meta art.
+
+## Current presentation layers
+The shipped page intentionally layers CSS by responsibility:
+
+- `src/styles.css` — base app geometry;
+- `public/polish.css` / `viewport-fit.css` / `character-fit.css` — legacy/base presentation normalization;
+- `public/code-ui.css` — primary code-first component geometry and structural skin;
+- `public/sprite-art.css` — atlas variables;
+- `public/chain-polish.css` — sequential-chain states and discovery/Collection polish;
+- `public/standalone-character-art.css` — retained compatibility layer; current T1-T18 production rendering is unified through the shared atlas and this file must not reintroduce standalone routing;
+- `public/mission-journey.css` — first-cycle mission presentation;
+- `public/economy-loop.css` — production/offline/Brain Lab styling;
+- `public/upgrade-art.css` — approved economy raster decoration only;
+- `public/return-loop.css` — computed `Next move` presentation;
+- `public/mobile-runtime.css` — responsive board/rail base composition;
+- `public/visual-finish.css` / `game-feel*.css` — production finish and motion;
+- `public/mobile-sheets.css` — phone-only overlay ownership for Missions / Collection / Brain Lab, keeping them out of the default document flow;
+- `public/ui-icon-pass.css` — production Missions / Collection / Rewards / Brain Lab icon integration and compact alignment corrections;
+- `public/accessibility.css` — final focus/coarse-pointer/reduced-motion interaction layer.
+
+Future Campaign/Prestige presentation should follow the same contract: state/geometry is code-owned, art is decorative, and mobile navigation must not regress to a long vertical pile of full panels.
 
 ## UI ownership contract
-`GameView` owns live DOM structure and derives visible state from `GameState`: prices, levels, progress, lock reasons, affordability, labels, buttons and hit areas remain code-owned. Raster assets decorate those components; they never replace live UI with flattened screenshots.
+`GameView` owns live gameplay DOM and derives visible state from authoritative data: prices, levels, progress, lock reasons, affordability, labels, buttons and hit areas remain code-owned.
 
-CSS responsibilities are intentionally layered:
-1. base/component geometry is code-driven;
-2. feature/polish layers may change appearance and feature-specific states;
-3. art layers may size/crop/filter approved raster assets but must not decide whether production components exist or where whole panels are ordered;
-4. `mobile-runtime.css` owns final responsive panel composition and ordering;
-5. `accessibility.css` is last so interaction affordances cannot be accidentally hidden by visual polish.
+Raster assets may provide:
+- character art;
+- icons;
+- world/environment backgrounds;
+- boss renders;
+- decorative reward art.
 
-`tests/ui-contract.test.mjs` protects this contract. It verifies stylesheet order, keeps upgrade/economy art layers out of responsive page composition, requires Mission/Collection/Brain Lab to remain reachable at compact breakpoints, clears legacy nested grid-row ownership, protects shared-atlas vs standalone character rendering and checks that Brain Lab state/actions still originate from code.
+Raster assets must never flatten or own:
+- currency values;
+- stage objectives;
+- star counts;
+- boss HP/progress;
+- Prestige reset/preserve lists;
+- localized text;
+- prices/upgrade levels;
+- hit areas.
 
-The board is keyboard-operable without hidden economy actions. Enter/Space on a focused cell reuses the same select/move/merge path as pointer input; arrow keys move focus by board geometry; focus is restored after code-driven DOM rerenders; Escape clears selection. There is no global Space shortcut that spends coins.
+## Character rendering contract
+All canonical T1-T18 identities currently resolve through one physical **6x3 `public/assets/characters/character-atlas.webp`**.
 
-## Packaged-runtime browser gate
-CI builds the real Yandex `dist/` package first and then opens that packaged output in headless Chromium through `scripts/runtime-smoke.mjs`. The page uses `?platform=local` only to isolate visual/input validation from the external Yandex SDK; HTML, CSS, compiled JS and raster assets are the actual distribution files.
+Board and Collection select the correct slot through tier/family presentation data. The atlas is a production optimization, not gameplay state. Per-character scale/shadow/collection normalization remains presentation data.
 
-The browser gate runs three production viewports:
-- desktop: 1440x900;
-- compact landscape: 1024x576;
-- phone: 390x844 with touch capability enabled.
+Standalone character WebPs may remain in the repository as approved source/reference material but are not the ordinary production rendering path.
 
-For each viewport it verifies:
-- all 30 board cells and the Mission, Collection, Brain Lab, Brain Box and onboarding/Next Move surfaces are present;
-- no horizontal document overflow, broken `<img>` resource or uncaught page error;
-- compact Brain Lab/Collection share the intended rail row and keep independent natural heights;
-- phone Brain Lab precedes Collection;
-- a real mouse merge works on desktop/compact through the pointer handlers;
-- a real touch tap merge works in the phone context;
-- the resulting Camera Dude shared-atlas sprite has a visible absolute board slot;
-- a separate fresh-state keyboard merge succeeds and restores focus to the target cell.
+## Mobile composition contract
+Phone default is board-first.
 
-Full-page screenshots are uploaded as a dedicated CI artifact. These screenshots are reviewed when responsive or presentation code changes. This gate is technical runtime evidence; it does not replace approved Figma/art-direction comparison or human pacing review.
+- main board and Brain Box remain in the primary flow;
+- Missions / Collection / Brain Lab are opened from the fixed bottom dock as modal sheets;
+- inactive sheets are inert/aria-hidden;
+- sheets respect safe-area insets and reduced-motion rules;
+- desktop card composition remains separate and unchanged by the phone controller;
+- Campaign should get a prominent map/goal CTA outside the three-item dock rather than squeezing a fourth item into it by default;
+- Collection Rewards live inside Collection;
+- Prestige entry appears only when eligible or as a clearly locked meta entry.
 
 ## Canonical state ownership
-`GameState` is the only authoritative progression/economy snapshot. UI never owns currency, production, upgrade or discovery truth. Platform adapters persist the same state; they do not modify gameplay rules.
+The main persistent save remains the only authority for account progression. UI and platform adapters never invent progression state.
 
-Current schema is **version 5**.
+### Current v5 runtime state
+Current production schema is **v5** and includes:
+- main board;
+- coins;
+- paid Brain Box count;
+- current Brain Lab upgrade levels;
+- lifetime discovered tier;
+- mission progress/history;
+- passive-income remainder/timestamps/offline pending coins;
+- other current canonical counters.
 
-Persistent v5 economy fields include:
-- `paidBoxes` — successful paid Brain Box purchases only; drives escalating paid-box price;
-- `upgrades` — Base Drop Tier, Lucky Drop, Brain Income and Offline Storage levels;
-- `incomeRemainder` — fractional passive income carried between deterministic accrual calls;
-- `lastAccrualAt` — last timestamp already accounted for;
-- `pendingOfflineCoins` — capped offline income waiting for explicit collection.
+`sanitizeState()` currently migrates v1-v5 into v5.
 
-`sanitizeState()` accepts v1-v5 saves and normalizes them to v5.
+### Planned v6 meta state
+Collection Rewards + Prestige + Campaign should ship as one coherent **v6** migration.
 
-Migration guarantees:
-- legacy family IDs remain the same identity but normalize to canonical chain tiers;
-- saved discovery is clamped to the runtime T1-T8 chain;
-- old `missionClaimed=true` maps to mission step 2;
-- v4 mission index is preserved/clamped;
-- legacy saves begin at zero `paidBoxes` because old data cannot distinguish paid from rewarded Box history;
-- new upgrades default to level 0;
-- invalid/negative economy values are clamped;
-- a persisted timestamp in the future is normalized on load;
-- runtime-only selection/message state is never restored.
+Planned permanent fields:
+- collection reward claim state;
+- Prestige count;
+- Brain Cell balance;
+- permanent Prestige upgrade levels;
+- campaign stage completion;
+- campaign star totals;
+- world unlock/completion data.
+
+Optional active `CampaignRunState` persistence may be added only if campaign-stage resume is explicitly supported.
+
+Do not add one-off unversioned localStorage keys for these systems.
+
+## Main run vs permanent meta
+The architecture must distinguish run-level economy from permanent account progression.
+
+### Run-level state
+Expected to reset on Prestige:
+- main board units;
+- coins;
+- `paidBoxes` inflation;
+- Brain Lab run upgrades;
+- run-level fractional/pending income state.
+
+### Permanent state
+Must survive Prestige:
+- lifetime Collection discovery;
+- claimed Collection Rewards;
+- campaign progress/stars/world clears;
+- Prestige count;
+- Brain Cells;
+- permanent meta upgrade levels.
+
+Reset/preserve behavior belongs in deterministic core functions with regression tests, not scattered UI handlers.
+
+## Campaign architecture
+Campaign reuses merge primitives but must not mutate the main idle board accidentally.
+
+Target separation:
+
+- `CampaignDefinition` / `WorldDefinition` / `StageDefinition` — immutable content tables;
+- `CampaignProgress` — permanent world/stage/star completion in the save;
+- `CampaignRunState` — temporary stage board, counters, objective progress and stage-local economy;
+- pure core functions — start/restart/abandon/act/complete/claim stage reward;
+- UI — renders current stage and map; does not own objective truth.
+
+A stage definition should provide configuration rather than custom code:
+- starting board;
+- allowed/limited actions;
+- objective type/target;
+- mastery conditions;
+- reward table;
+- optional boss configuration.
+
+## Campaign/main-board isolation
+Entering a Campaign stage must not convert or overwrite the main board.
+
+The main board remains a separate persistent structure. If passive main-board production continues while a Campaign stage is active, that behavior must be deterministic and settled through existing time-accounting logic. If it is paused, the pause must also be explicit in core state/time rules.
+
+Leaving or restarting a stage cannot consume main-board units or coins unless a product rule explicitly says so. The first campaign implementation should prefer full isolation.
+
+## Boss architecture
+Bosses are stage configuration plus presentation.
+
+Code-owned boss state can include:
+- total/current progress or HP;
+- objective queue;
+- progress contribution per ordinary merge;
+- larger contribution for requested orders;
+- completion reward/unlock action.
+
+Boss art is a decorative large render. No separate combat simulation, physics engine or real-time 3D system is required.
+
+## Collection Rewards architecture
+Collection milestones should be immutable data records with:
+- threshold;
+- reward definition;
+- localization keys;
+- stable milestone id.
+
+Claiming must be transactional/idempotent: eligibility is derived from lifetime discovery, claim state persists, and the reward cannot be granted twice across rerender/reload/cloud retry.
+
+## Prestige architecture
+Prestige is a pure core transition with explicit eligibility/result output.
+
+Recommended interface responsibilities:
+- derive eligibility from current run milestone (first implementation: T18 reached);
+- compute Brain Cell award from data-driven rules;
+- produce a new run-level state;
+- preserve permanent fields exactly;
+- return a summary for the confirmation/result UI.
+
+The UI must preview reset/preserve categories before calling the transition.
+
+Brain Cells are a permanent-meta-only currency. Ordinary Brain Box/Brain Lab code should not accept Brain Cells.
 
 ## Time / passive-income model
-Passive income is computed from elapsed time, not from frame count.
+Passive income remains elapsed-time based, not frame-count based.
 
-Before an action changes board composition or an income multiplier, runtime settles online income up to `Date.now()`. This prevents a newly purchased upgrade or newly merged high-tier unit from retroactively earning at its new rate for earlier elapsed time.
+Before actions that change board production or multipliers, runtime settles online income up to `Date.now()`.
 
 While visible:
-- presentation accrues income on a 5-second coarse tick;
-- a 30-second autosave persists canonical foreground state without writing on every display tick.
+- presentation accrues on the existing coarse tick;
+- periodic autosave persists canonical foreground state.
 
-At lifecycle boundaries:
-- `visibilitychange -> hidden` settles income, stops GameplayAPI and requests `saveState(state, true)`;
-- `pagehide` repeats the flush-safe boundary in case the browser closes instead of suspending;
-- resume/load converts only elapsed time after `lastAccrualAt` into capped `pendingOfflineCoins`;
-- duplicate resume events and clock rollback do not move the cursor backward and therefore cannot duplicate elapsed-time credit.
+Lifecycle boundaries settle/flush state. Clock rollback and duplicate resume remain non-duplicating.
 
-Offline collection is explicit. Claiming transfers `pendingOfflineCoins` once and zeroes it before persistence.
+Prestige must zero/normalize old-run passive fields so elapsed time from a previous run cannot be credited under a new run state.
 
 ## Persistence model
-`PlatformAdapter.saveState(state, flush?)` supports two write modes:
-
-- normal saves are safe/local immediately and may debounce remote/cloud work;
-- `flush=true` is reserved for lifecycle boundaries where a deferred cloud timer may never execute.
+`PlatformAdapter.saveState(state, flush?)` remains the only persistence boundary.
 
 ### Local
-`LocalPlatformAdapter` stores the canonical snapshot synchronously through localStorage inside a best-effort async wrapper.
+`LocalPlatformAdapter` persists the canonical versioned save to localStorage.
 
 ### Yandex
-`YandexPlatformAdapter` writes safe/local storage immediately and debounces cloud `player.setData()` during ordinary activity. A flush save cancels any pending debounce timer and writes the newest queued snapshot with the Yandex flush flag.
+`YandexPlatformAdapter` writes safe/local state immediately and debounces cloud `player.setData()` during normal activity. Lifecycle flush writes the latest snapshot.
 
-If an older in-flight cloud write fails after a newer snapshot has already been queued, the failed old snapshot is not allowed to overwrite the newer pending state.
-
-Automated platform tests cover:
-- ordinary debounce;
-- newest-snapshot replacement;
-- immediate lifecycle flush;
-- safe/local latest snapshot;
-- cloud-first load with local fallback.
-
-## Brain Box / discovery model
-The paid Brain Box price is derived from `paidBoxes`. Rewarded Brain Boxes do not increase that counter.
-
-Box upgrades may rebuild already-discovered tiers, but `spawnTier` is always clamped to `maxDiscoveredTier`. Therefore the first copy of a new tier can only be created by merging two identical pieces from the previous tier.
-
-This keeps the merge reveal as the progression gate while allowing late-game rebuilding to accelerate.
+Campaign/Prestige fields ride inside the same versioned save. No platform-specific gameplay fork is allowed.
 
 ## Return-session guidance
-`nextActionHint(state)` is pure derived state. It does not add a save field or hidden progression counter.
+`nextActionHint(state)` remains derived/advisory.
 
-Its priority is:
-1. pending offline collection;
-2. ready mission reward;
-3. true deadlock Rescue;
-4. free production-positive merge;
-5. currently affordable permanent upgrades;
-6. affordable Brain Box;
-7. estimated minutes until the next Brain Box at current production;
-8. completed-current-chain state.
-
-The UI renders this as advisory `Next move` guidance after onboarding. The player remains free to ignore it.
+Current priority still covers offline reward, mission, deadlock, free merge, upgrades, Box and wait. After the meta systems ship, T18/completed-run states should point toward eligible Collection Reward / Prestige / Campaign objective rather than implying a nonexistent T19.
 
 ## Platform model
 Common runtime depends only on `PlatformAdapter`.
 
-- Local development uses `LocalPlatformAdapter`.
-- Yandex Games uses `YandexPlatformAdapter` for SDK initialization, locale signal, safe/local + cloud persistence, rewarded/fullscreen ads and LoadingAPI/GameplayAPI lifecycle reporting.
-- Paid/rewarded gameplay semantics remain in `src/core/`; adapters only expose capabilities and ad/persistence primitives.
+- Local: localStorage development fallback.
+- Yandex: SDK locale, safe/cloud persistence, rewarded/fullscreen ads and Loading/Gameplay lifecycle.
+- Future portals: new adapters, not gameplay branches.
 
-`index.html` uses an `auto` platform hint. Distribution packages may explicitly select Yandex or use `?platform=yandex` for integration testing. Future portals add adapters rather than gameplay forks.
+Campaign and Prestige are platform-neutral core systems.
+
+## Packaged-runtime browser gate
+CI packages the real Yandex distribution and opens packaged output in Chromium.
+
+Current viewports:
+- desktop 1440x900;
+- compact 1024x576;
+- phone 390x844 touch-capable.
+
+The existing gate covers 30-cell board geometry, Missions/Collection/Brain Lab/Brain Box, shared atlas rendering, mouse/touch/keyboard merge paths, focus, reduced motion, locale, release audit and Yandex adapter behavior.
+
+The campaign expansion must extend this gate with:
+- Campaign map/navigation screenshots;
+- a normal stage;
+- a boss stage;
+- Prestige confirmation/result;
+- Collection Rewards state;
+- v5 -> v6 migration;
+- campaign progress surviving Prestige.
 
 ## Current gameplay runtime
-- 6x5 touch/mouse/keyboard board;
-- one canonical T1 -> T8 character chain;
-- two identical characters merge into the next identity;
-- per-tier passive coin production with every merge production-positive;
-- escalating paid Brain Box cost;
-- optional rewarded Brain Box that does not inflate paid price;
-- Base Drop Tier / Lucky Drop / Brain Income / Offline Storage upgrades;
-- merge-first character discovery;
-- capped explicit offline-reward flow;
-- persistent Collection discovery;
-- cumulative eight-step first-cycle mission journey;
-- computed return-session `Next move` guidance;
-- crowded-board best-merge hint;
-- chain-aware true-deadlock Rescue;
-- save migration through v5;
-- periodic autosave and lifecycle cloud flush;
-- EN/RU player-facing string parity;
-- responsive code-driven UI, focus-visible/coarse-pointer hardening and reduced-motion handling;
-- packaged Chromium screenshot/mouse/touch/keyboard regression coverage in CI.
+- 6x5 board;
+- one canonical T1 -> T18 chain;
+- unified 6x3 character atlas;
+- passive production and production-positive merges;
+- escalating paid Brain Box + optional rewarded Box;
+- Base Drop Tier / Lucky Drop / Brain Income / Offline Storage;
+- merge-first discovery;
+- persistent Collection;
+- first-cycle mission journey to T8;
+- capped explicit offline reward;
+- `Next move` guidance;
+- deadlock Rescue;
+- save v5 + migrations;
+- EN/RU parity;
+- board-first mobile dock/sheets;
+- production UI icon set;
+- packaged Chromium/Yandex CI gates.
 
-## Current content boundary
-The chain ends at T8 Tung Wood. Toilet Buddy has approved standalone runtime art. Camera Dude through Tung Wood still use the shared character atlas until their approved standalone assets are integrated.
+## Next architecture milestone
+Implement Collection Rewards + Prestige + save v6 first, then the Campaign framework and Worlds 1-2.
 
-Extending character content does not require changing the merge/economy architecture. Prestige/rebirth remains intentionally deferred until the production economy is validated in real player sessions.
+Do not build 64 hardcoded levels. The success criterion is that additional stages/worlds are mostly data + approved art, not new gameplay branches.
