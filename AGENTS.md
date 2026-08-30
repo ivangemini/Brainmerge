@@ -10,7 +10,7 @@ Brainmerge uses a **single-agent studio model**. Files under `agents/` are exper
 
 In a conflict, use this precedence:
 1. latest explicit user instruction;
-2. Brainmerge project-specific source-of-truth docs (`docs/ART_BIBLE.md`, game design, roadmap, platform/localization contracts, approved Figma targets);
+2. Brainmerge project-specific source-of-truth docs (`docs/ART_BIBLE.md`, `docs/CAMPAIGN_AND_META_PROGRESSION.md`, gameplay/progression, roadmap, platform/localization contracts, approved Figma targets);
 3. this `AGENTS.md`;
 4. Brainmerge `rules/`;
 5. relevant `skills/` workflow;
@@ -62,7 +62,10 @@ Reusable workflows live under `skills/<name>/SKILL.md`. Read relevant skills bef
 - No hardcoded player-facing strings in production UI/gameplay code.
 - Touch and mouse are mandatory. Keyboard support is required where useful for desktop UX. Gamepad is optional unless a target platform later requires it.
 - Approved Figma frames and `docs/ART_BIBLE.md` are visual source of truth for player-facing implementation.
-- Character visual form changes every three gameplay tiers by default; see `docs/ART_BIBLE.md`.
+- The core merge progression is one sequential **T1 -> T18 chain with a distinct canonical identity at every tier**. Do not reintroduce the obsolete three-tiers-per-form or multiple-T1-family model.
+- Campaign, Collection Rewards and Prestige are approved long-term progression layers; see `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
+- Campaign stage state must remain separable from the persistent main idle board.
+- Coins remain the ordinary merge-economy currency; Brain Cells, once implemented, are permanent-meta-only.
 - Do not present placeholders, generic SVG stand-ins or flat developer panels as production-ready visuals.
 
 ## Session continuity
