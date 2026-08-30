@@ -133,15 +133,15 @@ export const DISCOVERY_BONUS_BY_TIER: Readonly<Record<number, number>> = {
 };
 
 const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
-const TOILET_BUDDY = './public/assets/characters/toilet-buddy-form-a.webp';
-const characterAsset = (name: string) => `./public/assets/characters/${name}.webp`;
+const TOILET_BUDDY = BASE_CHARACTER_ATLAS;
+const characterAsset = (_name: string) => BASE_CHARACTER_ATLAS;
 
 /**
  * Canonical core progression. First discovery of every tier above T1 must come
  * from merging. Brain Box upgrades only accelerate rebuilding of discovered tiers.
  *
- * T1-T8 preserve the established production art. T9-T18 use approved standalone
- * character renders normalized to the same runtime cell anchor.
+ * All T1-T18 identities resolve to the same production 6x3 character atlas.
+ * Board and Collection select the tier slot through CSS data-chain-tier routing.
  */
 export const FAMILIES: readonly FamilyDefinition[] = [
   {
