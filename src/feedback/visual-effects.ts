@@ -79,6 +79,13 @@ export function runDiscoveryCelebration(cell: HTMLElement | null, tier: number):
   shell.classList.add('fx-discovery-celebration');
   window.setTimeout(() => shell.classList.remove('fx-discovery-celebration'), tier >= 8 ? 1150 : 850);
 
+  const chip = document.querySelector<HTMLElement>(`.collection-chip[data-chain-tier="${tier}"]`);
+  const collection = chip?.closest<HTMLElement>('.side-card--collection') ?? null;
+  chip?.classList.add('fx-collection-unlock');
+  collection?.classList.add('fx-collection-card');
+  window.setTimeout(() => chip?.classList.remove('fx-collection-unlock'), 980);
+  window.setTimeout(() => collection?.classList.remove('fx-collection-card'), 760);
+
   const point = centerOf(cell);
   if (!point) return;
   const badge = document.createElement('span');
