@@ -46,7 +46,7 @@ await new Promise((resolve) => server.listen(4175, '127.0.0.1', resolve));
 const browser = await chromium.launch({ headless: true });
 
 try {
-  // Normal-motion path: pointer drag, real merge and Brain Box actions must emit transient choreography.
+  // Normal-motion path: drag, merge, move, reject, progression and Brain Box choreography.
   {
     const context = await browser.newContext({ viewport: { width: 1024, height: 576 } });
     const { page, errors } = await openRuntime(context);
@@ -76,14 +76,15 @@ try {
     const mergeCell = page.locator('[data-cell="1"]');
     assert(await mergeCell.evaluate((el) => el.classList.contains('fx-merge-result')), 'merge result class must be emitted by the real merge transition');
     assert(await page.locator('.fx-burst').count() >= 1, 'merge must emit a transient particle burst');
-    assert(await page.locator('.fx-unit-flight').count() === 1, 'merge must create one flying source-unit ghost');
+    assert(await page.locator('.fx-unit-flight.is-merge-flight').count() === 1, 'merge must create one merge-flight source ghost');
     assert(await page.locator('.fx-coin-trail').count() >= 3, 'merge reward must emit a coin trail toward the HUD');
     assert(await page.locator('.fx-discovery-tier').count() === 1, 'first T2 merge must emit discovery-tier hero feedback');
     assert(await page.locator('.game-shell.fx-discovery-celebration').count() === 1, 'first discovery must animate the board-level celebration state');
     assert(await page.locator('.collection-chip[data-chain-tier="2"].fx-collection-unlock').count() === 1, 'newly discovered T2 must animate its Collection chip');
     assert(await page.locator('.side-card--collection.fx-collection-card').count() === 1, 'Collection panel must acknowledge a new discovery');
+    await page.locator('.side-card--mission.fx-mission-progress').waitFor({ state: 'attached', timeout: 500 });
 
-    const flightBox = await page.locator('.fx-unit-flight').boundingBox();
+    const flightBox = await page.locator('.fx-unit-flight.is-merge-flight').boundingBox();
     assert(flightBox && flightBox.width > 10 && flightBox.height > 10, 'merge flight ghost must have visible runtime geometry');
     const mergeAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(mergeAnimation.includes('bmMergePop'), `merge result must run bmMergePop, got ${mergeAnimation}`);
@@ -97,8 +98,36 @@ try {
     const idleAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(idleAnimation.includes('bmIdleCamera'), `Camera Dude should settle into its family-specific idle, got ${idleAnimation}`);
 
+    // Plain move: a selected unit should arc to an empty cell and compress on landing.
+    await page.locator('[data-cell="2"]').click({ force: true });
+    await page.locator('[data-cell="4"]').click({ force: true });
+    assert(await page.locator('.fx-unit-flight.is-move-flight').count() === 1, 'plain move must create one move-flight ghost');
+    await page.locator('[data-cell="4"].fx-move-land').waitFor({ state: 'attached', timeout: 500 });
+    assert(await page.locator('[data-cell="4"][data-family="toilet-buddy"]').count() === 1, 'plain move must still update gameplay state');
+    await page.waitForTimeout(620);
+    assert(await page.locator('.fx-unit-flight.is-move-flight').count() === 0, 'move flight must clean itself up');
+    assert(await page.locator('.fx-move-land').count() === 0, 'move landing class must be transient');
+
+    // Mismatch: state must stay put while target/board reject physically.
+    await page.locator('[data-cell="1"]').click({ force: true });
+    await page.locator('[data-cell="3"]').click({ force: true });
+    await page.locator('[data-cell="3"].fx-reject').waitFor({ state: 'attached', timeout: 500 });
+    assert(await page.locator('.board-frame.fx-board-reject').count() === 1, 'invalid merge must emit board rejection feedback');
+    assert(await page.locator('[data-cell="1"][data-family="camera-dude"]').count() === 1, 'invalid merge must not consume source');
+    assert(await page.locator('[data-cell="3"][data-family="toilet-buddy"]').count() === 1, 'invalid merge must not replace target');
+    await page.waitForTimeout(520);
+    assert(await page.locator('.fx-reject').count() === 0, 'reject class must clean itself up');
+
     const spawnButton = page.locator('[data-action="spawn"]');
     assert(await spawnButton.isEnabled(), 'fresh economy after one merge must still allow a paid Brain Box');
+    const spawnBox = await spawnButton.boundingBox();
+    assert(spawnBox, 'spawn CTA must have geometry');
+    await page.mouse.move(spawnBox.x + spawnBox.width / 2, spawnBox.y + spawnBox.height / 2);
+    await page.mouse.down();
+    assert(await spawnButton.evaluate((el) => el.classList.contains('fx-pressed')), 'production CTA must compress on pointer down');
+    await page.mouse.up();
+    assert(!(await spawnButton.evaluate((el) => el.classList.contains('fx-pressed'))), 'CTA press state must clear on release');
+
     await spawnButton.click({ force: true });
     assert(await page.locator('.spawn-dock.fx-spawn-dock').count() === 1, 'Brain Box action must animate the spawn dock');
     assert(await page.locator('.cell.fx-spawn').count() === 1, 'new Brain Box unit must receive spawn-pop choreography');
@@ -107,6 +136,7 @@ try {
     assert(await page.locator('.fx-spawn-spark').count() === 4, 'spawn landing must emit four short-lived spark nodes');
     const spawnAnimation = await page.locator('.cell.fx-spawn .unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(spawnAnimation.includes('bmSpawnPop'), `spawned unit must run bmSpawnPop, got ${spawnAnimation}`);
+    await page.locator('.next-action.fx-next-move').waitFor({ state: 'attached', timeout: 700 });
 
     await page.waitForTimeout(900);
     assert(await page.locator('.cell.fx-spawn').count() === 0, 'spawn transition class must be transient');
@@ -116,7 +146,7 @@ try {
     await context.close();
   }
 
-  // Reduced-motion path: state transition still works while decorative choreography is suppressed.
+  // Reduced-motion path: gameplay still works while decorative choreography is suppressed.
   {
     const context = await browser.newContext({ viewport: { width: 1024, height: 576 }, reducedMotion: 'reduce' });
     const { page, errors } = await openRuntime(context);
@@ -142,9 +172,16 @@ try {
     assert(await page.locator('.fx-unit-flight').count() === 0, 'reduced motion must suppress flying merge ghosts');
     assert(await page.locator('.fx-coin-trail').count() === 0, 'reduced motion must suppress coin trails');
     assert(await page.locator('.fx-discovery-tier').count() === 0, 'reduced motion must suppress discovery hero badge creation');
+    assert(await page.locator('.fx-mission-progress').count() === 0, 'reduced motion must suppress mission progression choreography');
     const duration = await page.locator('[data-cell="1"] .unit-visual').evaluate((el) => getComputedStyle(el).animationDuration);
     const seconds = duration.endsWith('ms') ? Number.parseFloat(duration) / 1000 : Number.parseFloat(duration);
     assert(Number.isFinite(seconds) && seconds <= 0.001, `reduced-motion merge animation must collapse to <=1ms, got ${duration}`);
+
+    await page.locator('[data-cell="2"]').click({ force: true });
+    await page.locator('[data-cell="4"]').click({ force: true });
+    assert(await page.locator('[data-cell="4"][data-family="toilet-buddy"]').count() === 1, 'reduced-motion plain move must still complete');
+    assert(await page.locator('.fx-unit-flight.is-move-flight').count() === 0, 'reduced motion must suppress move flight');
+    assert(await page.locator('.fx-move-land').count() === 0, 'reduced motion must suppress move landing choreography');
 
     const spawnButton = page.locator('[data-action="spawn"]');
     assert(await spawnButton.isEnabled(), 'reduced-motion economy should still allow paid spawn');
@@ -155,7 +192,7 @@ try {
     await context.close();
   }
 
-  console.log('Packaged motion smoke OK: pointer drag + flight + merge + discovery + Collection + coin trails + spawn energy + cleanup + reduced motion');
+  console.log('Packaged motion smoke OK: drag + merge + plain move + reject + CTA press + progression + discovery + Collection + coin trails + spawn energy + cleanup + reduced motion');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
