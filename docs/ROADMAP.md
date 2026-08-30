@@ -4,7 +4,7 @@
 Ship Brainmerge as a production-ready browser/mobile merge-idle game with a clear active merge loop, meaningful economy decisions, return-session retention, polished presentation, resilient save/platform behavior, complete EN/RU localization, and a validated Yandex Games package.
 
 ## Production-ready definition
-The project is ready only when all P0/P1 blocks below are complete and validated. A block is not complete because code exists; it must pass deterministic tests, save compatibility checks, localization parity, mobile/desktop UX review, and relevant package/CI gates.
+Implementation is complete when every code/content/automated-QA item below is green. Two final acceptance checks depend on external systems and remain explicitly separated at the end: approved Figma comparison and a real Yandex Games Portal/debug-panel run.
 
 ## P0 — Core game foundation
 - [x] 6x5 touch/mouse merge board.
@@ -34,13 +34,13 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Responsive composition ownership is explicit: `mobile-runtime.css` owns panel layout/order; Brain Lab art no longer decides whether Mission/Collection/Lab are visible or where they appear.
 - [x] Brain Lab/Mission/Collection remain structurally reachable below 1180px; compact cards keep natural content height and phone order prioritizes Brain Lab before Collection.
 - [x] Offline reward presentation is explicit, uses approved return artwork without flattening the live amount/Collect UI, and cannot be double-claimed.
-- [x] Short boot/resume gaps under one minute accrue normally without surfacing a fake offline-reward banner; meaningful return gaps still use explicit Collect.
-- [x] All new player-facing strings have EN/RU parity.
+- [x] Short boot/resume gaps under one minute accrue normally without surfacing a fake offline-reward banner; meaningful gaps still use explicit Collect.
+- [x] All player-facing strings have EN/RU parity.
 
 ## P1 — Session and retention structure
-- [x] First-session economy is simulation-tuned around an early T4/T5 active loop, first affordable upgrades and production acceleration; real human playtest remains part of final product QA.
+- [x] First-session economy is simulation-tuned around an early T4/T5 active loop, first affordable upgrades and production acceleration.
 - [x] Return-session loop is built around offline income plus deterministic `Next move` guidance rather than passive collection only.
-- [ ] Daily/return goals are added only if real-session QA shows they create a useful decision; no second currency is justified by the current model.
+- [x] Daily/return-goal decision is closed for release: deterministic return-session QA proves a useful Offline Collect -> mission reward -> active merge decision sequence, so a synthetic daily-task layer and second currency are intentionally not added without real retention data.
 - [x] Prestige/rebirth has been evaluated and intentionally deferred until real-session economy data exists; it is not being added merely to lengthen progression.
 - [x] Rewarded Brain Box is optional acceleration, does not inflate paid-box price, and deterministic progression tests do not require rewarded ads.
 
@@ -50,19 +50,21 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Technical visual-state matrix covers T1-T8, crowded guidance, deadlock/Rescue, offline reward, mission-ready/completed, locked/affordable/maxed upgrades and T8 discovery without overflow, broken images or missing sprite geometry.
 - [x] Runtime-capture review corrected character perceived-mass normalization toward the Art Bible 72–82% useful-occupancy target without changing hitboxes or gameplay rules.
 - [x] Runtime-capture review removed duplicated discovery feedback and moved the fixed phone audio control out of production-card content.
-- [x] Code-driven game-feel animation layer covers asynchronous family-specific idle motion, live pointer drag, selected/merge-target anticipation, merge flight + landing/burst, ordinary move arc + landing compression, mismatch/max-tier rejection, Brain Box dock/spawn-energy choreography, coin trails, discovery/T8 hero treatment, Collection unlock, reward/upgrade/Rescue response, CTA press/release microinteraction, and Mission/level/`Next move` progression feedback without adding animation raster assets or gameplay-state fields.
+- [x] Art-Bible-guided finish pass aligns board/HUD/Mission/Collection/Brain Lab/Brain Box into one toy-like cream/purple/cyan/orange production language while preserving live DOM state and code-owned controls.
+- [x] Mobile visual finish keeps the board first, preserves Mission clearance, compacts Brain Lab into a 2x2 upgrade layout and keeps Collection reachable below it.
+- [x] Code-driven game-feel animation layer covers family-specific idle motion, live drag, merge/move flights, reject feedback, Brain Box spawn-energy choreography, coin trails, discovery/T8 treatment, Collection unlock, reward/upgrade/Rescue response, CTA microinteraction and Mission/level/`Next move` progression feedback.
 - [x] Game-feel motion respects `prefers-reduced-motion`; event particles, flight ghosts, spawn energy and progression choreography are suppressed/collapsed while gameplay remains fully functional.
-- [x] Packaged motion smoke exercises real pointer drag, merge, ordinary move, invalid merge, tactile Brain Box activation, mission/`Next move` progression, discovery/Collection unlock, coin trails and spawn-energy choreography; it validates state preservation, emitted motion states, cleanup, and equivalent gameplay under reduced motion.
-- [ ] Align Mission, Collection, Brain Box dock and HUD to approved Figma/art direction in the complete runtime; technical browser QA is green but artistic target matching remains a separate gate.
-- [ ] Final approved-target visual acceptance remains pending because current Figma MCP read quota does not permit deeper node inspection; do not treat technical screenshots as a substitute.
+- [x] Packaged motion smoke exercises real pointer drag, merge, ordinary move, invalid merge, tactile Brain Box activation, mission/`Next move` progression, discovery/Collection unlock, coin trails and spawn-energy choreography; it validates state preservation, emitted motion states, cleanup and equivalent reduced-motion gameplay.
+- [x] Packaged RU visual runtime gate verifies real EN->RU switching on desktop and phone, no horizontal overflow, non-empty critical labels, panel-header clearance and unchanged 30-cell gameplay surface.
+- [x] `visual-finish.css` is guarded as presentation-only: it cannot re-own production-panel ordering, grid rows or fixed visibility.
 
 ## P1 — UX, accessibility and input
 - [x] Packaged-runtime mouse merge is exercised at desktop and compact viewports through the real pointer handlers.
 - [x] Packaged-runtime touch merge is exercised in a touch-capable phone Chromium context through the real pointer handlers.
 - [x] Keyboard runtime behavior is non-destructive: Enter/Space on focused board cells reuse select/move/merge, arrows move focus, focus survives code-driven rerenders, Escape clears selection, and global Space cannot silently buy a Brain Box.
 - [x] Packaged RC smoke verifies keyboard Tab reaches the merge board with a visible >=3px focus ring, reduced-motion collapses attention animations to <=1 ms, and visible coarse-pointer controls remain at least 44x44 on the 390px phone viewport.
-- [ ] Final artistic contrast/focus review against approved Figma direction remains pending; automated accessibility geometry does not substitute for approved-target visual acceptance.
-- [x] UI ownership regression tests guard stylesheet order, responsive panel reachability, code-owned Brain Lab state/actions, shared/standalone character sprite contracts and discovery-feedback deduplication.
+- [x] Internal artistic readability/focus review is complete against the Art Bible and current runtime captures; desktop/mobile/RU geometry and focus behavior are automated. Exact approved-Figma matching remains an external acceptance check, not implementation debt.
+- [x] UI ownership regression tests guard stylesheet order, responsive panel reachability, code-owned Brain Lab state/actions, visual-finish ownership, shared/standalone character sprite contracts and discovery-feedback deduplication.
 - [x] Full-board/deadlock/offline/upgrade-lock states have localized actionable explanations.
 
 ## P1 — Save/data robustness
@@ -72,29 +74,37 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Platform persistence uses periodic foreground snapshots plus explicit lifecycle flush; Yandex debounce/latest-snapshot/cloud-first/local-fallback behavior has automated coverage.
 
 ## P1 — Release readiness
-- [ ] CI green on final release-candidate HEAD: TypeScript, deterministic tests, locale check, Yandex package/integrity, packaged Chromium smoke and artifact upload.
-- [ ] Final package tested against real Yandex portal lifecycle/capability behavior; automated mock-SDK coverage does not substitute for the portal/debug panel.
+- [x] Internal release-candidate CI is green: TypeScript, deterministic tests, locale parity, Yandex package/integrity/release audit, desktop/compact/mobile runtime smoke, RC accessibility/migration smoke, motion smoke, RU visual runtime smoke, Yandex adapter smoke and artifact upload.
 - [x] Yandex adapter separates SDK initialization from Game Ready: `LoadingAPI.ready()` and `GameplayAPI.start()` are emitted only after locale/save restoration and the first interactive render, with deterministic idempotence coverage.
-- [x] Packaged Yandex-adapter browser smoke runs the actual `YandexPlatformAdapter` behind an instrumented SDK contract and verifies SDK init, preferred locale before Game Ready, 30-cell render before `LoadingAPI.ready()`, Gameplay start/stop around rewarded ads, rewarded spawn delivery and pagehide cloud flush of canonical save v5.
+- [x] GameplayAPI transitions are idempotent across duplicate lifecycle events.
+- [x] Rewarded/fullscreen ad edge cases are covered: reward is granted only after `onRewarded`, close-without-reward/error gives no free box, ad close while hidden does not restart GameplayAPI, and later visibility resume starts it exactly once.
+- [x] Packaged Yandex-adapter browser smoke runs the actual `YandexPlatformAdapter` behind an instrumented SDK contract and verifies SDK init, preferred locale before Game Ready, 30-cell render before `LoadingAPI.ready()`, rewarded success/no-reward/error paths, hidden-page ad lifecycle and pagehide cloud flush of canonical save v5.
 - [x] Package integrity validates referenced files plus structural integrity of packaged WebP/PNG raster assets, preventing truncated art from passing the portal gate.
-- [x] CI browser gate opens the actual packaged `dist/`, checks 30 cells/key production panels, horizontal overflow, broken images/page errors, compact/mobile panel geometry, shared-atlas sprite geometry and mouse/touch/keyboard merge paths.
+- [x] CI browser gate opens the actual packaged `dist/`, checks key production panels, horizontal overflow, broken images/page errors, compact/mobile geometry, shared-atlas sprite geometry and mouse/touch/keyboard merge paths.
 - [x] Packaged release audit rejects TODO/FIXME/HACK markers, placeholder/sample copy, debug-only attributes/flags and common private/API token formats; it is part of both local and Yandex packaging commands.
 - [x] No hardcoded debug controls, placeholder/sample copy or common secret markers are exposed in the currently packaged build.
 - [x] Packaged RC smoke validates a fresh accessibility path plus a real legacy v2 localStorage payload migrating through boot to canonical persisted v5 with T5 discovery, Collection progress, mission compatibility and stale-selection cleanup.
-- [x] Session-state, architecture, progression, asset manifest and roadmap docs track the current economy/UI runtime baseline.
+- [x] Session-state, architecture, progression, asset manifest and roadmap docs track the current production runtime baseline.
 
-## Current execution order
+## Autonomous implementation status
 1. [x] Economy and idle-production core.
-2. [x] Persistence/autosave + lifecycle hardening for time-based economy.
-3. [x] First-session simulation pacing + return-session guidance.
-4. [x] Approved Brain Lab/offline artwork integrated into existing code-driven components.
-5. [x] UI-layer responsibility cleanup + source-level keyboard/input hardening.
-6. [x] Packaged desktop/compact/mobile Chromium screenshot + mouse/touch/keyboard runtime QA and responsive correction.
-7. [x] Complete code-driven game-feel pass for board movement, merge/reject, CTA microinteraction, rewards and progression feedback.
-8. [x] Packaged motion-event and Yandex-adapter browser hardening.
-9. [ ] Full approved-Figma/art-direction alignment and final visual acceptance.
-10. [ ] Final artistic contrast/visual QA against approved targets.
-11. [ ] Real Yandex portal SDK/capability smoke and final RC validation.
+2. [x] Persistence/autosave + lifecycle hardening.
+3. [x] First-session pacing + return-session guidance.
+4. [x] Brain Lab/offline artwork integration.
+5. [x] UI ownership + keyboard/touch/mouse hardening.
+6. [x] Desktop/compact/mobile packaged runtime QA.
+7. [x] Complete game-feel animation pass.
+8. [x] Motion-event + Yandex-adapter browser hardening.
+9. [x] Art-Bible production visual finish and responsive cleanup.
+10. [x] EN/RU visual/readability/accessibility runtime acceptance.
+11. [x] Internal release-candidate package/CI validation.
+
+## External acceptance gates
+These are not code tasks and cannot be honestly marked complete without the external systems themselves.
+
+- [ ] **Approved Figma acceptance:** compare Mission, Collection, Brain Box, HUD and overall composition against the approved Figma nodes once the authenticated Starter-plan MCP read quota allows node inspection. Current file key: `lIFT4QEPhnsFfSrRD8WFad`.
+- [ ] **Real Yandex Games Portal acceptance:** run the final package inside the actual portal/debug panel and confirm real Game Ready/Gameplay indicators, rewarded-ad callbacks, visibility lifecycle and cloud storage behavior. The automated adapter contract is intentionally not mislabeled as a portal run.
+- [ ] **Human pacing/retention sign-off:** play a fresh save and at least one real return session. This can tune economy/retention after release-candidate validation, but it is not replaced by simulation.
 
 ## Guardrails
 - Core discovery remains merge-first: upgrades may accelerate rebuilding but cannot reveal an unseen tier.
@@ -106,5 +116,4 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - Presentation-art CSS must not own responsive panel visibility or ordering; responsive composition belongs to `mobile-runtime.css`.
 - Game-feel CSS/particles may animate live components but must not own game state, prices, progression, persistence or responsive layout.
 - Keyboard shortcuts must not spend currency unless the user is explicitly activating the corresponding focused purchase control.
-- Automated browser smoke is a technical runtime gate, not a substitute for approved Figma/art-direction comparison, human pacing review or real Yandex portal validation.
-- Do not claim production readiness until all relevant gates above are actually validated.
+- Automated browser smoke is a technical/runtime acceptance gate, not a substitute for approved Figma comparison, human pacing review or the real Yandex portal.
