@@ -12,7 +12,7 @@ import {
   spawnUnit,
   accrueOnlineIncome
 } from '../build/core/game.js';
-import { MAX_RUNTIME_TIER, MISSION_TRACK } from '../build/core/catalog.js';
+import { MISSION_TRACK } from '../build/core/catalog.js';
 
 function claimReady(state) {
   let next = state;
@@ -58,13 +58,14 @@ test('T5 remains an active-play milestone before the longer idle/return curve ta
   assert.ok(result.actions <= 40, `T5 should remain in the early active loop, got ${result.actions} actions`);
 });
 
-test('baseline no-upgrade route to T8 lands in a multi-session passive-time band rather than instant completion or a hard wall', () => {
+test('baseline no-upgrade route to T8 checkpoint lands in a multi-session passive-time band', () => {
+  const checkpointTier = 8;
   let now = 0;
   let waitedMs = 0;
   let state = createInitialState(now);
   let guard = 0;
 
-  while (state.maxDiscoveredTier < MAX_RUNTIME_TIER && guard < 900) {
+  while (state.maxDiscoveredTier < checkpointTier && guard < 900) {
     guard += 1;
     state = claimReady(state);
     const pair = findBestMergePair(state);
@@ -87,7 +88,7 @@ test('baseline no-upgrade route to T8 lands in a multi-session passive-time band
   }
 
   assert.ok(guard < 900);
-  assert.equal(state.maxDiscoveredTier, MAX_RUNTIME_TIER);
+  assert.equal(state.maxDiscoveredTier, checkpointTier);
   const waitedMinutes = waitedMs / 60_000;
   assert.ok(waitedMinutes >= 90, `baseline T8 should not be instant; got ${waitedMinutes.toFixed(1)} passive minutes`);
   assert.ok(waitedMinutes <= 240, `baseline T8 should not become a hard wall; got ${waitedMinutes.toFixed(1)} passive minutes`);
