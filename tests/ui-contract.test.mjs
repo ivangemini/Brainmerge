@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, upgradeArt, chainPolish, economyLoop, mobileRuntime, gameView, main] = await Promise.all([
+const [html, upgradeArt, chainPolish, economyLoop, mobileRuntime, visualFinish, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/chain-polish.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/economy-loop.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/mobile-runtime.css', import.meta.url), 'utf8'),
+  readFile(new URL('../public/visual-finish.css', import.meta.url), 'utf8'),
   readFile(new URL('../src/ui/game-view.ts', import.meta.url), 'utf8'),
   readFile(new URL('../src/main.ts', import.meta.url), 'utf8')
 ]);
@@ -15,10 +16,12 @@ const [html, upgradeArt, chainPolish, economyLoop, mobileRuntime, gameView, main
 test('responsive composition loads after art presentation layers', () => {
   const upgradeIndex = html.indexOf('./public/upgrade-art.css');
   const mobileIndex = html.indexOf('./public/mobile-runtime.css');
+  const finishIndex = html.indexOf('./public/visual-finish.css');
   const accessibilityIndex = html.indexOf('./public/accessibility.css');
   assert.ok(upgradeIndex >= 0, 'upgrade-art.css must be loaded');
   assert.ok(mobileIndex > upgradeIndex, 'mobile-runtime.css must own composition after upgrade art');
-  assert.ok(accessibilityIndex > mobileIndex, 'accessibility remains the final interaction layer');
+  assert.ok(finishIndex > mobileIndex, 'visual-finish.css may refine appearance only after responsive composition is established');
+  assert.ok(accessibilityIndex > finishIndex, 'accessibility remains the final interaction layer');
 });
 
 test('upgrade art remains presentation-only', () => {
@@ -29,6 +32,16 @@ test('upgrade art remains presentation-only', () => {
   assert.match(upgradeArt, /button\[data-upgrade='luckyDrop'\]/);
   assert.match(upgradeArt, /button\[data-upgrade='income'\]/);
   assert.match(upgradeArt, /button\[data-upgrade='offline'\]/);
+});
+
+test('visual finish cannot re-own responsive panel ordering or visibility', () => {
+  assert.doesNotMatch(visualFinish, /\border\s*:/);
+  assert.doesNotMatch(visualFinish, /\bgrid-row\s*:/);
+  assert.doesNotMatch(visualFinish, /display\s*:\s*none/);
+  assert.doesNotMatch(visualFinish, /position\s*:\s*fixed/);
+  assert.match(visualFinish, /\.board-frame/);
+  assert.match(visualFinish, /\.side-card/);
+  assert.match(visualFinish, /\.upgrade-card/);
 });
 
 test('responsive runtime keeps all production panels reachable without legacy row or height stretching', () => {
