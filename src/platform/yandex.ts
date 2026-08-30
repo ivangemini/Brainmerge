@@ -65,6 +65,7 @@ export class YandexPlatformAdapter implements PlatformAdapter {
   private storage: YandexStorage | null = null;
   private pendingCloudState: GameState | null = null;
   private cloudTimer: number | null = null;
+  private readySignaled = false;
 
   async initialize(): Promise<void> {
     const yaGames = yaGamesGlobal();
@@ -82,8 +83,16 @@ export class YandexPlatformAdapter implements PlatformAdapter {
     } catch {
       this.player = null;
     }
+  }
 
-    await Promise.resolve(this.sdk.features?.LoadingAPI?.ready());
+  async gameReady(): Promise<void> {
+    if (this.readySignaled) return;
+    this.readySignaled = true;
+    try {
+      await Promise.resolve(this.sdk?.features?.LoadingAPI?.ready());
+    } catch {
+      // Game Ready reporting must never make an already-rendered game unusable.
+    }
     this.setGameplayActive(true);
   }
 
