@@ -59,6 +59,11 @@ test('shared board sprites use an absolute atlas slot while Toilet Buddy keeps s
   assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-art[\s\S]*opacity:1!important/);
 });
 
+test('named discovery toast suppresses duplicate generic discovery feedback without collapsing header geometry', () => {
+  assert.match(gameView, /class="discovery-toast"/);
+  assert.match(chainPolish, /\.has-new-discovery \.board-header \.message\{visibility:hidden\}/);
+});
+
 test('Brain Lab state and actions stay code-owned', () => {
   assert.match(gameView, /UPGRADE_DEFINITIONS\.map/);
   assert.match(gameView, /canPurchaseUpgrade\(state, id\)/);
