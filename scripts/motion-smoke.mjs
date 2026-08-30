@@ -80,17 +80,20 @@ try {
     assert(await page.locator('.fx-coin-trail').count() >= 3, 'merge reward must emit a coin trail toward the HUD');
     assert(await page.locator('.fx-discovery-tier').count() === 1, 'first T2 merge must emit discovery-tier hero feedback');
     assert(await page.locator('.game-shell.fx-discovery-celebration').count() === 1, 'first discovery must animate the board-level celebration state');
+    assert(await page.locator('.collection-chip[data-chain-tier="2"].fx-collection-unlock').count() === 1, 'newly discovered T2 must animate its Collection chip');
+    assert(await page.locator('.side-card--collection.fx-collection-card').count() === 1, 'Collection panel must acknowledge a new discovery');
 
     const flightBox = await page.locator('.fx-unit-flight').boundingBox();
     assert(flightBox && flightBox.width > 10 && flightBox.height > 10, 'merge flight ghost must have visible runtime geometry');
     const mergeAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(mergeAnimation.includes('bmMergePop'), `merge result must run bmMergePop, got ${mergeAnimation}`);
 
-    await page.waitForTimeout(950);
+    await page.waitForTimeout(1050);
     assert(await page.locator('.fx-burst').count() === 0, 'merge particle burst must clean itself up');
     assert(await page.locator('.fx-unit-flight').count() === 0, 'merge flight ghost must clean itself up');
     assert(await page.locator('.fx-coin-trail').count() === 0, 'coin trail nodes must clean themselves up');
     assert(await page.locator('.fx-discovery-tier').count() === 0, 'discovery tier badge must clean itself up');
+    assert(await page.locator('.fx-collection-unlock').count() === 0, 'Collection unlock animation class must clean itself up');
     const idleAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(idleAnimation.includes('bmIdleCamera'), `Camera Dude should settle into its family-specific idle, got ${idleAnimation}`);
 
@@ -137,7 +140,7 @@ try {
     await context.close();
   }
 
-  console.log('Packaged motion smoke OK: pointer drag + flight + merge + discovery + coin trails + spawn + cleanup + reduced motion');
+  console.log('Packaged motion smoke OK: pointer drag + flight + merge + discovery + Collection + coin trails + spawn + cleanup + reduced motion');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
