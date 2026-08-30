@@ -1,12 +1,13 @@
 # Active Session — Brainmerge
 
 ## Objective
-Brainmerge autonomous implementation roadmap is complete. Preserve the validated merge-idle direction and treat remaining work as external acceptance only: approved Figma comparison, real Yandex Games Portal/debug-panel validation, and human pacing/retention sign-off.
+Brainmerge autonomous implementation is at release-candidate stage. Preserve the validated merge-idle direction and continue only with unfinished acceptance/hardening work: approved Figma comparison, real Yandex Games Portal/debug-panel validation, and human pacing/retention sign-off.
 
 ## Canonical gameplay state
 - browser-first TypeScript, 6x5 merge board;
-- one sequential T1-T8 chain: Toilet Buddy -> Camera Dude -> Sigma Rock -> Rizz Head -> Shark Sneakers -> Crocodile Bomber -> Coffee Ballerina -> Tung Wood;
-- two identical characters become exactly one next-tier character;
+- one sequential T1-T18 chain: Toilet Buddy -> Camera Dude -> Sigma Rock -> Rizz Head -> Shark Sneakers -> Crocodile Bomber -> Coffee Ballerina -> Tung Wood -> Brr Brr Patapim -> Boneca Ambalabu -> Cappuccino Assassino -> Frigo Camelo -> Lirili Larila -> Chimpanzini Bananini -> Cocofanto Elefanto -> Bombombini Gusini -> Trippi Troppi -> La Vacca Saturno Saturnita;
+- two identical non-terminal characters become exactly one next-tier character; T18 is terminal;
+- T8 remains a midgame checkpoint, not chain completion;
 - first discovery remains merge-only; upgraded Brain Boxes rebuild only already-discovered tiers;
 - passive coin production is merge-positive;
 - paid Brain Box price escalates; rewarded Box is free and never inflates paid price;
@@ -15,27 +16,16 @@ Brainmerge autonomous implementation roadmap is complete. Preserve the validated
 - one primary currency remains intentional.
 
 ## Character / art truth
-All eight canonical character visuals are production-bound. Toilet Buddy uses the approved standalone WebP; T2-T8 use the existing production atlas. No standalone T2-T8 asset blocker exists.
+All eighteen canonical character visuals are production-bound. Toilet Buddy uses standalone art, T2-T8 use the existing production atlas, and T9-T18 use standalone packaged WebP assets. The T9-T18 board and Collection routes are contract-tested so the legacy atlas cannot override the new art.
 
-The Art-Bible-guided production finish is implemented across HUD, board, Mission, Brain Box, Brain Lab and Collection. `public/visual-finish.css` is presentation-only and contract-tested not to take over production-panel ordering/grid rows/fixed visibility. Mobile keeps board first, Mission next, then Brain Lab and Collection; Brain Lab uses a compact 2x2 module layout on phone.
+The T18 raster was repaired after package-integrity QA caught a truncated RIFF payload. Current Yandex packaging validates all referenced character rasters structurally before browser smoke.
 
-Exact approved-Figma matching is not claimed because authenticated Figma MCP reads currently return the Starter-plan call-limit error. Known file key: `lIFT4QEPhnsFfSrRD8WFad`.
+The Art-Bible-guided production finish is implemented across HUD, board, Mission, Brain Box, Brain Lab and Collection. `public/visual-finish.css` remains presentation-only and contract-tested not to take over production-panel ordering/grid rows/fixed visibility. Mobile keeps board first, Mission next, then Brain Lab and Collection.
+
+Known approved Figma file key: `lIFT4QEPhnsFfSrRD8WFad`. Exact approved-frame comparison remains an external acceptance gate until the target nodes are inspected in the authenticated Figma context.
 
 ## Motion / interaction truth
-The code-driven game-feel layer covers:
-- family-specific idle motion;
-- live pointer drag;
-- select/merge-target anticipation;
-- merge and ordinary-move flights;
-- mismatch/max-tier reject feedback;
-- merge landing/burst and coin trails;
-- Brain Box dock + spawn-energy trajectory + spawn pop;
-- discovery/T8 and Collection unlock treatment;
-- Mission/offline/upgrade/Rescue/HUD feedback;
-- CTA press/release microinteraction;
-- Mission, level and `Next move` progression feedback.
-
-All nonessential motion collapses under `prefers-reduced-motion`; gameplay behavior remains unchanged.
+The code-driven game-feel layer covers family idle motion, live drag, merge/move/reject feedback, Brain Box spawn choreography, coin trails, discovery/Collection unlock, reward/upgrade/Rescue response, CTA microinteraction and Mission/level/`Next move` progression feedback. Nonessential motion collapses under `prefers-reduced-motion`; gameplay remains functional.
 
 ## Persistence / lifecycle truth
 - migrations through save v5 and malformed-state sanitization are covered;
@@ -43,36 +33,37 @@ All nonessential motion collapses under `prefers-reduced-motion`; gameplay behav
 - autosave + lifecycle flush are implemented;
 - Yandex cloud latest-snapshot/local fallback/write-race behavior is covered;
 - `LoadingAPI.ready()` is emitted only after locale/save restore and first interactive render;
-- GameplayAPI state transitions are idempotent;
+- GameplayAPI transitions are idempotent;
 - rewarded/fullscreen ads stop gameplay, resume exactly once only when visible, never grant reward without `onRewarded`, and recover from close/error safely;
 - ad close while hidden does not incorrectly restart GameplayAPI; visibility resume starts it once.
 
 ## Return-session product decision
-Daily/return goals are intentionally out of release scope rather than unfinished. Deterministic return-session QA locks the useful sequence `Offline Collect -> earned mission reward -> active merge`, so an extra synthetic daily-task layer or second currency is not justified before real retention data.
+Daily/return goals remain intentionally out of release scope. Deterministic return-session QA locks the useful sequence `Offline Collect -> earned mission reward -> active merge`, so an extra synthetic daily-task layer or second currency is not justified before real retention data.
 
 ## Automated release gates
-Current CI includes:
-- TypeScript build;
-- 131-key EN/RU locale parity;
-- 58 deterministic/static tests;
-- Yandex package + integrity + release audit;
+CI run #241 on commit `243b2d15edc5c92582ab50a269ee29ffd7059ca6` passed end-to-end after the T18 expansion. It validates:
+- TypeScript build and EN/RU locale parity;
+- 60 deterministic/static tests;
+- Yandex package + raster integrity + release audit;
 - packaged desktop 1440x900 / compact 1024x576 / phone 390x844 runtime matrix;
 - mouse, touch and keyboard merge paths;
-- production state matrix: high tiers, crowded, deadlock, offline/mission/upgrades, maxed, T8 discovery;
+- all T1-T18 characters on the high-tier runtime fixture, including T9-T18 standalone image decoding/rendering;
+- a genuine terminal-T18 full-board deadlock with Rescue and disabled Brain Box;
+- crowded guidance, offline/mission/upgrades, maxed upgrades and T8 discovery;
 - RC focus/reduced-motion/coarse-pointer/v2->v5 migration smoke;
 - full motion smoke;
-- packaged RU visual smoke on desktop and phone, including no horizontal overflow, non-empty critical labels and panel-header clearance;
-- packaged real-adapter Yandex smoke covering rewarded success, close-without-reward, SDK error, hidden-page ad lifecycle and pagehide cloud flush;
-- artifact upload for Yandex package and runtime screenshots.
+- packaged RU visual smoke;
+- packaged Yandex-adapter smoke covering rewarded success, close-without-reward, SDK error, hidden-page lifecycle and pagehide cloud flush;
+- artifact upload for the Yandex package and runtime screenshots.
 
-Implementation HEAD `44a00e9fe3d3eba209534a23a2aa9811e0798e31` passed CI #226 end-to-end before final source-of-truth documentation updates.
+Runtime screenshots from #241 were visually inspected. The T1-T18 board renders all eighteen identities with readable tier/income badges; the terminal T18 deadlock surface renders all 30 terminal units plus the actionable Rescue state without broken images or horizontal clipping.
 
 ## External acceptance gates only
-1. Approved Figma node comparison for Mission / Collection / Brain Box / HUD / overall composition once MCP reads are available.
+1. Approved Figma node comparison for Mission / Collection / Brain Box / HUD / overall composition.
 2. Real Yandex Games Portal/debug-panel run confirming actual Game Ready/Gameplay indicators, rewarded callbacks and cloud storage.
 3. Human fresh-save + return-session pacing/retention sign-off.
 
-These are intentionally not represented as missing code features.
+These are intentionally not represented as missing core code features.
 
 ## Source of truth
 - `docs/ROADMAP.md`
