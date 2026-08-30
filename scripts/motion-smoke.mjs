@@ -60,11 +60,23 @@ try {
     const mergeCell = page.locator('[data-cell="1"]');
     assert(await mergeCell.evaluate((el) => el.classList.contains('fx-merge-result')), 'merge result class must be emitted by the real merge transition');
     assert(await page.locator('.fx-burst').count() >= 1, 'merge must emit a transient particle burst');
+    assert(await page.locator('.fx-unit-flight').count() === 1, 'merge must create one flying source-unit ghost');
+    assert(await page.locator('.fx-coin-trail').count() >= 3, 'merge reward must emit a coin trail toward the HUD');
+    assert(await page.locator('.fx-discovery-tier').count() === 1, 'first T2 merge must emit discovery-tier hero feedback');
+    assert(await page.locator('.game-shell.fx-discovery-celebration').count() === 1, 'first discovery must animate the board-level celebration state');
+
+    const flightBox = await page.locator('.fx-unit-flight').boundingBox();
+    assert(flightBox && flightBox.width > 10 && flightBox.height > 10, 'merge flight ghost must have visible runtime geometry');
     const mergeAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(mergeAnimation.includes('bmMergePop'), `merge result must run bmMergePop, got ${mergeAnimation}`);
 
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(950);
     assert(await page.locator('.fx-burst').count() === 0, 'merge particle burst must clean itself up');
+    assert(await page.locator('.fx-unit-flight').count() === 0, 'merge flight ghost must clean itself up');
+    assert(await page.locator('.fx-coin-trail').count() === 0, 'coin trail nodes must clean themselves up');
+    assert(await page.locator('.fx-discovery-tier').count() === 0, 'discovery tier badge must clean itself up');
+    const idleAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
+    assert(idleAnimation.includes('bmIdleCamera'), `Camera Dude should settle into its family-specific idle, got ${idleAnimation}`);
 
     const spawnButton = page.locator('[data-action="spawn"]');
     assert(await spawnButton.isEnabled(), 'fresh economy after one merge must still allow a paid Brain Box');
@@ -80,7 +92,7 @@ try {
     await context.close();
   }
 
-  // Reduced-motion path: state transition still works while particles and animated event classes resolve statically.
+  // Reduced-motion path: state transition still works while decorative choreography is suppressed.
   {
     const context = await browser.newContext({ viewport: { width: 1024, height: 576 }, reducedMotion: 'reduce' });
     const { page, errors } = await openRuntime(context);
@@ -90,6 +102,9 @@ try {
     await page.locator('[data-cell="1"]').click({ force: true });
     assert(await page.locator('[data-cell="1"][data-chain-tier="2"]').count() === 1, 'merge gameplay must still complete with reduced motion');
     assert(await page.locator('.fx-burst').count() === 0, 'reduced motion must suppress particle DOM creation');
+    assert(await page.locator('.fx-unit-flight').count() === 0, 'reduced motion must suppress flying merge ghosts');
+    assert(await page.locator('.fx-coin-trail').count() === 0, 'reduced motion must suppress coin trails');
+    assert(await page.locator('.fx-discovery-tier').count() === 0, 'reduced motion must suppress discovery hero badge creation');
     const duration = await page.locator('[data-cell="1"] .unit-visual').evaluate((el) => getComputedStyle(el).animationDuration);
     const seconds = duration.endsWith('ms') ? Number.parseFloat(duration) / 1000 : Number.parseFloat(duration);
     assert(Number.isFinite(seconds) && seconds <= 0.001, `reduced-motion merge animation must collapse to <=1ms, got ${duration}`);
@@ -97,7 +112,7 @@ try {
     await context.close();
   }
 
-  console.log('Packaged motion smoke OK: merge + spawn choreography + cleanup + reduced motion');
+  console.log('Packaged motion smoke OK: flight + merge + discovery + coin trails + spawn + cleanup + reduced motion');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
