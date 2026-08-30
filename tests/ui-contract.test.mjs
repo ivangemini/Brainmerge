@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, upgradeArt, chainPolish, standaloneCharacterArt, economyLoop, mobileRuntime, visualFinish, gameView, main] = await Promise.all([
+const [html, upgradeArt, chainPolish, characterAtlasRouting, economyLoop, mobileRuntime, visualFinish, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/chain-polish.css', import.meta.url), 'utf8'),
@@ -66,24 +66,23 @@ test('economy layer does not re-own responsive page composition', () => {
   assert.match(economyLoop, /white-space:nowrap/);
 });
 
-test('shared board sprites use an absolute atlas slot while Toilet Buddy keeps standalone art', () => {
-  assert.match(chainPolish, /\.cell:not\(\[data-family='toilet-buddy'\]\) \.unit-visual::before/);
-  assert.match(chainPolish, /position:absolute!important/);
-  assert.match(chainPolish, /inset:0!important/);
-  assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-visual::before\{display:none!important\}/);
-  assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-art[\s\S]*opacity:1!important/);
-});
-
-test('T9-T18 standalone character art overrides the legacy shared atlas on board and Collection', () => {
+test('all T1-T18 board and Collection characters resolve through one shared 6x3 atlas', () => {
   const chainIndex = html.indexOf('./public/chain-polish.css');
-  const standaloneIndex = html.indexOf('./public/standalone-character-art.css');
-  assert.ok(standaloneIndex > chainIndex, 'standalone character art must load after chain-polish atlas rules');
-  assert.match(standaloneCharacterArt, /data-chain-tier='9'/);
-  assert.match(standaloneCharacterArt, /data-chain-tier='18'/);
-  assert.match(standaloneCharacterArt, /\.unit-visual::before[\s\S]*display:\s*none\s*!important/);
-  assert.match(standaloneCharacterArt, /\.unit-art[\s\S]*opacity:\s*1\s*!important/);
-  assert.match(standaloneCharacterArt, /\.collection-chip:is[\s\S]*::after[\s\S]*display:\s*none\s*!important/);
-  assert.match(standaloneCharacterArt, /\.collection-chip:is[\s\S]*img[\s\S]*opacity:\s*1\s*!important/);
+  const atlasIndex = html.indexOf('./public/standalone-character-art.css');
+  assert.ok(atlasIndex > chainIndex, 'full-chain atlas routing must load after legacy chain-polish rules');
+
+  assert.match(characterAtlasRouting, /data-chain-tier='1'/);
+  assert.match(characterAtlasRouting, /data-chain-tier='9'/);
+  assert.match(characterAtlasRouting, /data-chain-tier='18'/);
+  assert.match(characterAtlasRouting, /background-size:\s*600%\s+300%\s*!important/);
+  assert.match(characterAtlasRouting, /\.cell\[data-chain-tier\] \.unit-visual::before[\s\S]*display:\s*block\s*!important/);
+  assert.match(characterAtlasRouting, /\.cell\[data-chain-tier\] \.unit-art[\s\S]*opacity:\s*0\s*!important/);
+  assert.match(characterAtlasRouting, /\.collection-chip\[data-chain-tier\]::after[\s\S]*display:\s*block\s*!important/);
+  assert.match(characterAtlasRouting, /\.collection-chip\[data-chain-tier\] img[\s\S]*opacity:\s*0\s*!important/);
+
+  for (const tier of [1, 6, 7, 12, 13, 18]) {
+    assert.match(characterAtlasRouting, new RegExp(`data-chain-tier='${tier}'`));
+  }
 });
 
 test('named discovery toast suppresses duplicate generic discovery feedback without collapsing header geometry', () => {
