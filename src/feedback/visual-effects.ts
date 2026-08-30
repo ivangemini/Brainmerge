@@ -56,7 +56,6 @@ export function runCoinTrail(from: FxPoint | null, hud: Element | null, amount: 
     coin.setAttribute('aria-hidden', 'true');
     coin.style.left = `${from.x}px`;
     coin.style.top = `${from.y}px`;
-    coin.style.setProperty('--coin-delay', `${i * 42}ms`);
     document.body.appendChild(coin);
     const bend = (i - (count - 1) / 2) * 9;
     const dx = target.x - from.x;
@@ -95,3 +94,49 @@ export function runDiscoveryCelebration(cell: HTMLElement | null, tier: number):
 export function elementFxCenter(element: Element | null): FxPoint | null {
   return centerOf(element);
 }
+
+function installPointerDragFx(): void {
+  const root = document.querySelector<HTMLElement>('#app');
+  if (!root) return;
+  let active: HTMLElement | null = null;
+  let pointerId: number | null = null;
+  let startX = 0;
+  let startY = 0;
+
+  const clear = (): void => {
+    if (active) {
+      active.classList.remove('fx-pointer-drag');
+      active.style.removeProperty('--drag-x');
+      active.style.removeProperty('--drag-y');
+    }
+    active = null;
+    pointerId = null;
+  };
+
+  root.addEventListener('pointerdown', (event) => {
+    if (!motionAllowed() || event.button !== 0) return;
+    const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-cell].is-occupied') : null;
+    if (!cell) return;
+    active = cell;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    cell.style.setProperty('--drag-x', '0px');
+    cell.style.setProperty('--drag-y', '0px');
+  });
+
+  root.addEventListener('pointermove', (event) => {
+    if (!active || pointerId !== event.pointerId) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    if (Math.hypot(dx, dy) < 7) return;
+    active.classList.add('fx-pointer-drag');
+    active.style.setProperty('--drag-x', `${dx}px`);
+    active.style.setProperty('--drag-y', `${dy}px`);
+  });
+
+  root.addEventListener('pointerup', clear);
+  root.addEventListener('pointercancel', clear);
+}
+
+installPointerDragFx();
