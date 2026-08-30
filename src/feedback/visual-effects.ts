@@ -11,6 +11,14 @@ function centerOf(element: Element | null): FxPoint | null {
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
+function transientClass(element: Element | null, className: string, duration = 620): void {
+  if (!(element instanceof HTMLElement) || !motionAllowed()) return;
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+  window.setTimeout(() => element.classList.remove(className), duration);
+}
+
 export function runUnitFlight(from: HTMLElement | null, to: HTMLElement | null, merge: boolean): void {
   if (!motionAllowed() || !from || !to) return;
   const visual = from.querySelector<HTMLElement>('.unit-visual');
@@ -20,7 +28,7 @@ export function runUnitFlight(from: HTMLElement | null, to: HTMLElement | null, 
   if (fromRect.width <= 0 || fromRect.height <= 0 || toRect.width <= 0 || toRect.height <= 0) return;
 
   const ghost = visual.cloneNode(true) as HTMLElement;
-  ghost.className = 'fx-unit-flight';
+  ghost.className = `fx-unit-flight ${merge ? 'is-merge-flight' : 'is-move-flight'}`;
   ghost.setAttribute('aria-hidden', 'true');
   Object.assign(ghost.style, {
     left: `${fromRect.left}px`,
@@ -189,6 +197,62 @@ function installPointerDragFx(): void {
   root.addEventListener('pointercancel', clear);
 }
 
+function installMoveRejectFx(): void {
+  const root = document.querySelector<HTMLElement>('#app');
+  if (!root) return;
+
+  root.addEventListener('click', (event) => {
+    if (!motionAllowed() || !(event.target instanceof Element)) return;
+    const target = event.target.closest<HTMLElement>('[data-cell]');
+    const source = root.querySelector<HTMLElement>('[data-cell].is-selected');
+    if (!target || !source || target === source) return;
+
+    const targetIndex = target.dataset.cell;
+    const targetOccupied = target.classList.contains('is-occupied');
+    const sourceFamily = source.dataset.family ?? '';
+    const targetFamily = target.dataset.family ?? '';
+    const sourceTier = Number(source.dataset.chainTier ?? 0);
+
+    if (!targetOccupied) {
+      runUnitFlight(source, target, false);
+      window.setTimeout(() => {
+        const landed = targetIndex === undefined ? null : root.querySelector<HTMLElement>(`[data-cell="${targetIndex}"]`);
+        transientClass(landed, 'fx-move-land', 520);
+      }, 0);
+      return;
+    }
+
+    if (sourceFamily !== targetFamily || sourceTier >= 8) {
+      const maxTierReject = sourceFamily === targetFamily && sourceTier >= 8;
+      window.setTimeout(() => {
+        const rejected = targetIndex === undefined ? null : root.querySelector<HTMLElement>(`[data-cell="${targetIndex}"]`);
+        transientClass(rejected, maxTierReject ? 'fx-max-reject' : 'fx-reject', 460);
+        transientClass(root.querySelector('.board-frame'), 'fx-board-reject', 420);
+      }, 0);
+    }
+  });
+}
+
+function installPressFx(): void {
+  const root = document.querySelector<HTMLElement>('#app');
+  if (!root) return;
+  let pressed: HTMLElement | null = null;
+  const clear = (): void => {
+    pressed?.classList.remove('fx-pressed');
+    pressed = null;
+  };
+  root.addEventListener('pointerdown', (event) => {
+    if (!motionAllowed() || event.button !== 0 || !(event.target instanceof Element)) return;
+    const control = event.target.closest<HTMLElement>('[data-action],.locale-button,.audio-toggle');
+    if (!control || control.matches(':disabled')) return;
+    pressed = control;
+    control.classList.add('fx-pressed');
+  });
+  root.addEventListener('pointerup', clear);
+  root.addEventListener('pointercancel', clear);
+  root.addEventListener('pointerleave', clear, true);
+}
+
 function installSpawnEnergyFx(): void {
   const root = document.querySelector<HTMLElement>('#app');
   if (!root) return;
@@ -206,5 +270,46 @@ function installSpawnEnergyFx(): void {
   observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['class'] });
 }
 
+function installProgressionFx(): void {
+  const root = document.querySelector<HTMLElement>('#app');
+  if (!root) return;
+  let initialized = false;
+  let levelText = '';
+  let missionSignal = '';
+  let nextMoveText = '';
+  let missionComplete = false;
+
+  const snapshot = (): void => {
+    const nextLevel = root.querySelector('.hud-pill--level strong')?.textContent?.trim() ?? '';
+    const nextMissionSignal = `${root.querySelector('.mission-row strong')?.textContent?.trim() ?? ''}|${(root.querySelector('.mission-track i') as HTMLElement | null)?.style.width ?? ''}`;
+    const nextMove = root.querySelector('.next-action strong')?.textContent?.trim() ?? '';
+    const nextMissionComplete = Boolean(root.querySelector('.mission-complete'));
+
+    if (initialized && motionAllowed()) {
+      if (nextLevel && levelText && nextLevel !== levelText) transientClass(root.querySelector('.hud-pill--level'), 'fx-level-up', 860);
+      if (nextMissionSignal && missionSignal && nextMissionSignal !== missionSignal) transientClass(root.querySelector('.side-card--mission'), 'fx-mission-progress', 720);
+      if (nextMove && nextMoveText && nextMove !== nextMoveText) transientClass(root.querySelector('.next-action'), 'fx-next-move', 620);
+      if (nextMove && !nextMoveText) transientClass(root.querySelector('.next-action'), 'fx-next-move', 620);
+      if (nextMissionComplete && !missionComplete) transientClass(root.querySelector('.side-card--mission'), 'fx-mission-complete', 980);
+    }
+
+    levelText = nextLevel;
+    missionSignal = nextMissionSignal;
+    nextMoveText = nextMove;
+    missionComplete = nextMissionComplete;
+    initialized = true;
+  };
+
+  snapshot();
+  const observer = new MutationObserver((records) => {
+    if (!records.some((record) => record.type === 'childList')) return;
+    window.queueMicrotask(snapshot);
+  });
+  observer.observe(root, { subtree: true, childList: true });
+}
+
 installPointerDragFx();
+installMoveRejectFx();
+installPressFx();
 installSpawnEnergyFx();
+installProgressionFx();
