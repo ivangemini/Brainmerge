@@ -24,6 +24,8 @@ jobs:
         run: npm run smoke:rc
       - name: Run packaged motion smoke
         run: npm run smoke:motion
+      - name: Run packaged RU runtime smoke
+        run: npm run smoke:locale
       - name: Run packaged Yandex adapter smoke
         run: npm run smoke:yandex
       - uses: actions/upload-artifact@v4
