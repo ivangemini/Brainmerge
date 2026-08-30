@@ -1,0 +1,64 @@
+/* Brainmerge game-feel layer. Pure presentation: no economy/layout ownership. */
+
+/* Subtle asynchronous idle motion keeps a populated board alive without making every tile pulse together. */
+.cell.is-occupied .unit-visual{transform-origin:50% 82%;animation:bmUnitIdle 3.6s ease-in-out infinite;animation-delay:calc((var(--cell-phase,0) * -170ms) - 400ms)}
+.cell.is-occupied:nth-child(4n+1){--cell-phase:1}
+.cell.is-occupied:nth-child(4n+2){--cell-phase:3}
+.cell.is-occupied:nth-child(4n+3){--cell-phase:5}
+.cell.is-occupied:nth-child(4n){--cell-phase:7}
+.cell[data-chain-tier='5'] .unit-visual,.cell[data-chain-tier='8'] .unit-visual{animation-name:bmUnitIdleHeavy;animation-duration:4.4s}
+@keyframes bmUnitIdle{0%,100%{transform:translateY(0) rotate(-.35deg) scale(var(--unit-scale,1))}50%{transform:translateY(-2.2%) rotate(.45deg) scale(calc(var(--unit-scale,1) * 1.012))}}
+@keyframes bmUnitIdleHeavy{0%,100%{transform:translateY(0) rotate(.2deg) scale(var(--unit-scale,1))}50%{transform:translateY(-1.6%) rotate(-.25deg) scale(calc(var(--unit-scale,1) * 1.008))}}
+
+/* Selection/drag affordance: physical lift, contact shadow compression and a tiny toy tilt. */
+.cell.is-selected{z-index:12}
+.cell.is-selected .unit-visual{animation:none!important;transform:translateY(-8%) rotate(-2deg) scale(calc(var(--unit-scale,1) * 1.08));filter:brightness(1.04) saturate(1.06)}
+.cell.is-selected .unit-shadow{transform:translateX(-50%) scaleX(calc(var(--shadow-scale,1) * .82)) scaleY(.78);opacity:.46}
+.cell.is-merge-target .unit-visual{animation:bmMergeTarget .72s ease-in-out infinite alternate}
+@keyframes bmMergeTarget{to{transform:translateY(-2%) scale(calc(var(--unit-scale,1) * 1.045));filter:brightness(1.07) saturate(1.08)}}
+
+/* Transient state classes are applied from main.ts after real gameplay transitions. */
+.cell.fx-spawn .unit-visual{animation:bmSpawnPop .52s cubic-bezier(.16,.9,.25,1.25) both!important}
+.cell.fx-merge-result .unit-visual{animation:bmMergePop .62s cubic-bezier(.18,.9,.18,1.28) both!important}
+.cell.fx-rescue{animation:bmRescueCell .48s ease-out both!important}
+.spawn-dock.fx-spawn-dock .spawn-button{animation:bmBoxKick .46s cubic-bezier(.2,.85,.25,1.2) both!important}
+.side-card--mission.fx-reward{animation:bmRewardCard .56s cubic-bezier(.2,.9,.2,1.18) both!important}
+.upgrade-card.fx-upgrade{animation:bmUpgradeCard .58s cubic-bezier(.2,.9,.2,1.16) both!important}
+.offline-reward.fx-collect{animation:bmRewardCard .54s cubic-bezier(.2,.9,.2,1.14) both!important}
+.hud-pill--coin.fx-coin{animation:bmHudCoin .42s ease-out both!important}
+
+@keyframes bmSpawnPop{0%{opacity:0;transform:translateY(22%) scale(calc(var(--unit-scale,1) * .38)) rotate(-7deg)}58%{opacity:1;transform:translateY(-6%) scale(calc(var(--unit-scale,1) * 1.16)) rotate(2deg)}78%{transform:translateY(1%) scale(calc(var(--unit-scale,1) * .97)) rotate(-.5deg)}100%{opacity:1;transform:translateY(0) scale(var(--unit-scale,1)) rotate(0)}}
+@keyframes bmMergePop{0%{opacity:.2;transform:scale(calc(var(--unit-scale,1) * .28)) rotate(-10deg);filter:brightness(1.55) saturate(1.35)}45%{opacity:1;transform:scale(calc(var(--unit-scale,1) * 1.22)) rotate(2deg);filter:brightness(1.18) saturate(1.2)}72%{transform:scale(calc(var(--unit-scale,1) * .95)) rotate(-.7deg)}100%{transform:scale(var(--unit-scale,1));filter:none}}
+@keyframes bmRescueCell{0%{filter:brightness(1);transform:scale(1)}35%{filter:brightness(1.3) saturate(.7);transform:scale(.9) rotate(-2deg)}100%{filter:brightness(1);transform:scale(1)}}
+@keyframes bmBoxKick{0%{transform:translateY(0) scale(1)}28%{transform:translateY(4px) scale(.96,1.04)}58%{transform:translateY(-8px) scale(1.06,.94) rotate(-1.5deg)}78%{transform:translateY(2px) scale(.99,1.01) rotate(.6deg)}100%{transform:none}}
+@keyframes bmRewardCard{0%{transform:scale(1);filter:brightness(1)}35%{transform:scale(1.025);filter:brightness(1.08)}68%{transform:scale(.992)}100%{transform:scale(1);filter:brightness(1)}}
+@keyframes bmUpgradeCard{0%{transform:translateY(0) scale(1)}38%{transform:translateY(-4px) scale(1.025);filter:brightness(1.09) saturate(1.08)}70%{transform:translateY(1px) scale(.994)}100%{transform:none;filter:none}}
+@keyframes bmHudCoin{0%{transform:scale(1)}45%{transform:scale(1.08);filter:brightness(1.12)}100%{transform:scale(1);filter:none}}
+
+/* Event burst. Generated as short-lived DOM particles; no raster asset required. */
+.fx-burst{position:absolute;z-index:45;width:0;height:0;pointer-events:none;contain:layout style}
+.fx-burst__ring{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border:3px solid rgba(255,239,125,.95);border-radius:50%;animation:bmBurstRing .55s ease-out both}
+.fx-particle{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--particle,#ffd94d);box-shadow:0 1px 2px rgba(83,53,40,.18);animation:bmParticle .56s cubic-bezier(.15,.78,.22,1) both;transform:rotate(var(--r,0deg));--distance:32px}
+.fx-particle:nth-child(3n){border-radius:2px;background:#fff2a9}
+.fx-particle:nth-child(3n+1){background:#8ee8d6}
+.fx-particle:nth-child(3n+2){background:#d49bf0}
+@keyframes bmBurstRing{0%{opacity:.95;transform:scale(.45)}100%{opacity:0;transform:scale(4.6)}}
+@keyframes bmParticle{0%{opacity:1;transform:rotate(var(--r)) translateX(5px) scale(.7)}75%{opacity:1}100%{opacity:0;transform:rotate(var(--r)) translateX(var(--distance)) scale(1.05)}}
+
+/* Floating economy feedback is intentionally sparse: only explicit rewards/actions, not every passive tick. */
+.fx-float-value{position:fixed;z-index:100;pointer-events:none;transform:translate(-50%,-50%);padding:4px 8px;border:2px solid rgba(255,255,255,.9);border-radius:999px;background:linear-gradient(180deg,#fff7a5,#ffd548);color:#68461e;font-size:12px;font-weight:950;box-shadow:0 4px 10px rgba(83,55,36,.18);animation:bmFloatValue .78s ease-out both}
+@keyframes bmFloatValue{0%{opacity:0;transform:translate(-50%,-28%) scale(.78)}18%{opacity:1;transform:translate(-50%,-55%) scale(1.06)}100%{opacity:0;transform:translate(-50%,-145%) scale(.96)}}
+
+.has-new-discovery .discovery-toast__spark{animation:bmDiscoverySpark .55s ease-in-out 2 alternate}
+@keyframes bmDiscoverySpark{to{transform:rotate(22deg) scale(1.28);filter:brightness(1.2)}}
+.has-new-discovery .cell[data-chain-tier='8'] .unit-visual{animation:bmMergePop .72s cubic-bezier(.18,.9,.18,1.28) both!important}
+
+@media(hover:hover) and (pointer:fine){
+  .cell.is-occupied:not(.is-selected):hover .unit-visual{animation-play-state:paused;transform:translateY(-3%) scale(calc(var(--unit-scale,1) * 1.035));filter:brightness(1.035)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .cell.is-occupied .unit-visual,.cell.is-merge-target .unit-visual,.cell.fx-spawn .unit-visual,.cell.fx-merge-result .unit-visual,.cell.fx-rescue,.spawn-dock.fx-spawn-dock .spawn-button,.side-card--mission.fx-reward,.upgrade-card.fx-upgrade,.offline-reward.fx-collect,.hud-pill--coin.fx-coin,.fx-burst__ring,.fx-particle,.fx-float-value,.has-new-discovery .discovery-toast__spark{animation:none!important}
+  .cell.is-selected .unit-visual{transform:translateY(-3%) scale(calc(var(--unit-scale,1) * 1.025))}
+  .fx-burst,.fx-float-value{display:none!important}
+}
