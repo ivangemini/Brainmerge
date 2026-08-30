@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, upgradeArt, chainPolish, economyLoop, mobileRuntime, visualFinish, gameView, main] = await Promise.all([
+const [html, upgradeArt, chainPolish, standaloneCharacterArt, economyLoop, mobileRuntime, visualFinish, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/chain-polish.css', import.meta.url), 'utf8'),
+  readFile(new URL('../public/standalone-character-art.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/economy-loop.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/mobile-runtime.css', import.meta.url), 'utf8'),
   readFile(new URL('../public/visual-finish.css', import.meta.url), 'utf8'),
@@ -71,6 +72,18 @@ test('shared board sprites use an absolute atlas slot while Toilet Buddy keeps s
   assert.match(chainPolish, /inset:0!important/);
   assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-visual::before\{display:none!important\}/);
   assert.match(chainPolish, /\.cell\[data-family='toilet-buddy'\] \.unit-art[\s\S]*opacity:1!important/);
+});
+
+test('T9-T18 standalone character art overrides the legacy shared atlas on board and Collection', () => {
+  const chainIndex = html.indexOf('./public/chain-polish.css');
+  const standaloneIndex = html.indexOf('./public/standalone-character-art.css');
+  assert.ok(standaloneIndex > chainIndex, 'standalone character art must load after chain-polish atlas rules');
+  assert.match(standaloneCharacterArt, /data-chain-tier='9'/);
+  assert.match(standaloneCharacterArt, /data-chain-tier='18'/);
+  assert.match(standaloneCharacterArt, /\.unit-visual::before[\s\S]*display:\s*none\s*!important/);
+  assert.match(standaloneCharacterArt, /\.unit-art[\s\S]*opacity:\s*1\s*!important/);
+  assert.match(standaloneCharacterArt, /\.collection-chip:is[\s\S]*::after[\s\S]*display:\s*none\s*!important/);
+  assert.match(standaloneCharacterArt, /\.collection-chip:is[\s\S]*img[\s\S]*opacity:\s*1\s*!important/);
 });
 
 test('named discovery toast suppresses duplicate generic discovery feedback without collapsing header geometry', () => {
