@@ -16,11 +16,13 @@ Brainmerge autonomous implementation is at release-candidate stage. Preserve the
 - one primary currency remains intentional.
 
 ## Character / art truth
-All eighteen canonical character visuals are production-bound. Toilet Buddy uses standalone art, T2-T8 use the existing production atlas, and T9-T18 use standalone packaged WebP assets. The T9-T18 board and Collection routes are contract-tested so the legacy atlas cannot override the new art.
+All eighteen canonical character visuals are production-bound through one physical 6x3 `character-atlas.webp`. Board and Collection select T1-T18 from the same shared sprite pipeline; standalone WebP files remain source/reference assets rather than the production rendering path.
 
-The T18 raster was repaired after package-integrity QA caught a truncated RIFF payload. Current Yandex packaging validates all referenced character rasters structurally before browser smoke.
+The atlas migration is contract-tested at runtime so T1, T9-T18 and the original T2-T8 all resolve through the same sprite layer without standalone overrides. Yandex packaging validates all referenced raster assets structurally before browser smoke.
 
-The Art-Bible-guided production finish is implemented across HUD, board, Mission, Brain Box, Brain Lab and Collection. `public/visual-finish.css` remains presentation-only and contract-tested not to take over production-panel ordering/grid rows/fixed visibility. Mobile keeps board first, Mission next, then Brain Lab and Collection.
+The Art-Bible-guided production finish is implemented across HUD, board, Mission, Brain Box, Brain Lab and Collection. `public/visual-finish.css` remains presentation-only and contract-tested not to take over production-panel ordering/grid rows/fixed visibility.
+
+Phone composition is now board-first: the live board and Brain Box stay in the primary document flow while Mission, Collection and Brain Lab are opened from a fixed three-button bottom dock as modal sheets. The dock reflects existing localized DOM/state, does not own gameplay state, respects safe-area insets, keeps inactive sheets inert, and leaves desktop composition unchanged.
 
 Known approved Figma file key: `lIFT4QEPhnsFfSrRD8WFad`. Exact approved-frame comparison remains an external acceptance gate until the target nodes are inspected in the authenticated Figma context.
 
@@ -41,13 +43,13 @@ The code-driven game-feel layer covers family idle motion, live drag, merge/move
 Daily/return goals remain intentionally out of release scope. Deterministic return-session QA locks the useful sequence `Offline Collect -> earned mission reward -> active merge`, so an extra synthetic daily-task layer or second currency is not justified before real retention data.
 
 ## Automated release gates
-CI run #241 on commit `243b2d15edc5c92582ab50a269ee29ffd7059ca6` passed end-to-end after the T18 expansion. It validates:
+Current CI validates:
 - TypeScript build and EN/RU locale parity;
-- 60 deterministic/static tests;
+- deterministic/static tests including the unified T1-T18 atlas and board-first mobile dock contracts;
 - Yandex package + raster integrity + release audit;
 - packaged desktop 1440x900 / compact 1024x576 / phone 390x844 runtime matrix;
 - mouse, touch and keyboard merge paths;
-- all T1-T18 characters on the high-tier runtime fixture, including T9-T18 standalone image decoding/rendering;
+- all T1-T18 characters on the high-tier runtime fixture;
 - a genuine terminal-T18 full-board deadlock with Rescue and disabled Brain Box;
 - crowded guidance, offline/mission/upgrades, maxed upgrades and T8 discovery;
 - RC focus/reduced-motion/coarse-pointer/v2->v5 migration smoke;
@@ -56,7 +58,7 @@ CI run #241 on commit `243b2d15edc5c92582ab50a269ee29ffd7059ca6` passed end-to-e
 - packaged Yandex-adapter smoke covering rewarded success, close-without-reward, SDK error, hidden-page lifecycle and pagehide cloud flush;
 - artifact upload for the Yandex package and runtime screenshots.
 
-Runtime screenshots from #241 were visually inspected. The T1-T18 board renders all eighteen identities with readable tier/income badges; the terminal T18 deadlock surface renders all 30 terminal units plus the actionable Rescue state without broken images or horizontal clipping.
+Runtime screenshots are visually inspected after meaningful UI/art changes. Phone QA must verify the board-first default screen plus each modal sheet state, while desktop remains visually unchanged.
 
 ## External acceptance gates only
 1. Approved Figma node comparison for Mission / Collection / Brain Box / HUD / overall composition.
