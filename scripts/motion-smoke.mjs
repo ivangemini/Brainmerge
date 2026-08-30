@@ -46,13 +46,29 @@ await new Promise((resolve) => server.listen(4175, '127.0.0.1', resolve));
 const browser = await chromium.launch({ headless: true });
 
 try {
-  // Normal-motion path: real merge and Brain Box actions must emit transient choreography.
+  // Normal-motion path: pointer drag, real merge and Brain Box actions must emit transient choreography.
   {
     const context = await browser.newContext({ viewport: { width: 1024, height: 576 } });
     const { page, errors } = await openRuntime(context);
 
     const occupied = page.locator('.cell.is-occupied');
     assert(await occupied.count() >= 4, 'fresh board must expose the starter merge pair');
+
+    const dragCell = page.locator('[data-cell="2"]');
+    const dragBox = await dragCell.boundingBox();
+    assert(dragBox, 'starter drag cell must have geometry');
+    const cx = dragBox.x + dragBox.width / 2;
+    const cy = dragBox.y + dragBox.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 18, cy + 2, { steps: 3 });
+    assert(await dragCell.evaluate((el) => el.classList.contains('fx-pointer-drag')), 'live pointer movement must lift and track the source unit');
+    const dragTransform = await dragCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).transform);
+    assert(dragTransform !== 'none', 'dragged unit must expose a non-empty transform');
+    await page.mouse.move(cx, cy, { steps: 2 });
+    await page.mouse.up();
+    assert(await page.locator('.fx-pointer-drag').count() === 0, 'pointer drag presentation state must clean up on release');
+    await page.keyboard.press('Escape');
 
     await page.locator('[data-cell="0"]').click({ force: true });
     await page.locator('[data-cell="1"]').click({ force: true });
@@ -98,6 +114,15 @@ try {
     const { page, errors } = await openRuntime(context);
     assert(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), 'reduced-motion media query must be active');
 
+    const dragCell = page.locator('[data-cell="2"]');
+    const dragBox = await dragCell.boundingBox();
+    assert(dragBox, 'reduced-motion drag cell must have geometry');
+    await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dragBox.x + dragBox.width / 2 + 18, dragBox.y + dragBox.height / 2, { steps: 2 });
+    assert(await page.locator('.fx-pointer-drag').count() === 0, 'reduced motion must suppress live pointer-drag choreography');
+    await page.mouse.up();
+
     await page.locator('[data-cell="0"]').click({ force: true });
     await page.locator('[data-cell="1"]').click({ force: true });
     assert(await page.locator('[data-cell="1"][data-chain-tier="2"]').count() === 1, 'merge gameplay must still complete with reduced motion');
@@ -112,7 +137,7 @@ try {
     await context.close();
   }
 
-  console.log('Packaged motion smoke OK: flight + merge + discovery + coin trails + spawn + cleanup + reduced motion');
+  console.log('Packaged motion smoke OK: pointer drag + flight + merge + discovery + coin trails + spawn + cleanup + reduced motion');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
