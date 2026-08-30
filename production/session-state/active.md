@@ -32,7 +32,7 @@ CSS ownership:
 - feature CSS = feature-specific appearance/states;
 - `public/upgrade-art.css` = Brain Lab/offline presentation only;
 - `public/mobile-runtime.css` = responsive composition authority;
-- `public/game-feel.css` = transient motion/presentation only;
+- `public/game-feel.css` + `public/game-feel-advanced.css` = transient motion/presentation only;
 - `public/accessibility.css` = final interaction override layer.
 
 At <=1180px board is first, Mission follows, then reachable supporting panels. Compact Collection keeps natural height rather than stretching to Brain Lab. At phone widths Brain Lab precedes Collection.
@@ -55,18 +55,24 @@ Fresh-session and controlled-state gates verify 30 cells, key panels, overflow/b
 - a real legacy v2 localStorage payload migrates through packaged boot to canonical persisted v5 while preserving T5 discovery/Collection/mission compatibility and clearing stale selection.
 
 ## Game-feel animation layer
-`public/game-feel.css` plus event choreography in `src/main.ts` now provides:
-- asynchronous character idle motion;
-- selected/merge-target lift;
-- Brain Box kick + spawned-unit pop;
-- merge result squash/overshoot + transient particle burst;
-- mission/offline/HUD reward feedback;
-- upgrade-card response;
-- Rescue cell response;
-- stronger discovery/high-tier treatment;
-- complete reduced-motion suppression for nonessential event motion and particles.
+The code-driven motion layer now covers the full primary interaction loop without adding animation raster assets or presentation state to `GameState`:
+- asynchronous family-specific character idle personalities;
+- live pointer drag with lifted unit/shadow response;
+- selected/merge-target anticipation;
+- merge source flight, result squash/overshoot, burst and reward coin trail;
+- ordinary move flight to an empty cell followed by landing compression;
+- mismatch rejection shake plus a distinct softer max-tier rejection;
+- Brain Box dock response, charged spawn-energy orb/sparks and spawned-unit pop;
+- discovery/T8 board-level hero treatment and Collection-chip unlock response;
+- mission/offline/HUD reward feedback, upgrade response and Rescue response;
+- tactile press/release compression on production actions and small controls;
+- Mission progress/completion, player-level and `Next move` transition feedback.
 
-`scripts/motion-smoke.mjs` exercises real packaged merge and Brain Box actions. It asserts emitted transition classes, `bmMergePop`/`bmSpawnPop`, particle creation and cleanup, then repeats merge under reduced motion and confirms gameplay still completes with no particle DOM creation.
+Move/reject intent is captured on board `pointerdown` before the existing GameView `pointerup` state transition. This preserves pre-render source geometry for presentation while leaving gameplay ownership in the existing action handlers.
+
+All nonessential choreography observes `prefers-reduced-motion`; flight ghosts, particle/coin/spawn-energy nodes and progression attention effects are suppressed/collapsed while the same gameplay transitions still complete.
+
+`scripts/motion-smoke.mjs` now exercises the actual packaged interaction chain rather than only checking CSS presence. It validates live drag, merge, ordinary move, mismatch reject/state preservation, tactile Brain Box press, Mission/`Next move` progression, discovery/Collection, coin trails, spawn energy, transient cleanup and equivalent reduced-motion gameplay.
 
 ## Yandex SDK lifecycle hardening
 The adapter contract separates SDK initialization from Game Ready:
@@ -76,7 +82,7 @@ The adapter contract separates SDK initialization from Game Ready:
 - visibility/ad lifecycle pairs Gameplay start/stop;
 - cloud debounce/latest-state flush/storage fallback/write-race protections remain intact.
 
-`scripts/yandex-browser-smoke.mjs` now boots the packaged build through the real `YandexPlatformAdapter` using an instrumented SDK contract. It verifies:
+`scripts/yandex-browser-smoke.mjs` boots the packaged build through the real `YandexPlatformAdapter` using an instrumented SDK contract. It verifies:
 - one SDK init and player/cloud-load path;
 - Yandex preferred RU locale is applied before Game Ready;
 - 30 interactive board cells exist when `LoadingAPI.ready()` fires;
@@ -87,10 +93,10 @@ The adapter contract separates SDK initialization from Game Ready:
 This substantially hardens the portal path but does not replace a final run inside the real Yandex Games portal/debug panel.
 
 ## Latest validation
-- deterministic/static suite: 51 passing tests;
-- CI #180 validated the complete game-feel runtime without regressing existing package/runtime/RC gates;
-- CI #187 on `6ac717efc03121592ae2e2b0d13e09a8721d584c` passed TypeScript/tests, EN/RU parity, Yandex package/integrity/release audit, full packaged state-matrix smoke, RC focus/reduced-motion/touch/migration smoke, packaged motion smoke, packaged real-adapter Yandex smoke and both artifact uploads;
-- documentation commits after #187 do not alter runtime behavior and receive normal CI separately.
+- deterministic/static suite: 51 passing tests, 131 EN/RU locale keys in parity;
+- animation implementation HEAD `73de5d273b1dfe67eff8608d16e9780c7fce7fb2` passed CI #212 end-to-end: tests, Yandex package/integrity/release audit, packaged desktop/compact/mobile runtime matrix, RC focus/reduced-motion/touch/migration gate, expanded packaged motion smoke, real-adapter Yandex browser smoke and both artifact uploads;
+- the expanded motion gate caught and resolved real event-order assumptions during implementation: ordinary move intent must be captured before GameView rerender, and physical CTA smoke must use one actual pointer activation rather than double-clicking the action;
+- documentation is being updated after the green runtime gate and receives normal CI on the final source-of-truth HEAD.
 
 ## Figma source of truth
 Known Brainmerge Figma file key: `lIFT4QEPhnsFfSrRD8WFad`.
