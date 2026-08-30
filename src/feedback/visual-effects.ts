@@ -201,8 +201,8 @@ function installMoveRejectFx(): void {
   const root = document.querySelector<HTMLElement>('#app');
   if (!root) return;
 
-  root.addEventListener('click', (event) => {
-    if (!motionAllowed() || !(event.target instanceof Element)) return;
+  root.addEventListener('pointerdown', (event) => {
+    if (!motionAllowed() || event.button !== 0 || !(event.target instanceof Element)) return;
     const target = event.target.closest<HTMLElement>('[data-cell]');
     const source = root.querySelector<HTMLElement>('[data-cell].is-selected');
     if (!target || !source || target === source) return;
