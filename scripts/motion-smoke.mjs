@@ -102,11 +102,16 @@ try {
     await spawnButton.click({ force: true });
     assert(await page.locator('.spawn-dock.fx-spawn-dock').count() === 1, 'Brain Box action must animate the spawn dock');
     assert(await page.locator('.cell.fx-spawn').count() === 1, 'new Brain Box unit must receive spawn-pop choreography');
+    await page.locator('.fx-spawn-orb').waitFor({ state: 'attached', timeout: 500 });
+    assert(await page.locator('.fx-spawn-orb').count() === 1, 'Brain Box must send one energy orb toward the spawned cell');
+    assert(await page.locator('.fx-spawn-spark').count() === 4, 'spawn landing must emit four short-lived spark nodes');
     const spawnAnimation = await page.locator('.cell.fx-spawn .unit-visual').evaluate((el) => getComputedStyle(el).animationName);
     assert(spawnAnimation.includes('bmSpawnPop'), `spawned unit must run bmSpawnPop, got ${spawnAnimation}`);
 
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(900);
     assert(await page.locator('.cell.fx-spawn').count() === 0, 'spawn transition class must be transient');
+    assert(await page.locator('.fx-spawn-orb').count() === 0, 'spawn energy orb must clean itself up');
+    assert(await page.locator('.fx-spawn-spark').count() === 0, 'spawn landing sparks must clean themselves up');
     assert(errors.length === 0, `motion path page errors: ${errors.join(' | ')}`);
     await context.close();
   }
@@ -126,7 +131,6 @@ try {
     await page.mouse.down();
     await page.mouse.move(cx + 18, cy, { steps: 2 });
     assert(await page.locator('.fx-pointer-drag').count() === 0, 'reduced motion must suppress live pointer-drag choreography');
-    // Return to the source before release so this presentation-only check cannot mutate the board.
     await page.mouse.move(cx, cy, { steps: 2 });
     await page.mouse.up();
     await page.keyboard.press('Escape');
@@ -141,11 +145,17 @@ try {
     const duration = await page.locator('[data-cell="1"] .unit-visual').evaluate((el) => getComputedStyle(el).animationDuration);
     const seconds = duration.endsWith('ms') ? Number.parseFloat(duration) / 1000 : Number.parseFloat(duration);
     assert(Number.isFinite(seconds) && seconds <= 0.001, `reduced-motion merge animation must collapse to <=1ms, got ${duration}`);
+
+    const spawnButton = page.locator('[data-action="spawn"]');
+    assert(await spawnButton.isEnabled(), 'reduced-motion economy should still allow paid spawn');
+    await spawnButton.click({ force: true });
+    assert(await page.locator('.fx-spawn-orb').count() === 0, 'reduced motion must suppress spawn energy orb creation');
+    assert(await page.locator('.fx-spawn-spark').count() === 0, 'reduced motion must suppress spawn landing sparks');
     assert(errors.length === 0, `reduced-motion path page errors: ${errors.join(' | ')}`);
     await context.close();
   }
 
-  console.log('Packaged motion smoke OK: pointer drag + flight + merge + discovery + Collection + coin trails + spawn + cleanup + reduced motion');
+  console.log('Packaged motion smoke OK: pointer drag + flight + merge + discovery + Collection + coin trails + spawn energy + cleanup + reduced motion');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
