@@ -50,6 +50,10 @@ function yaGamesGlobal(): YaGamesGlobal | null {
   return value ?? null;
 }
 
+function pageIsVisible(): boolean {
+  return typeof document === 'undefined' || !document.hidden;
+}
+
 export class YandexPlatformAdapter implements PlatformAdapter {
   readonly id = 'yandex';
   readonly capabilities = {
@@ -66,6 +70,7 @@ export class YandexPlatformAdapter implements PlatformAdapter {
   private pendingCloudState: GameState | null = null;
   private cloudTimer: number | null = null;
   private readySignaled = false;
+  private gameplayActive: boolean | null = null;
 
   async initialize(): Promise<void> {
     const yaGames = yaGamesGlobal();
@@ -93,7 +98,7 @@ export class YandexPlatformAdapter implements PlatformAdapter {
     } catch {
       // Game Ready reporting must never make an already-rendered game unusable.
     }
-    this.setGameplayActive(true);
+    if (pageIsVisible()) this.setGameplayActive(true);
   }
 
   preferredLocale(): Locale | null {
@@ -154,7 +159,7 @@ export class YandexPlatformAdapter implements PlatformAdapter {
       const finish = (shown: boolean): void => {
         if (settled) return;
         settled = true;
-        this.setGameplayActive(true);
+        if (pageIsVisible()) this.setGameplayActive(true);
         resolve(shown);
       };
       try {
@@ -174,7 +179,7 @@ export class YandexPlatformAdapter implements PlatformAdapter {
       const finish = (): void => {
         if (settled) return;
         settled = true;
-        this.setGameplayActive(true);
+        if (pageIsVisible()) this.setGameplayActive(true);
         resolve(rewarded);
       };
       try {
@@ -186,12 +191,15 @@ export class YandexPlatformAdapter implements PlatformAdapter {
   }
 
   setGameplayActive(active: boolean): void {
+    if (this.gameplayActive === active) return;
     try {
       const api = this.sdk?.features?.GameplayAPI;
       if (!api) return;
+      this.gameplayActive = active;
       void Promise.resolve(active ? api.start() : api.stop());
     } catch {
-      // Lifecycle reporting should never break gameplay.
+      // Let a later lifecycle event retry if the SDK call itself throws synchronously.
+      this.gameplayActive = null;
     }
   }
 
