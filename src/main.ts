@@ -169,6 +169,9 @@ async function boot(): Promise<void> {
   if (saved) state = accrueReturnIncome(saved, now);
   else state = createInitialState(now);
   render();
+  // Platform Game Ready must be emitted only after locale/save restoration and the
+  // first complete interactive render. Yandex moderation explicitly checks this timing.
+  await platform.gameReady();
   void platform.saveState(state);
 }
 
