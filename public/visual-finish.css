@@ -1,0 +1,83 @@
+/* Art-Bible-guided finish pass.
+ * Presentation only: no game state, responsive panel ordering, prices, locks or hit areas live here.
+ * Exact Figma target acceptance remains a separate gate while MCP reads are unavailable.
+ */
+
+/* Establish a clearer toy-console hierarchy without flattening the live DOM UI. */
+.topbar{position:relative}
+.brand{letter-spacing:-.025em;text-shadow:0 2px 0 rgba(255,255,255,.62),0 5px 14px rgba(76,48,78,.08)}
+.brand-block::after{border-radius:999px;box-shadow:0 1px 0 rgba(255,255,255,.72)}
+.hud-cluster{align-items:center}
+.hud-pill,.locale-switch{border-color:rgba(110,76,68,.12)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.9),0 5px 0 rgba(105,76,72,.07),0 10px 18px rgba(86,60,47,.09)!important}
+.hud-pill--coin{background:linear-gradient(180deg,#fffdf4,#fff0cf)!important}
+.hud-pill--level{background:linear-gradient(180deg,#fffdf8,#f4e7da)!important}
+.hud-pill--merge{background:linear-gradient(180deg,#fffdf7,#f6eadb)!important}
+.locale-switch{background:linear-gradient(180deg,#fffdf7,#eee0d5)!important}
+.locale-button.is-active{box-shadow:inset 0 2px 0 rgba(255,255,255,.18),0 3px 7px rgba(65,38,72,.18)}
+
+/* The board is the primary toy object. Give it a cleaner rim/tray separation and a soft floor shadow. */
+.board-frame{box-shadow:0 8px 0 rgba(155,98,48,.14),0 24px 42px rgba(79,54,40,.18),inset 0 3px 0 rgba(255,255,255,.72)!important}
+.board-rim{box-shadow:inset 0 0 0 3px rgba(35,120,118,.18),inset 0 5px 0 rgba(255,255,255,.38),0 5px 9px rgba(72,94,90,.14)!important}
+.board-tray{border:1px solid rgba(44,105,112,.16);box-shadow:inset 0 7px 17px rgba(60,83,91,.24),inset 0 1px 0 rgba(255,255,255,.30)!important}
+.cell,.cell.tone-1,.cell.tone-2,.cell.tone-3,.cell:nth-child(5n){box-shadow:0 5px 0 #168f9b,0 8px 11px rgba(44,84,89,.14),inset 0 3px 0 rgba(255,255,255,.38),inset 0 -3px 0 rgba(16,111,124,.16)!important}
+
+/* Board information becomes one compact control stack rather than several equally loud strips. */
+.board-header{margin-bottom:3px}
+.board-heading .eyebrow{letter-spacing:.12em}
+.chain-progress{border-color:rgba(109,76,67,.12);box-shadow:inset 0 2px 0 rgba(255,255,255,.9),0 6px 13px rgba(91,62,50,.07)}
+.coach-card,.next-action,.offline-reward{box-shadow:inset 0 2px 0 rgba(255,255,255,.88),0 6px 13px rgba(82,58,49,.08)!important}
+
+/* Side panels share the same collectible-card construction while preserving their semantic colors. */
+.side-card{box-shadow:0 13px 22px rgba(90,58,47,.13),0 5px 0 rgba(109,68,47,.08),inset 0 3px 0 rgba(255,255,255,.9),inset 0 -4px 0 rgba(165,107,55,.08)}
+.side-card__eyebrow{letter-spacing:.12em}
+.side-card--mission{background:radial-gradient(circle at 20% 18%,rgba(255,255,255,.46) 0 1px,transparent 1.6px) 0 0/15px 15px,linear-gradient(180deg,#fffbed 0%,#fff4d8 62%,#f7dfb3 100%)}
+.side-card--collection{background:radial-gradient(circle at 20% 18%,rgba(255,255,255,.42) 0 1px,transparent 1.6px) 0 0/15px 15px,linear-gradient(180deg,#fffdf0 0%,#fff5dc 62%,#f3dfbb 100%)}
+.side-card--lab{box-shadow:0 13px 22px rgba(75,53,88,.13),0 5px 0 rgba(84,54,105,.08),inset 0 3px 0 rgba(255,255,255,.9)!important}
+
+/* Upgrade cards should read as four collectible modules, not a settings form. */
+.upgrade-card{position:relative;overflow:hidden;border-color:rgba(104,73,121,.12);background:linear-gradient(180deg,rgba(255,255,252,.9),rgba(255,249,244,.78));box-shadow:inset 0 2px rgba(255,255,255,.85),0 5px 9px rgba(70,48,83,.065)}
+.upgrade-card::after{content:"";position:absolute;left:10px;right:10px;top:0;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);pointer-events:none}
+.upgrade-card.is-affordable{border-color:rgba(224,166,48,.30);box-shadow:inset 0 2px rgba(255,255,255,.88),0 0 0 2px rgba(255,207,91,.08),0 6px 10px rgba(111,72,37,.08)}
+.upgrade-card.is-maxed{border-color:rgba(71,163,113,.24);background:linear-gradient(180deg,rgba(240,255,246,.94),rgba(226,247,236,.86))}
+.upgrade-card button{box-shadow:inset 0 2px rgba(255,255,255,.58),0 3px 0 #c98b2f,0 5px 8px rgba(121,79,36,.08)}
+
+/* Spawn is the primary economy CTA. Keep it visually dominant but reduce the detached-label feeling below it. */
+.spawn-dock{filter:drop-shadow(0 7px 9px rgba(100,61,31,.08))}
+.spawn-button{letter-spacing:.01em}
+.box-profile{margin-top:7px!important;background:rgba(255,250,239,.84);border-color:rgba(111,80,65,.12);box-shadow:inset 0 1px rgba(255,255,255,.9),0 3px 7px rgba(85,60,48,.05)}
+
+/* Phone: preserve the board-first composition, but keep the economy rail from becoming an excessively long form. */
+@media(max-width:700px){
+  .game-shell{padding-inline:8px!important}
+  .topbar{margin-bottom:7px!important}
+  .brand-block{padding-left:2px}
+  .board-heading p{max-width:88%}
+  .board-frame{border-radius:26px!important;padding:9px!important}
+  .board-rim{border-radius:21px!important;padding:7px!important}
+  .board-tray{gap:5px!important;padding:7px!important;border-radius:15px!important}
+  .cell,.cell.tone-1,.cell.tone-2,.cell.tone-3,.cell:nth-child(5n){border-radius:13px!important;border-width:2px!important;box-shadow:0 4px 0 #168f9b,0 6px 8px rgba(44,84,89,.13),inset 0 2px 0 rgba(255,255,255,.38)!important}
+  .spawn-dock{margin-top:10px!important}
+  .side-card{border-radius:28px}
+  .right-rail .side-card--lab{padding:14px!important}
+  .upgrade-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+  .upgrade-card{min-width:0;padding:8px!important}
+  .upgrade-card__top{align-items:flex-start}
+  .upgrade-card__top strong{font-size:10px;line-height:1.08}
+  .upgrade-card__top span{padding:2px 5px;font-size:7px}
+  .upgrade-card>small{display:none!important}
+  .upgrade-effect{font-size:9px;line-height:1.15;margin:5px 0 6px}
+  .collection-grid{gap:8px}
+}
+
+@media(max-width:420px){
+  .hud-pill,.locale-switch{border-radius:13px!important}
+  .hud-pill--merge{position:relative}
+  .hud-pill--merge::before{content:"×";margin-right:3px;color:#9b6a35;font-size:11px;font-weight:950}
+  .side-card--mission,.right-rail .side-card--lab,.right-rail .side-card--collection{width:min(342px,96vw)!important}
+  .upgrade-list{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .upgrade-card>small{display:none!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .upgrade-card,.hud-pill,.locale-switch{transition:none!important}
+}
