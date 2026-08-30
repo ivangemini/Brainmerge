@@ -17,8 +17,9 @@ Drive Brainmerge to production-ready state from `docs/ROADMAP.md`. Complete the 
 ## Persistence / validation baseline
 - save migrations v1-v5 and malformed economy-state sanitization are covered;
 - online fractional production, offline cap/claim, duplicate resume, clock rollback, autosave and Yandex latest-snapshot/lifecycle flush behavior have deterministic tests;
-- package build validates HTML/CSS/JS references, locale payloads, Yandex marker/SDK loader and accidental debugger statements;
-- packaged WebP/PNG assets are structurally parsed so truncated raster files fail CI.
+- package build validates HTML/CSS/JS references, locale payloads, Yandex marker/SDK loader and raster structure;
+- short boot/resume gaps under 60 seconds use normal online accrual rather than surfacing tiny fake offline rewards; meaningful gaps still use capped explicit Collect;
+- packaged release audit rejects TODO/FIXME/HACK markers, placeholder/sample copy, debug-only attributes/flags and common secret/token formats.
 
 ## Approved upgrade/offline art integration
 The user supplied production artwork for Base Drop Tier, Lucky +1, Global Income, Offline Capacity and Offline Reward.
@@ -32,70 +33,77 @@ Integration follows the existing code-first UI architecture rather than flatteni
 - affordable/locked/maxed presentation is driven by runtime classes;
 - offline artwork decorates the existing amount/description/Collect component rather than replacing it.
 
-## UI architecture cleanup completed
-CSS ownership is explicit:
-- `public/code-ui.css` remains the structural code-first component layer;
-- feature CSS layers own feature-specific appearance/states;
-- `public/upgrade-art.css` contains no Mission/right-rail composition rules;
-- `public/economy-loop.css` no longer redefines compact/page rail composition;
-- `public/mobile-runtime.css` is the final responsive composition authority;
-- at <=1180px the board is first, Mission follows, then a reachable two-column right rail;
-- nested legacy `grid-row` assignments are reset inside the compact rail;
-- compact Collection uses natural content height rather than stretching to Brain Lab;
-- at phone widths the rail becomes one column with Brain Lab before Collection;
-- `public/accessibility.css` remains the final interaction override layer.
+## UI architecture baseline
+CSS ownership remains explicit:
+- `public/code-ui.css` = structural code-first component layer;
+- feature CSS = feature-specific appearance/states;
+- `public/upgrade-art.css` = Brain Lab/offline presentation only;
+- `public/mobile-runtime.css` = responsive composition authority;
+- `public/accessibility.css` = final interaction override layer.
 
-`tests/ui-contract.test.mjs` guards stylesheet ordering, responsive ownership, compact rail geometry assumptions, code-owned Brain Lab state/actions and shared-vs-standalone character sprite rules.
+At <=1180px board is first, Mission follows, then a reachable two-column right rail. Compact Collection keeps natural height rather than stretching to Brain Lab. At phone widths Brain Lab precedes Collection.
 
-## Packaged Chromium runtime QA completed
-The actual Yandex `dist/` package is now browser-smoked in CI with Playwright Chromium. Runtime uses `?platform=local` only to avoid making the technical UI/input gate depend on the external Yandex SDK; the loaded HTML/CSS/compiled JS/assets are the packaged distribution files.
+`tests/ui-contract.test.mjs` guards stylesheet ordering, responsive ownership, compact rail geometry, code-owned Brain Lab state/actions, character sprite contracts, keyboard safety and discovery-feedback deduplication.
+
+## Packaged Chromium runtime QA
+CI opens the actual packaged Yandex `dist/` with `?platform=local` solely to avoid external SDK dependence while testing the packaged HTML/CSS/compiled JS/assets.
 
 Viewports:
 - desktop 1440x900;
 - compact 1024x576;
 - phone 390x844 with touch enabled.
 
-The gate verifies:
-- exactly 30 board cells;
-- Mission, Collection, Brain Lab, Brain Box and onboarding/Next Move visibility;
-- no horizontal overflow, broken images or uncaught page errors;
-- compact Brain Lab and Collection share a row without equal-height stretching;
-- phone Brain Lab appears before Collection;
-- T2 Camera Dude shared-atlas sprite has visible board geometry after merge;
-- mouse merge works on desktop/compact;
-- touch tap merge works on phone;
-- a separate fresh-state keyboard merge works and focus returns to the target cell.
+Fresh-session gate verifies 30 cells, key panels, overflow/broken-image/page-error health, responsive rail geometry, mouse/touch/keyboard merge and focus restoration.
 
-Full-page screenshots are uploaded from CI and have been visually reviewed. The review caught two issues that static tests had missed:
-1. Collection was stretched to Brain Lab height / later still inherited a stale nested grid row; both responsive cascade issues are fixed.
-2. Camera Dude appeared in Collection but disappeared on the board after merge because the shared-atlas pseudo sprite depended on flex-item sizing. Shared board sprites now use an absolute slot; Toilet Buddy keeps its standalone image path.
+Controlled-state matrix additionally verifies:
+- complete T1-T8 board/Collection sprite range;
+- crowded-board best-pair guidance;
+- true deadlock + Rescue + disabled Brain Box;
+- real offline reward + Collect;
+- mission-ready state;
+- locked + affordable upgrades;
+- all four maxed upgrades + completed mission track;
+- T7 -> T8 discovery and Collection unlock.
 
-The current fresh-session screenshots show T1/T2 art plus readable per-unit production/tier labels at all three target viewports.
+## Runtime visual review corrections
+Real CI screenshots, not isolated asset previews, drove the latest corrections:
+1. Compact Collection no longer stretches to Brain Lab height or inherits stale grid-row placement.
+2. Shared-atlas Camera Dude now uses an absolute board sprite slot and remains visible after merge.
+3. A named `NEW Tn: Character` discovery toast suppresses the duplicate generic discovery message while reserving header geometry.
+4. On phone, the fixed audio control moved from the bottom viewport anchor that overlapped Mission into a free system-control pocket below the HUD.
+5. Per-character `presentation.scale`, shadow scale and Collection scale were moderately re-tuned from runtime captures toward the Art Bible 72-82% useful visual-occupancy target. Gameplay hitboxes/rules are unchanged.
+6. Trivial sub-minute reload/resume gaps no longer produce +1/+2-style offline reward banners.
 
 ## Keyboard/input hardening
-- global Space no longer buys a paid Brain Box;
-- Enter/Space on a focused board cell uses the same select/move/merge path as pointer input;
+- global Space cannot buy a paid Brain Box;
+- Enter/Space on focused board cells uses the same select/move/merge path as pointer input;
 - ArrowLeft/Right/Up/Down move focus using board geometry;
-- Escape clears board selection;
+- Escape clears selection;
 - M remains a safe body-level mute toggle;
-- focus is restored after code-driven DOM rerenders;
-- real packaged-runtime mouse/touch/keyboard merge paths are now part of CI.
+- focus is restored after DOM rerenders;
+- real packaged mouse/touch/keyboard merge paths are CI-gated.
 
-Tutorial cells pulse continuously by design. Playwright therefore uses forced mouse/touch input for those cells so the smoke does not wait for impossible visual stability; the emitted events still exercise the real pointer handlers.
+Tutorial cells pulse continuously by design. Playwright uses forced pointer input for those cells so it exercises the real handlers without waiting for impossible visual stability.
 
 ## Latest validation
-- CI #144 on `48e23424d41da978498497dc7492f337ccabf346`: fully green, including static tests, Yandex package, Playwright Chromium runtime smoke and screenshot artifact upload.
-- CI #146 validates the expanded mouse/touch/keyboard runtime gate after adapting automation to intentionally animated tutorial cells; confirm final job conclusion before advancing the release baseline.
-- static suite baseline is 49 passing tests plus packaged browser smoke.
+- static suite: 50 passing tests after discovery-feedback contract coverage;
+- CI #155: first complete controlled-state matrix green;
+- CI #157: sub-minute offline-reward suppression green;
+- CI #163 on `1a3141ddd3e2a09ac20116834ddb8f85f7778bac`: fully green — TypeScript/tests, EN/RU parity, Yandex package/integrity, packaged release audit, Playwright Chromium fresh + state-matrix smoke, package artifact and screenshot artifact uploads.
+- latest documentation commit follows #163 and does not alter runtime behavior.
+
+## Figma source of truth
+Known Brainmerge Figma file key: `lIFT4QEPhnsFfSrRD8WFad`.
+The connector successfully identified page `Characters — Approved`. Deeper node inspection is currently blocked by the authenticated Starter/View MCP read quota, so technical screenshots must not be mislabeled as final Figma artistic acceptance.
 
 ## Remaining gates
-1. Compare the full packaged runtime against approved Figma/art-direction targets and correct remaining visual hierarchy/scale/spacing deltas; technical browser geometry alone is not artistic acceptance.
-2. Review complete visual states beyond the fresh T1/T2 route: higher tiers, crowded hint, discovery/reward, deadlock/Rescue, offline reward, mission completion, lock/max/affordable upgrade states.
-3. Replace T2-T8 shared character atlas entries with approved standalone assets when they are supplied; do not fabricate replacements.
-4. Final focus/contrast/reduced-motion visual review.
-5. Real Yandex SDK lifecycle/capability smoke.
-6. Packaged fresh-save + migrated-save release-candidate smoke.
-7. Decide on additional daily/return goals only after real session QA; no second currency is currently justified.
+1. Full approved-Figma/art-direction comparison once node reads are available; align remaining Mission/Collection/Brain Box/HUD deltas and record final visual acceptance.
+2. Replace T2-T8 shared atlas entries with approved standalone assets when actual files are supplied; do not fabricate replacements.
+3. Final focus-visible/contrast/reduced-motion/coarse-pointer visual review.
+4. Real Yandex SDK lifecycle/capability smoke.
+5. Full packaged fresh-save + migrated-save release-candidate smoke.
+6. Final RC HEAD CI after all remaining gates.
+7. Decide on additional daily/return goals only if real session QA justifies them; no second currency is currently justified.
 
 ## Source of truth
 - `docs/ROADMAP.md`
