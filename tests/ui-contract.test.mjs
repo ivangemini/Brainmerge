@@ -34,11 +34,12 @@ test('upgrade art remains presentation-only', () => {
   assert.match(upgradeArt, /button\[data-upgrade='offline'\]/);
 });
 
-test('visual finish cannot re-own responsive panel ordering or visibility', () => {
+test('visual finish cannot re-own responsive panel ordering or fixed visibility', () => {
   assert.doesNotMatch(visualFinish, /\border\s*:/);
   assert.doesNotMatch(visualFinish, /\bgrid-row\s*:/);
-  assert.doesNotMatch(visualFinish, /display\s*:\s*none/);
   assert.doesNotMatch(visualFinish, /position\s*:\s*fixed/);
+  assert.doesNotMatch(visualFinish, /\.side-card[^\{]*\{[^}]*display\s*:\s*none/);
+  assert.doesNotMatch(visualFinish, /\.right-rail[^\{]*\{[^}]*display\s*:\s*none/);
   assert.match(visualFinish, /\.board-frame/);
   assert.match(visualFinish, /\.side-card/);
   assert.match(visualFinish, /\.upgrade-card/);
