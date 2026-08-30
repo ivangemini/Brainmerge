@@ -27,6 +27,7 @@ const root: HTMLElement = rootCandidate;
 
 const INCOME_TICK_MS = 5_000;
 const AUTOSAVE_MS = 30_000;
+const OFFLINE_REWARD_MIN_MS = 60_000;
 
 let platform: PlatformAdapter = new LocalPlatformAdapter();
 let locale: Locale = detectLocale();
@@ -40,6 +41,13 @@ function cellElement(index: number): HTMLElement | null {
 
 function settleOnline(now = Date.now()): void {
   state = accrueOnlineIncome(state, now);
+}
+
+function accrueReturnIncome(current: GameState, now = Date.now()): GameState {
+  const elapsedMs = Math.max(0, now - current.lastAccrualAt);
+  return elapsedMs >= OFFLINE_REWARD_MIN_MS
+    ? accrueOfflineIncome(current, now)
+    : accrueOnlineIncome(current, now);
 }
 
 function activateCell(index: number): void {
@@ -158,7 +166,7 @@ async function boot(): Promise<void> {
 
   const now = Date.now();
   const saved = sanitizeState(await platform.loadState(), now);
-  if (saved) state = accrueOfflineIncome(saved, now);
+  if (saved) state = accrueReturnIncome(saved, now);
   else state = createInitialState(now);
   render();
   void platform.saveState(state);
@@ -225,7 +233,7 @@ document.addEventListener('visibilitychange', () => {
     void platform.saveState(state, true);
     return;
   }
-  state = accrueOfflineIncome(state, now);
+  state = accrueReturnIncome(state, now);
   platform.setGameplayActive(true);
   render();
   void platform.saveState(state);
