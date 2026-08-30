@@ -12,6 +12,11 @@ const mime = new Map([
 ]);
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
+function cssSeconds(value) {
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount)) return Number.POSITIVE_INFINITY;
+  return value.trim().endsWith('ms') ? amount / 1000 : amount;
+}
 function safePath(urlPath) {
   const clean = decodeURIComponent(urlPath.split('?')[0]).replace(/^\/+/, '') || 'index.html';
   const normalized = normalize(clean);
@@ -97,8 +102,8 @@ try {
       return { media: matchMedia('(prefers-reduced-motion: reduce)').matches, cell: read(cell), spawn: read(spawn) };
     });
     assert(motion.media, 'reduced-motion media query must be active');
-    assert(!motion.cell || motion.cell.name === 'none' || motion.cell.duration === '0s' || motion.cell.duration === '0.001ms', `reduced-motion: tutorial cell still animates (${JSON.stringify(motion.cell)})`);
-    assert(!motion.spawn || motion.spawn.name === 'none' || motion.spawn.duration === '0s' || motion.spawn.duration === '0.001ms', `reduced-motion: spawn CTA still animates (${JSON.stringify(motion.spawn)})`);
+    assert(!motion.cell || motion.cell.name === 'none' || cssSeconds(motion.cell.duration) <= 0.001, `reduced-motion: tutorial cell still animates (${JSON.stringify(motion.cell)})`);
+    assert(!motion.spawn || motion.spawn.name === 'none' || cssSeconds(motion.spawn.duration) <= 0.001, `reduced-motion: spawn CTA still animates (${JSON.stringify(motion.spawn)})`);
     await assertNoPageErrors(page, errors, 'reduced motion');
     await context.close();
   }
