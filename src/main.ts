@@ -15,6 +15,7 @@ import {
 } from './core/game.js';
 import type { GameState, UpgradeId } from './core/types.js';
 import { AudioFeedback } from './feedback/audio-feedback.js';
+import { runCoinTrail, runDiscoveryCelebration, runUnitFlight } from './feedback/visual-effects.js';
 import { detectLocale, loadLocale, translate, type Locale } from './i18n/i18n.js';
 import type { PlatformAdapter } from './platform/adapter.js';
 import { createPlatformAdapter } from './platform/factory.js';
@@ -111,16 +112,28 @@ function runSpawnFx(index: number | null): void {
   burstAtCell(index, 9);
 }
 
-function runMergeFx(index: number): void {
-  transientClass(cellElement(index), 'fx-merge-result', 720);
-  burstAtCell(index, state.maxDiscoveredTier >= 7 ? 18 : 14);
+function runMergeFx(index: number, reward: number, discoveredTier: number | null): void {
+  const cell = cellElement(index);
+  transientClass(cell, 'fx-merge-result', discoveredTier ? 900 : 720);
+  burstAtCell(index, discoveredTier && discoveredTier >= 8 ? 24 : state.maxDiscoveredTier >= 7 ? 18 : 14);
   transientClass(root.querySelector('.hud-pill--coin'), 'fx-coin', 480);
+  if (reward > 0) runCoinTrail(elementCenter(cell), root.querySelector('.hud-pill--coin'), reward);
+  if (discoveredTier) {
+    runDiscoveryCelebration(cell, discoveredTier);
+    if (discoveredTier >= 8) {
+      window.setTimeout(() => burstAtCell(index, 26), 180);
+      window.setTimeout(() => burstAtCell(index, 20), 390);
+    }
+  }
 }
 
 function runRewardFx(selector: string, reward: number, anchor: { x: number; y: number } | null): void {
   transientClass(root.querySelector(selector), 'fx-reward', 660);
   transientClass(root.querySelector('.hud-pill--coin'), 'fx-coin', 480);
-  if (reward > 0) floatValueAt(anchor, `+${reward}`);
+  if (reward > 0) {
+    floatValueAt(anchor, `+${reward}`);
+    runCoinTrail(anchor, root.querySelector('.hud-pill--coin'), reward);
+  }
 }
 
 function settleOnline(now = Date.now()): void {
@@ -139,11 +152,18 @@ function activateCell(index: number): void {
   settleOnline();
   if (state.selectedIndex !== null && state.selectedIndex !== index) {
     const from = state.selectedIndex;
+    const sourceElement = cellElement(from);
+    const targetElement = cellElement(index);
+    const before = state;
+    const beforeTier = state.maxDiscoveredTier;
     const result = moveOrMerge(state, from, index);
+    if (result.merged) runUnitFlight(sourceElement, targetElement, true);
     update(result.state);
     if (result.merged) {
+      const reward = Math.max(0, result.state.coins - before.coins);
+      const discoveredTier = result.state.maxDiscoveredTier > beforeTier ? result.state.maxDiscoveredTier : null;
       feedback.trigger('merge', cellElement(index));
-      runMergeFx(index);
+      runMergeFx(index, reward, discoveredTier);
     }
     if (restoreKeyboardFocus) cellElement(index)?.focus();
     return;
@@ -182,8 +202,10 @@ const view = new GameView(root, {
     if (hadReward && next.pendingOfflineCoins === 0) feedback.trigger('reward');
     update(next);
     if (hadReward && next.pendingOfflineCoins === 0) {
+      const reward = Math.max(0, next.coins - before.coins);
       transientClass(root.querySelector('.hud-pill--coin'), 'fx-coin', 480);
-      floatValueAt(anchor, `+${Math.max(0, next.coins - before.coins)}`);
+      floatValueAt(anchor, `+${reward}`);
+      runCoinTrail(anchor, root.querySelector('.hud-pill--coin'), reward);
     }
   },
   purchaseUpgrade: (id: UpgradeId) => {
@@ -226,11 +248,18 @@ const view = new GameView(root, {
   select: (index) => activateCell(index),
   moveOrMerge: (from, to) => {
     settleOnline();
+    const sourceElement = cellElement(from);
+    const targetElement = cellElement(to);
+    const before = state;
+    const beforeTier = state.maxDiscoveredTier;
     const result = moveOrMerge(state, from, to);
+    if (result.merged) runUnitFlight(sourceElement, targetElement, true);
     update(result.state);
     if (result.merged) {
+      const reward = Math.max(0, result.state.coins - before.coins);
+      const discoveredTier = result.state.maxDiscoveredTier > beforeTier ? result.state.maxDiscoveredTier : null;
       feedback.trigger('merge', cellElement(to));
-      runMergeFx(to);
+      runMergeFx(to, reward, discoveredTier);
     }
   },
   setLocale: async (nextLocale) => {
