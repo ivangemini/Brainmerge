@@ -6,7 +6,17 @@ export type FamilyId =
   | 'shark-sneakers'
   | 'crocodile-bomber'
   | 'coffee-ballerina'
-  | 'tung-wood';
+  | 'tung-wood'
+  | 'brr-brr-patapim'
+  | 'boneca-ambalabu'
+  | 'cappuccino-assassino'
+  | 'frigo-camelo'
+  | 'lirili-larila'
+  | 'chimpanzini-bananini'
+  | 'cocofanto-elefanto'
+  | 'bombombini-gusini'
+  | 'trippi-troppi'
+  | 'la-vacca-saturno-saturnita';
 
 export interface Unit {
   id: string;
