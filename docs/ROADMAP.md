@@ -8,9 +8,9 @@ Implementation is complete when every code/content/automated-QA item below is gr
 
 ## P0 — Core game foundation
 - [x] 6x5 touch/mouse merge board.
-- [x] One canonical T1 -> T8 character chain.
+- [x] One canonical T1 -> T18 character chain; T8 is a midgame checkpoint and T18 is terminal.
 - [x] Brain Box feed, merge rewards, discovery persistence.
-- [x] Deadlock detection + chain-aware Rescue.
+- [x] Deadlock detection + chain-aware Rescue, including terminal-T18 full-board deadlock handling.
 - [x] First-cycle mission journey.
 - [x] EN/RU architecture and portal adapters.
 - [x] Yandex packaging + CI.
@@ -24,7 +24,7 @@ Implementation is complete when every code/content/automated-QA item below is gr
 - [x] Brain Box can only drop already-discovered tiers; first discovery must still come from merging.
 - [x] Online passive income accrual with deterministic fractional handling.
 - [x] Offline income with capped duration, explicit collect flow, and save-safe timestamps.
-- [x] Economy simulation/regression coverage for progression to T8; no mandatory rewarded-ad wall or negative-coin state in the deterministic smoke route.
+- [x] Economy simulation/regression coverage for the tuned T8 first-cycle checkpoint; T9-T18 extends the long-tail merge chain without turning T8 into a terminal state.
 
 ## P0 — Economy/upgrade presentation
 - [x] HUD shows current coins and production/minute.
@@ -35,7 +35,7 @@ Implementation is complete when every code/content/automated-QA item below is gr
 - [x] Brain Lab/Mission/Collection remain structurally reachable below 1180px; compact cards keep natural content height and phone order prioritizes Brain Lab before Collection.
 - [x] Offline reward presentation is explicit, uses approved return artwork without flattening the live amount/Collect UI, and cannot be double-claimed.
 - [x] Short boot/resume gaps under one minute accrue normally without surfacing a fake offline-reward banner; meaningful gaps still use explicit Collect.
-- [x] All player-facing strings have EN/RU parity.
+- [x] All player-facing strings have EN/RU parity, including T9-T18 character names.
 
 ## P1 — Session and retention structure
 - [x] First-session economy is simulation-tuned around an early T4/T5 active loop, first affordable upgrades and production acceleration.
@@ -45,14 +45,16 @@ Implementation is complete when every code/content/automated-QA item below is gr
 - [x] Rewarded Brain Box is optional acceleration, does not inflate paid-box price, and deterministic progression tests do not require rewarded ads.
 
 ## P1 — Production visual integration
-- [x] All eight canonical character visuals are present in runtime: Toilet Buddy uses the approved standalone WebP and T2-T8 use the existing production character atlas. Splitting the atlas into standalone files is not a release requirement by itself.
+- [x] All eighteen canonical character visuals are present in runtime: Toilet Buddy uses standalone art, T2-T8 use the production atlas, and T9-T18 use standalone packaged WebP assets.
+- [x] T9-T18 standalone art explicitly overrides legacy atlas presentation on both board and Collection; contract tests guard the routing.
+- [x] Package integrity validates all shipped character rasters and caught/rejected a truncated T18 WebP before it was repaired.
 - [x] Packaged-runtime screenshot/geometry QA runs in Chromium at desktop 1440x900, compact landscape 1024x576 and phone 390x844; screenshots are retained as CI artifacts and reviewed after layout changes.
-- [x] Technical visual-state matrix covers T1-T8, crowded guidance, deadlock/Rescue, offline reward, mission-ready/completed, locked/affordable/maxed upgrades and T8 discovery without overflow, broken images or missing sprite geometry.
+- [x] Technical visual-state matrix covers T1-T18, crowded guidance, terminal deadlock/Rescue, offline reward, mission-ready/completed, locked/affordable/maxed upgrades and T8 discovery without overflow, broken images or missing sprite/image geometry.
 - [x] Runtime-capture review corrected character perceived-mass normalization toward the Art Bible 72–82% useful-occupancy target without changing hitboxes or gameplay rules.
 - [x] Runtime-capture review removed duplicated discovery feedback and moved the fixed phone audio control out of production-card content.
 - [x] Art-Bible-guided finish pass aligns board/HUD/Mission/Collection/Brain Lab/Brain Box into one toy-like cream/purple/cyan/orange production language while preserving live DOM state and code-owned controls.
 - [x] Mobile visual finish keeps the board first, preserves Mission clearance, compacts Brain Lab into a 2x2 upgrade layout and keeps Collection reachable below it.
-- [x] Code-driven game-feel animation layer covers family-specific idle motion, live drag, merge/move flights, reject feedback, Brain Box spawn-energy choreography, coin trails, discovery/T8 treatment, Collection unlock, reward/upgrade/Rescue response, CTA microinteraction and Mission/level/`Next move` progression feedback.
+- [x] Code-driven game-feel animation layer covers family-specific idle motion, live drag, merge/move flights, reject feedback, Brain Box spawn-energy choreography, coin trails, discovery treatment, Collection unlock, reward/upgrade/Rescue response, CTA microinteraction and Mission/level/`Next move` progression feedback.
 - [x] Game-feel motion respects `prefers-reduced-motion`; event particles, flight ghosts, spawn energy and progression choreography are suppressed/collapsed while gameplay remains fully functional.
 - [x] Packaged motion smoke exercises real pointer drag, merge, ordinary move, invalid merge, tactile Brain Box activation, mission/`Next move` progression, discovery/Collection unlock, coin trails and spawn-energy choreography; it validates state preservation, emitted motion states, cleanup and equivalent reduced-motion gameplay.
 - [x] Packaged RU visual runtime gate verifies real EN->RU switching on desktop and phone, no horizontal overflow, non-empty critical labels, panel-header clearance and unchanged 30-cell gameplay surface.
@@ -74,13 +76,14 @@ Implementation is complete when every code/content/automated-QA item below is gr
 - [x] Platform persistence uses periodic foreground snapshots plus explicit lifecycle flush; Yandex debounce/latest-snapshot/cloud-first/local-fallback behavior has automated coverage.
 
 ## P1 — Release readiness
-- [x] Internal release-candidate CI is green: TypeScript, deterministic tests, locale parity, Yandex package/integrity/release audit, desktop/compact/mobile runtime smoke, RC accessibility/migration smoke, motion smoke, RU visual runtime smoke, Yandex adapter smoke and artifact upload.
+- [x] Internal release-candidate CI is green on the T18 build: TypeScript, deterministic tests, locale parity, Yandex package/integrity/release audit, desktop/compact/mobile runtime smoke, RC accessibility/migration smoke, motion smoke, RU visual runtime smoke, Yandex adapter smoke and artifact upload.
+- [x] Runtime state-matrix fixture is aligned with the full T18 chain; its deadlock scenario uses a 30-unit terminal-T18 board rather than the obsolete T8-terminal assumption.
 - [x] Yandex adapter separates SDK initialization from Game Ready: `LoadingAPI.ready()` and `GameplayAPI.start()` are emitted only after locale/save restoration and the first interactive render, with deterministic idempotence coverage.
 - [x] GameplayAPI transitions are idempotent across duplicate lifecycle events.
 - [x] Rewarded/fullscreen ad edge cases are covered: reward is granted only after `onRewarded`, close-without-reward/error gives no free box, ad close while hidden does not restart GameplayAPI, and later visibility resume starts it exactly once.
 - [x] Packaged Yandex-adapter browser smoke runs the actual `YandexPlatformAdapter` behind an instrumented SDK contract and verifies SDK init, preferred locale before Game Ready, 30-cell render before `LoadingAPI.ready()`, rewarded success/no-reward/error paths, hidden-page ad lifecycle and pagehide cloud flush of canonical save v5.
 - [x] Package integrity validates referenced files plus structural integrity of packaged WebP/PNG raster assets, preventing truncated art from passing the portal gate.
-- [x] CI browser gate opens the actual packaged `dist/`, checks key production panels, horizontal overflow, broken images/page errors, compact/mobile geometry, shared-atlas sprite geometry and mouse/touch/keyboard merge paths.
+- [x] CI browser gate opens the actual packaged `dist/`, checks key production panels, horizontal overflow, broken images/page errors, compact/mobile geometry, shared-atlas and standalone-character rendering, plus mouse/touch/keyboard merge paths.
 - [x] Packaged release audit rejects TODO/FIXME/HACK markers, placeholder/sample copy, debug-only attributes/flags and common private/API token formats; it is part of both local and Yandex packaging commands.
 - [x] No hardcoded debug controls, placeholder/sample copy or common secret markers are exposed in the currently packaged build.
 - [x] Packaged RC smoke validates a fresh accessibility path plus a real legacy v2 localStorage payload migrating through boot to canonical persisted v5 with T5 discovery, Collection progress, mission compatibility and stale-selection cleanup.
@@ -97,12 +100,14 @@ Implementation is complete when every code/content/automated-QA item below is gr
 8. [x] Motion-event + Yandex-adapter browser hardening.
 9. [x] Art-Bible production visual finish and responsive cleanup.
 10. [x] EN/RU visual/readability/accessibility runtime acceptance.
-11. [x] Internal release-candidate package/CI validation.
+11. [x] T9-T18 progression + standalone character art integration.
+12. [x] T18 package integrity + full-chain runtime state-matrix validation.
+13. [x] Internal release-candidate package/CI validation.
 
 ## External acceptance gates
 These are not code tasks and cannot be honestly marked complete without the external systems themselves.
 
-- [ ] **Approved Figma acceptance:** compare Mission, Collection, Brain Box, HUD and overall composition against the approved Figma nodes once the authenticated Starter-plan MCP read quota allows node inspection. Current file key: `lIFT4QEPhnsFfSrRD8WFad`.
+- [ ] **Approved Figma acceptance:** compare Mission, Collection, Brain Box, HUD and overall composition against the approved Figma nodes. Current file key: `lIFT4QEPhnsFfSrRD8WFad`. The authenticated Figma connector is available, but the latest read attempt is currently blocked by the Starter-plan MCP tool-call limit.
 - [ ] **Real Yandex Games Portal acceptance:** run the final package inside the actual portal/debug panel and confirm real Game Ready/Gameplay indicators, rewarded-ad callbacks, visibility lifecycle and cloud storage behavior. The automated adapter contract is intentionally not mislabeled as a portal run.
 - [ ] **Human pacing/retention sign-off:** play a fresh save and at least one real return session. This can tune economy/retention after release-candidate validation, but it is not replaced by simulation.
 
