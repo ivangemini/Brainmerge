@@ -12,6 +12,7 @@
     "package:yandex": "npm run build && PLATFORM=yandex node scripts/package-portal.mjs && node scripts/check-package.mjs yandex && npm run audit:release",
     "smoke:runtime": "node scripts/runtime-smoke.mjs",
     "smoke:rc": "node scripts/rc-smoke.mjs",
+    "smoke:motion": "node scripts/motion-smoke.mjs",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {
