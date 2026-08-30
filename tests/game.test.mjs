@@ -16,7 +16,6 @@ import {
   currentBrainBoxCost,
   findBestMergePair,
   hasAnyMerge,
-  isBoardFull,
   isDeadlocked,
   missionProgress,
   moveOrMerge,
@@ -69,7 +68,7 @@ function waitUntilAffordable(state, now) {
   return { state: accrueOnlineIncome(state, nextNow), now: nextNow };
 }
 
-test('core progression is one ordered eight-character merge chain', () => {
+test('core progression is one ordered eighteen-character merge chain', () => {
   assert.deepEqual(FAMILIES.map((family) => family.id), [
     'toilet-buddy',
     'camera-dude',
@@ -78,12 +77,24 @@ test('core progression is one ordered eight-character merge chain', () => {
     'shark-sneakers',
     'crocodile-bomber',
     'coffee-ballerina',
-    'tung-wood'
+    'tung-wood',
+    'brr-brr-patapim',
+    'boneca-ambalabu',
+    'cappuccino-assassino',
+    'frigo-camelo',
+    'lirili-larila',
+    'chimpanzini-bananini',
+    'cocofanto-elefanto',
+    'bombombini-gusini',
+    'trippi-troppi',
+    'la-vacca-saturno-saturnita'
   ]);
-  assert.equal(MAX_RUNTIME_TIER, 8);
+  assert.equal(MAX_RUNTIME_TIER, 18);
   assert.equal(nextFamilyFor('toilet-buddy')?.id, 'camera-dude');
   assert.equal(nextFamilyFor('coffee-ballerina')?.id, 'tung-wood');
-  assert.equal(nextFamilyFor('tung-wood'), null);
+  assert.equal(nextFamilyFor('tung-wood')?.id, 'brr-brr-patapim');
+  assert.equal(nextFamilyFor('trippi-troppi')?.id, 'la-vacca-saturno-saturnita');
+  assert.equal(nextFamilyFor('la-vacca-saturno-saturnita'), null);
 });
 
 test('passive production ladder makes every merge production-positive', () => {
@@ -137,6 +148,20 @@ test('two identical characters merge into the next character identity', () => {
   assert.equal(result.state.cells[1]?.tier, 2);
   assert.equal(result.state.maxDiscoveredTier, 2);
   assert.equal(result.state.merges, 1);
+});
+
+test('T17 pair merges into terminal T18 identity', () => {
+  const base = createInitialState(0);
+  const cells = base.cells.map(() => null);
+  cells[0] = { id: 't17-a', familyId: 'trippi-troppi', tier: 17 };
+  cells[1] = { id: 't17-b', familyId: 'trippi-troppi', tier: 17 };
+  const state = { ...base, cells, maxDiscoveredTier: 17 };
+  const result = moveOrMerge(state, 0, 1);
+  assert.equal(result.merged, true);
+  assert.equal(result.state.cells[1]?.familyId, 'la-vacca-saturno-saturnita');
+  assert.equal(result.state.cells[1]?.tier, 18);
+  assert.equal(result.state.maxDiscoveredTier, 18);
+  assert.equal(nextFamilyFor('la-vacca-saturno-saturnita'), null);
 });
 
 test('different characters do not merge', () => {
@@ -224,7 +249,6 @@ test('online passive income accrual is deterministic and preserves fractional re
 test('offline income is capped, explicit to collect, and cannot be double-claimed', () => {
   const state = createInitialState(0);
   const afterTenHours = accrueOfflineIncome(state, 10 * 60 * 60 * 1000);
-  // Default cap = 2h, initial board = 12 coins/min => 1440 coins stored.
   assert.equal(afterTenHours.pendingOfflineCoins, 1_440);
   assert.equal(afterTenHours.coins, state.coins);
   const claimed = claimOfflineIncome(afterTenHours);
@@ -354,16 +378,17 @@ test('mission progress reads the correct cumulative signal', () => {
   assert.equal(missionProgress(base, MISSION_TRACK[2]), 7);
 });
 
-test('idle economy can progress from fresh save to T8 without rewarded ads or negative coins', () => {
+test('idle economy can progress from fresh save to T8 first-cycle checkpoint without rewarded ads or negative coins', () => {
+  const checkpointTier = 8;
   let now = 0;
   let state = createInitialState(now);
   let guard = 0;
   let waitedMs = 0;
 
-  while ((state.maxDiscoveredTier < MAX_RUNTIME_TIER || activeMission(state)) && guard < 900) {
+  while ((state.maxDiscoveredTier < checkpointTier || activeMission(state)) && guard < 900) {
     guard += 1;
     state = claimEverythingReady(state);
-    if (!activeMission(state) && state.maxDiscoveredTier >= MAX_RUNTIME_TIER) break;
+    if (!activeMission(state) && state.maxDiscoveredTier >= checkpointTier) break;
 
     const pair = findBestMergePair(state);
     if (pair) {
@@ -381,10 +406,10 @@ test('idle economy can progress from fresh save to T8 without rewarded ads or ne
   }
 
   state = claimEverythingReady(state);
-  assert.ok(guard < 900, 'idle economy smoke loop should converge');
-  assert.equal(state.maxDiscoveredTier, MAX_RUNTIME_TIER);
+  assert.ok(guard < 900, 'idle economy T8 checkpoint smoke loop should converge');
+  assert.equal(state.maxDiscoveredTier, checkpointTier);
   assert.equal(state.missionIndex, MISSION_TRACK.length);
-  assert.ok(waitedMs > 0, 'new economy should include meaningful production time instead of free instant T8');
+  assert.ok(waitedMs > 0, 'economy should include meaningful production time instead of free instant T8');
 });
 
 test('deadlock rescue clears a terminal blocker before useful lower-tier progress', () => {
