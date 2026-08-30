@@ -1,71 +1,229 @@
 # Brainmerge — Asset Manifest
 
 ## Runtime character presentation
+Brainmerge uses one canonical sequential T1-T18 character chain. Every core merge tier has one identity.
 
-Brainmerge now uses one canonical sequential character chain. Each core merge tier has one character identity; characters are no longer parallel Tier-1 families.
+Current production path:
 
-Current core chain:
+`public/assets/characters/character-atlas.webp`
 
-1. Toilet Buddy — approved standalone `public/assets/characters/toilet-buddy-form-a.webp`
-2. Camera Dude — shared atlas source pending standalone replacement
-3. Sigma Rock — shared atlas source pending standalone replacement
-4. Rizz Head — shared atlas source pending standalone replacement
-5. Shark Sneakers — shared atlas source pending standalone replacement
-6. Crocodile Bomber — shared atlas source pending standalone replacement
-7. Coffee Ballerina — shared atlas source pending standalone replacement
-8. Tung Wood — shared atlas source pending standalone replacement
+- physical layout: 6 columns × 3 rows;
+- contains all T1-T18 production identities;
+- board and Collection use the same atlas pipeline;
+- tier/family CSS/runtime presentation data selects the atlas cell;
+- per-character scale/shadow/Collection normalization remains runtime presentation data.
 
-The approved Toilet Buddy source is cleaned to transparent background, normalized to a 256x256 runtime canvas, and exported as WebP. It is the canonical Tier-1 source character for the core chain.
+Canonical order:
+1. Toilet Buddy
+2. Camera Dude
+3. Sigma Rock
+4. Rizz Head
+5. Shark Sneakers
+6. Crocodile Bomber
+7. Coffee Ballerina
+8. Tung Wood
+9. Brr Brr Patapim
+10. Boneca Ambalabu
+11. Cappuccino Assassino
+12. Frigo Camelo
+13. Lirili Larila
+14. Chimpanzini Bananini
+15. Cocofanto Elefanto
+16. Bombombini Gusini
+17. Trippi Troppi
+18. La Vacca Saturno Saturnita
 
-Legacy per-character runtime WebP files were removed after the atlas migration; new standalone files are added only for explicitly approved production art. Source/reference art remains governed by the Art Bible and is not treated as runtime framing.
+Standalone character WebPs may remain in `public/assets/characters/` as approved source/reference material. They are not the ordinary production board/Collection rendering path after the unified atlas migration.
 
-## Runtime UI kit
+## Current production UI assets
+### Core UI atlases
+- `public/assets/ui/ui-atlas.webp` — existing Brainmerge UI sprites such as Brain Box / coin / legacy general UI objects.
+- `public/assets/ui/upgrade-ui-atlas.webp` — Brain Lab + offline-reward sprite strip.
+- `public/assets/ui/reward-gift.webp` — generic reward/gift art.
 
-The production UI is packed into `public/assets/ui/ui-atlas.webp` and styled through the runtime UI CSS layers. The atlas contains the approved Brainmerge UI family: candy buttons, Mission/Collection/general popup panels, board-cell states, coin/gem/energy/gift icons, Brain Box, progress-bar frame and collection slot.
+### Approved standalone UI icons
+- `public/assets/ui/icon-missions.webp`
+- `public/assets/ui/icon-collection.webp`
+- `public/assets/ui/icon-rewards.webp`
+- `public/assets/ui/icon-brain-lab.webp`
 
-The runtime uses only UI elements backed by existing game systems. Gem/Energy remain art assets only until corresponding gameplay exists.
+These four were integrated into the production mobile dock/panel headers/reward treatment and are style anchors for future meta icons.
 
-### Brain Lab / economy art
+Do **not** regenerate these four unless a future controlled polish pass explicitly replaces the approved set.
 
-Approved economy artwork supplied for the production upgrade pass is normalized into one transparent runtime sprite strip:
+## UI asset ownership
+Raster assets are decorative/presentation-only. Live code owns:
+- labels/localized text;
+- prices;
+- progress values;
+- stars;
+- boss HP/progress;
+- reward amounts;
+- lock/claim/max/affordability state;
+- hit targets and button geometry.
 
-`public/assets/ui/upgrade-ui-atlas.webp` — 200x40 RGBA WebP, five 40x40 tiles.
+No generated full-screen image should replace a stateful DOM component.
 
-Tile order and semantic ownership are locked:
+## Campaign asset queue
+Campaign is the next major art dependency. See `docs/CAMPAIGN_AND_META_PROGRESSION.md` and `docs/ART_BIBLE.md`.
 
-1. Base Drop Tier — Brain Box + upward tier cue;
-2. Lucky Drop — lucky/clover + upward bonus cue;
-3. Brain Income — production/growth cue;
-4. Offline Storage — clock/moon/storage cue;
-5. Offline Reward — overflowing Brain Box / return reward cue.
+### P0 — generate before the first campaign UI pass
+#### A01 — Campaign / World Map icon
+- purpose: prominent Campaign entry point;
+- source: new Brainmerge UI icon;
+- source canvas: 512×512;
+- background: transparent;
+- runtime: typically 24–64 px depending on entry point;
+- required readability: obvious map/world/progression concept at small size;
+- naming target: `icon-campaign.webp`;
+- status: **missing / generate**.
 
-The source renders are **presentation assets, not complete UI components**. Brain Lab remains DOM/CSS-driven in `src/ui/game-view.ts`: title, level, description, effect, price, lock reason, affordability, max state and purchase interaction all remain live code. `public/upgrade-art.css` maps atlas tiles onto the existing `.upgrade-card` states and decorates the existing `.offline-reward` component. Do not replace these stateful components with flattened screenshots or image-only buttons.
+#### A02 — Prestige / Brain Reset icon
+- purpose: Prestige eligibility/meta screen;
+- source canvas: 512×512;
+- background: transparent;
+- concept: brain + reset/rebirth/upward permanent-power cue;
+- runtime: 24–96 px;
+- naming target: `icon-prestige.webp`;
+- status: **missing / generate**.
 
-Runtime state treatment is also code-owned:
-- affordable upgrades retain the existing actionable highlight and slightly lift/saturate the art;
-- discovery-locked upgrades desaturate/dim the art while preserving the real lock reason;
-- maxed upgrades keep the actual max state and add a lightweight completion mark;
-- Offline Reward artwork never replaces the real amount, description or Collect button.
+#### A03 — Brain Cell currency icon
+- purpose: permanent Prestige currency;
+- source canvas: 512×512;
+- background: transparent;
+- concept: premium stylized brain cell/token, clearly distinct from ordinary coin/gem art;
+- runtime: 16–48 px and larger reward displays;
+- naming target: `icon-brain-cell.webp`;
+- status: **missing / generate**.
 
-Compact/mobile behavior is part of the component contract. Legacy CSS that hid all side cards below 1100px is overridden for Mission, Collection and Brain Lab so the systems remain accessible. On narrow phone layouts Brain Lab is intentionally ordered before Collection after the board, because upgrades are an active economy action while Collection is informational.
+#### A04–A08 — Campaign stage-node icon family
+Required semantic concepts:
+1. Normal stage;
+2. Challenge stage;
+3. Elite/mastery stage;
+4. Boss stage;
+5. Locked/completed base treatment if not fully code-drawn.
 
-Packaged PNG/WebP files are structurally validated by `scripts/check-package.mjs`; malformed/truncated raster files must fail the portal package gate instead of reaching runtime.
+Spec:
+- source canvas: 512×512 each, transparent;
+- may be delivered as separate sources and packed later;
+- same construction/material/light language across the family;
+- no numbers/text baked in;
+- star/check/lock overlays should remain code-owned where practical;
+- naming targets: `stage-normal`, `stage-challenge`, `stage-elite`, `stage-boss`, `stage-lock`;
+- status: **missing / generate**.
 
-## Alignment contract
+### P1 — World 1 + World 2 campaign milestone
+#### A09 — World 1 environment/banner
+- working theme: Backyard / Meme Yard;
+- source canvas: 1536×864;
+- background: full image;
+- no text/UI/map nodes;
+- center-safe focal composition for responsive `object-fit: cover`;
+- naming target: `campaign-world-01.webp`;
+- status: **missing / generate**.
 
-- Board characters are centered inside a common normalized 256x256 presentation canvas.
-- Per-character `scale`, `shadowScale` and collection scale may adjust perceived visual mass; `yPercent` remains zero unless runtime screenshot QA proves a correction is required.
-- Shark Sneakers remains the perceived-mass baseline and must preserve the complete quadrupedal silhouette including all four shoes.
-- Board tile states share identical framing so state changes do not shift geometry.
-- Desktop gameplay uses symmetric side rails around the centered board; compact layouts collapse side panels below the board instead of squeezing the board off-axis.
-- Raster UI art decorates code-owned geometry/state; it must not become the source of hit areas, prices, progress, locks or localized text.
+#### A10 — World 2 environment/banner
+- working theme: Brainrot City;
+- source canvas: 1536×864;
+- same responsive/text-free rules as World 1;
+- naming target: `campaign-world-02.webp`;
+- status: **missing / generate**.
 
-## Core merge-chain rule
+#### A11 — World 1 boss render
+- source canvas: 1024×1024;
+- transparent background;
+- one whole boss, complete silhouette;
+- stronger presence than board units but same Brainmerge visual universe;
+- no health bar/text/background;
+- naming target: `boss-world-01.webp`;
+- status: **missing / generate**.
 
-The primary merge loop is now strictly sequential:
+#### A12 — World 2 boss render
+- source canvas: 1024×1024;
+- same rules as World 1 boss;
+- naming target: `boss-world-02.webp`;
+- status: **missing / generate**.
 
-`2x Toilet Buddy -> Camera Dude -> Sigma Rock -> Rizz Head -> Shark Sneakers -> Crocodile Bomber -> Coffee Ballerina -> Tung Wood`
+#### A13–A14 — Optional compact World 1/2 emblems
+Only generate if the Campaign map design needs a small world identity separate from the environment banner.
 
-More precisely, two identical characters at one chain tier merge into one character at the next chain tier. Brain Box feeds only Tier 1. Higher characters are earned through merging, and Collection discovery persists once a tier has been reached.
+- source canvas: 512×512;
+- transparent;
+- one iconic symbol per world;
+- no text;
+- naming targets: `world-emblem-01.webp`, `world-emblem-02.webp`;
+- status: **optional / defer until map layout proves need**.
 
-Future alternate forms, prestige skins or evolved variants are separate progression systems and must not replace the readability of this core chain.
+## Full campaign later-art queue
+After the Worlds 1-2 framework is validated:
+
+### Environment/banner art
+- A15 World 3 — Meme Factory — 1536×864.
+- A16 World 4 — Italian Chaos — 1536×864.
+- A17 World 5 — Sky Kingdom — 1536×864.
+- A18 World 6 — Neon Brain Lab — 1536×864.
+- A19 World 7 — Space Brainrot — 1536×864.
+- A20 World 8 — Brainverse Core — 1536×864.
+
+### Boss renders
+- A21–A26 World 3–8 bosses — 1024×1024 transparent each.
+
+### Optional world emblems
+- A27–A32 World 3–8 emblems — 512×512 transparent each, only if the final map design uses the compact-emblem pattern.
+
+Working world names/themes are provisional until approved. Do not bake these names into generated art.
+
+## Collection Rewards art
+No new generic Collection Reward icon is currently required.
+
+Reuse:
+- `icon-collection.webp` for Collection context;
+- `icon-rewards.webp` for claim/reward semantics;
+- code-owned progress/milestone frames for locked/claimable/claimed states.
+
+Generate a new asset only if a later reward type has genuinely distinct semantics.
+
+## Prestige UI art beyond P0
+The first Prestige implementation should be possible with:
+- `icon-prestige.webp`;
+- `icon-brain-cell.webp`;
+- code-drawn permanent-upgrade nodes/panels;
+- existing reward/Brainmerge UI language.
+
+Do not require a generated full Prestige tree screenshot.
+
+## Rare / Shiny future assets
+If rarity ships later, do **not** generate 18 duplicate characters.
+
+Preferred asset model:
+- one reusable rare rim/frame;
+- small reusable sparkle/aura particles;
+- optional rare badge;
+- runtime tint/brightness treatment where readable.
+
+The unified T1-T18 atlas stays the base identity source.
+
+## Alignment / runtime contract
+- Board characters remain centered and normalized by perceived visual mass.
+- Character labels/tier/income badges must not overlap artwork or one another at phone scale.
+- Campaign world art must leave readable negative space for live stage nodes/labels.
+- Boss renders cannot cover the merge-board hit area.
+- Small UI icons should be validated at actual 20–32 px use, not only at 512 px source size.
+- Board/mobile layout remains code-driven; raster art cannot decide responsive order/visibility.
+
+## Technical-art pipeline
+For generated sources:
+1. receive PNG/source render at the specified source canvas;
+2. verify transparency where required;
+3. remove accidental white/opaque background if present;
+4. crop/normalize without clipping silhouette;
+5. compare visual weight with existing Brainmerge anchors;
+6. downsample/encode to WebP for runtime;
+7. pack into an atlas only where it reduces requests without harming quality/maintenance;
+8. run package raster integrity and Chromium visual QA.
+
+Source generation dimensions are not necessarily runtime dimensions.
+
+## Package integrity
+`scripts/check-package.mjs` structurally validates packaged PNG/WebP resources. Any new Campaign/Prestige raster must be referenced through the normal package graph and pass the same integrity gate before release.
