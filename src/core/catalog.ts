@@ -45,7 +45,17 @@ export const INCOME_PER_MINUTE_BY_TIER: Readonly<Record<number, number>> = {
   5: 82,
   6: 185,
   7: 420,
-  8: 950
+  8: 950,
+  9: 2150,
+  10: 4850,
+  11: 10950,
+  12: 24700,
+  13: 55700,
+  14: 125500,
+  15: 283000,
+  16: 638000,
+  17: 1438000,
+  18: 3242000
 };
 
 export const LUCKY_DROP_CHANCE_BY_LEVEL = [0, 0.05, 0.10, 0.16, 0.23, 0.30] as const;
@@ -84,8 +94,8 @@ export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
 export const upgradeById = new Map(UPGRADE_DEFINITIONS.map((upgrade) => [upgrade.id, upgrade]));
 
 /**
- * Deterministic first-cycle goals. They alternate actions and discovery
- * milestones so the player always has one clear short-term target.
+ * Deterministic first-cycle goals. Keep the original eight entries stable so
+ * existing save-v5 missionIndex values retain their exact meaning.
  */
 export const MISSION_TRACK: readonly MissionDefinition[] = [
   { id: 'merge-6', kind: 'merges', target: 6, reward: 80, titleKey: 'mission.merge6.title', textKey: 'mission.merge6.text' },
@@ -109,84 +119,120 @@ export const DISCOVERY_BONUS_BY_TIER: Readonly<Record<number, number>> = {
   5: 20,
   6: 32,
   7: 48,
-  8: 80
+  8: 80,
+  9: 120,
+  10: 180,
+  11: 270,
+  12: 400,
+  13: 600,
+  14: 900,
+  15: 1350,
+  16: 2000,
+  17: 3000,
+  18: 5000
 };
 
 const BASE_CHARACTER_ATLAS = './public/assets/characters/character-atlas.webp';
 const TOILET_BUDDY = './public/assets/characters/toilet-buddy-form-a.webp';
+const characterAsset = (name: string) => `./public/assets/characters/${name}.webp`;
 
 /**
  * Canonical core progression. First discovery of every tier above T1 must come
  * from merging. Brain Box upgrades only accelerate rebuilding of discovered tiers.
  *
- * Presentation scales are capture-tuned perceived-mass corrections. The shared
- * atlas cells contain different amounts of transparent breathing room, so equal
- * raw scales make some characters read much smaller than others in the live board.
+ * T1-T8 preserve the established production art. T9-T18 use approved standalone
+ * character renders normalized to the same runtime cell anchor.
  */
 export const FAMILIES: readonly FamilyDefinition[] = [
   {
-    id: 'toilet-buddy',
-    nameKey: 'character.toiletBuddy',
-    tier: 1,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[1]!,
-    asset: TOILET_BUDDY,
+    id: 'toilet-buddy', nameKey: 'character.toiletBuddy', tier: 1,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[1]!, asset: TOILET_BUDDY,
     presentation: { scale: 1.08, yPercent: 0, shadowScale: 0.94, collectionScale: 1.04 }
   },
   {
-    id: 'camera-dude',
-    nameKey: 'character.cameraDude',
-    tier: 2,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[2]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'camera-dude', nameKey: 'character.cameraDude', tier: 2,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[2]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.14, yPercent: 0, shadowScale: 0.95, collectionScale: 1.08 }
   },
   {
-    id: 'sigma-rock',
-    nameKey: 'character.sigmaRock',
-    tier: 3,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[3]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'sigma-rock', nameKey: 'character.sigmaRock', tier: 3,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[3]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.08, yPercent: 0, shadowScale: 0.96, collectionScale: 1.03 }
   },
   {
-    id: 'rizz-head',
-    nameKey: 'character.rizzHead',
-    tier: 4,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[4]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'rizz-head', nameKey: 'character.rizzHead', tier: 4,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[4]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.09, yPercent: 0, shadowScale: 0.86, collectionScale: 1.03 }
   },
   {
-    id: 'shark-sneakers',
-    nameKey: 'character.sharkSneakers',
-    tier: 5,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[5]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'shark-sneakers', nameKey: 'character.sharkSneakers', tier: 5,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[5]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 0.96, yPercent: 0, shadowScale: 1.04, collectionScale: 1.06 }
   },
   {
-    id: 'crocodile-bomber',
-    nameKey: 'character.crocodileBomber',
-    tier: 6,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[6]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'crocodile-bomber', nameKey: 'character.crocodileBomber', tier: 6,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[6]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.05, yPercent: 0, shadowScale: 1.04, collectionScale: 1.03 }
   },
   {
-    id: 'coffee-ballerina',
-    nameKey: 'character.coffeeBallerina',
-    tier: 7,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[7]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'coffee-ballerina', nameKey: 'character.coffeeBallerina', tier: 7,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[7]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.12, yPercent: 0, shadowScale: 0.9, collectionScale: 1.08 }
   },
   {
-    id: 'tung-wood',
-    nameKey: 'character.tungWood',
-    tier: 8,
-    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[8]!,
-    asset: BASE_CHARACTER_ATLAS,
+    id: 'tung-wood', nameKey: 'character.tungWood', tier: 8,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[8]!, asset: BASE_CHARACTER_ATLAS,
     presentation: { scale: 1.03, yPercent: 0, shadowScale: 0.88, collectionScale: 1.01 }
+  },
+  {
+    id: 'brr-brr-patapim', nameKey: 'character.brrBrrPatapim', tier: 9,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[9]!, asset: characterAsset('brr-brr-patapim'),
+    presentation: { scale: 1.03, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
+  },
+  {
+    id: 'boneca-ambalabu', nameKey: 'character.bonecaAmbalabu', tier: 10,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[10]!, asset: characterAsset('boneca-ambalabu'),
+    presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.94, collectionScale: 1.03 }
+  },
+  {
+    id: 'cappuccino-assassino', nameKey: 'character.cappuccinoAssassino', tier: 11,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[11]!, asset: characterAsset('cappuccino-assassino'),
+    presentation: { scale: 1.03, yPercent: 0, shadowScale: 0.88, collectionScale: 1.02 }
+  },
+  {
+    id: 'frigo-camelo', nameKey: 'character.frigoCamelo', tier: 12,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[12]!, asset: characterAsset('frigo-camelo'),
+    presentation: { scale: 1.05, yPercent: 0, shadowScale: 0.96, collectionScale: 1.04 }
+  },
+  {
+    id: 'lirili-larila', nameKey: 'character.liriliLarila', tier: 13,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[13]!, asset: characterAsset('lirili-larila'),
+    presentation: { scale: 1.03, yPercent: 0, shadowScale: 0.92, collectionScale: 1.03 }
+  },
+  {
+    id: 'chimpanzini-bananini', nameKey: 'character.chimpanziniBananini', tier: 14,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[14]!, asset: characterAsset('chimpanzini-bananini'),
+    presentation: { scale: 1.05, yPercent: 0, shadowScale: 0.9, collectionScale: 1.04 }
+  },
+  {
+    id: 'cocofanto-elefanto', nameKey: 'character.cocofantoElefanto', tier: 15,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[15]!, asset: characterAsset('cocofanto-elefanto'),
+    presentation: { scale: 1.03, yPercent: 0, shadowScale: 0.94, collectionScale: 1.03 }
+  },
+  {
+    id: 'bombombini-gusini', nameKey: 'character.bombombiniGusini', tier: 16,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[16]!, asset: characterAsset('bombombini-gusini'),
+    presentation: { scale: 1.02, yPercent: 0, shadowScale: 1.04, collectionScale: 1.02 }
+  },
+  {
+    id: 'trippi-troppi', nameKey: 'character.trippiTroppi', tier: 17,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[17]!, asset: characterAsset('trippi-troppi'),
+    presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.94, collectionScale: 1.03 }
+  },
+  {
+    id: 'la-vacca-saturno-saturnita', nameKey: 'character.laVaccaSaturnoSaturnita', tier: 18,
+    incomePerMinute: INCOME_PER_MINUTE_BY_TIER[18]!, asset: characterAsset('la-vacca-saturno-saturnita'),
+    presentation: { scale: 1.02, yPercent: 0, shadowScale: 1.02, collectionScale: 1.02 }
   }
 ] as const;
 
