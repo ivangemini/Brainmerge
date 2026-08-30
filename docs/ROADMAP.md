@@ -58,7 +58,8 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Packaged-runtime mouse merge is exercised at desktop and compact viewports through the real pointer handlers.
 - [x] Packaged-runtime touch merge is exercised in a touch-capable phone Chromium context through the real pointer handlers.
 - [x] Keyboard runtime behavior is non-destructive: Enter/Space on focused board cells reuse select/move/merge, arrows move focus, focus survives code-driven rerenders, Escape clears selection, and global Space cannot silently buy a Brain Box.
-- [ ] Focus-visible, reduced-motion and coarse-pointer/touch-target hardening are implemented; final visual contrast/focus review against the approved art direction remains pending.
+- [x] Packaged RC smoke verifies keyboard Tab reaches the merge board with a visible >=3px focus ring, reduced-motion collapses attention animations to <=1 ms, and visible coarse-pointer controls remain at least 44x44 on the 390px phone viewport.
+- [ ] Final artistic contrast/focus review against approved Figma direction remains pending; automated accessibility geometry does not substitute for approved-target visual acceptance.
 - [x] UI ownership regression tests guard stylesheet order, responsive panel reachability, code-owned Brain Lab state/actions, shared/standalone character sprite contracts and discovery-feedback deduplication.
 - [x] Full-board/deadlock/offline/upgrade-lock states have localized actionable explanations.
 
@@ -71,12 +72,13 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 ## P1 — Release readiness
 - [ ] CI green on final release-candidate HEAD: TypeScript, deterministic tests, locale check, Yandex package/integrity, packaged Chromium smoke and artifact upload.
 - [ ] Final package tested against real Yandex lifecycle/capability behavior rather than the local adapter used by browser smoke.
+- [x] Yandex adapter separates SDK initialization from Game Ready: `LoadingAPI.ready()` and `GameplayAPI.start()` are emitted only after locale/save restoration and the first interactive render, with deterministic idempotence coverage.
 - [x] Package integrity validates referenced files plus structural integrity of packaged WebP/PNG raster assets, preventing truncated art from passing the portal gate.
 - [x] CI browser gate opens the actual packaged `dist/`, checks 30 cells/key production panels, horizontal overflow, broken images/page errors, compact/mobile panel geometry, shared-atlas sprite geometry and mouse/touch/keyboard merge paths.
 - [x] Packaged release audit rejects TODO/FIXME/HACK markers, placeholder/sample copy, debug-only attributes/flags and common private/API token formats; it is part of both local and Yandex packaging commands.
-- [x] No hardcoded debug controls, placeholder/sample copy or common secret markers are exposed in the currently packaged build; CI #163 validated the audit on the same distribution that passed Chromium state-matrix smoke.
+- [x] No hardcoded debug controls, placeholder/sample copy or common secret markers are exposed in the currently packaged build.
+- [x] Packaged RC smoke validates a fresh accessibility path plus a real legacy v2 localStorage payload migrating through boot to canonical persisted v5 with T5 discovery, Collection progress, mission compatibility and stale-selection cleanup.
 - [x] Session-state, architecture, progression, asset manifest and roadmap docs track the current economy/UI runtime baseline.
-- [ ] Release candidate receives one full fresh-save and migrated-save smoke pass before publication.
 
 ## Current execution order
 1. [x] Economy and idle-production core.
@@ -87,8 +89,8 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 6. [x] Packaged desktop/compact/mobile Chromium screenshot + mouse/touch/keyboard runtime QA and responsive correction.
 7. [ ] Full approved-Figma/art-direction alignment and final visual acceptance.
 8. [ ] Remaining standalone character art integration when approved files are available.
-9. [ ] Final accessibility/contrast/visual QA.
-10. [ ] Yandex real-SDK/release hardening and RC validation.
+9. [ ] Final artistic contrast/visual QA.
+10. [ ] Real Yandex portal SDK/capability smoke and final RC validation.
 
 ## Guardrails
 - Core discovery remains merge-first: upgrades may accelerate rebuilding but cannot reveal an unseen tier.
