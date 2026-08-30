@@ -39,6 +39,90 @@ function cellElement(index: number): HTMLElement | null {
   return root.querySelector<HTMLElement>(`[data-cell="${index}"]`);
 }
 
+function motionAllowed(): boolean {
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function elementCenter(element: Element | null): { x: number; y: number } | null {
+  if (!(element instanceof HTMLElement)) return null;
+  const rect = element.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return null;
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function transientClass(element: Element | null, className: string, duration = 700): void {
+  if (!(element instanceof HTMLElement)) return;
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+  window.setTimeout(() => element.classList.remove(className), duration);
+}
+
+function burstAtCell(index: number, particleCount = 12): void {
+  if (!motionAllowed()) return;
+  const cell = cellElement(index);
+  const zone = root.querySelector<HTMLElement>('.board-zone');
+  if (!cell || !zone) return;
+  const cellRect = cell.getBoundingClientRect();
+  const zoneRect = zone.getBoundingClientRect();
+  const burst = document.createElement('span');
+  burst.className = 'fx-burst';
+  burst.setAttribute('aria-hidden', 'true');
+  burst.style.left = `${cellRect.left - zoneRect.left + cellRect.width / 2}px`;
+  burst.style.top = `${cellRect.top - zoneRect.top + cellRect.height / 2}px`;
+  burst.innerHTML = `<i class="fx-burst__ring"></i>${Array.from({ length: particleCount }, (_, i) => `<i class="fx-particle" style="--r:${Math.round(i * 360 / particleCount)}deg;--distance:${28 + (i % 4) * 7}px"></i>`).join('')}`;
+  zone.appendChild(burst);
+  window.setTimeout(() => burst.remove(), 700);
+}
+
+function floatValueAt(point: { x: number; y: number } | null, text: string): void {
+  if (!point || !motionAllowed()) return;
+  const value = document.createElement('span');
+  value.className = 'fx-float-value';
+  value.setAttribute('aria-hidden', 'true');
+  value.textContent = text;
+  value.style.left = `${point.x}px`;
+  value.style.top = `${point.y}px`;
+  document.body.appendChild(value);
+  window.setTimeout(() => value.remove(), 900);
+}
+
+function insertedCellIndex(before: GameState, after: GameState): number | null {
+  for (let index = 0; index < after.cells.length; index += 1) {
+    if (!before.cells[index] && after.cells[index]) return index;
+  }
+  return null;
+}
+
+function changedCellIndexes(before: GameState, after: GameState): number[] {
+  const changed: number[] = [];
+  for (let index = 0; index < after.cells.length; index += 1) {
+    const a = before.cells[index];
+    const b = after.cells[index];
+    if (a?.id !== b?.id || a?.familyId !== b?.familyId || a?.tier !== b?.tier) changed.push(index);
+  }
+  return changed;
+}
+
+function runSpawnFx(index: number | null): void {
+  transientClass(root.querySelector('.spawn-dock'), 'fx-spawn-dock', 560);
+  if (index === null) return;
+  transientClass(cellElement(index), 'fx-spawn', 660);
+  burstAtCell(index, 9);
+}
+
+function runMergeFx(index: number): void {
+  transientClass(cellElement(index), 'fx-merge-result', 720);
+  burstAtCell(index, state.maxDiscoveredTier >= 7 ? 18 : 14);
+  transientClass(root.querySelector('.hud-pill--coin'), 'fx-coin', 480);
+}
+
+function runRewardFx(selector: string, reward: number, anchor: { x: number; y: number } | null): void {
+  transientClass(root.querySelector(selector), 'fx-reward', 660);
+  transientClass(root.querySelector('.hud-pill--coin'), 'fx-coin', 480);
+  if (reward > 0) floatValueAt(anchor, `+${reward}`);
+}
+
 function settleOnline(now = Date.now()): void {
   state = accrueOnlineIncome(state, now);
 }
@@ -57,7 +141,10 @@ function activateCell(index: number): void {
     const from = state.selectedIndex;
     const result = moveOrMerge(state, from, index);
     update(result.state);
-    if (result.merged) feedback.trigger('merge', cellElement(index));
+    if (result.merged) {
+      feedback.trigger('merge', cellElement(index));
+      runMergeFx(index);
+    }
     if (restoreKeyboardFocus) cellElement(index)?.focus();
     return;
   }
@@ -68,25 +155,36 @@ function activateCell(index: number): void {
 const view = new GameView(root, {
   spawn: () => {
     settleOnline();
+    const before = state;
     const beforePaidBoxes = state.paidBoxes;
     const next = spawnUnit(state);
     if (next.paidBoxes > beforePaidBoxes) feedback.trigger('spawn');
     update(next);
+    if (next.spawns > before.spawns) runSpawnFx(insertedCellIndex(before, next));
   },
   rewardedSpawn: () => { void handleRewardedSpawn(); },
   claimMission: () => {
     settleOnline();
+    const anchor = elementCenter(root.querySelector('[data-action="claim-mission"]'));
+    const before = state;
     const beforeIndex = state.missionIndex;
     const next = claimCurrentMission(state);
     if (next.missionIndex > beforeIndex) feedback.trigger('reward');
     update(next);
+    if (next.missionIndex > beforeIndex) runRewardFx('.side-card--mission', Math.max(0, next.coins - before.coins), anchor);
   },
   claimOffline: () => {
     settleOnline();
+    const anchor = elementCenter(root.querySelector('[data-action="claim-offline"]'));
+    const before = state;
     const hadReward = state.pendingOfflineCoins > 0;
     const next = claimOfflineIncome(state);
     if (hadReward && next.pendingOfflineCoins === 0) feedback.trigger('reward');
     update(next);
+    if (hadReward && next.pendingOfflineCoins === 0) {
+      transientClass(root.querySelector('.hud-pill--coin'), 'fx-coin', 480);
+      floatValueAt(anchor, `+${Math.max(0, next.coins - before.coins)}`);
+    }
   },
   purchaseUpgrade: (id: UpgradeId) => {
     settleOnline();
@@ -94,19 +192,46 @@ const view = new GameView(root, {
     const next = purchaseUpgrade(state, id);
     if (next.upgrades[id] > beforeLevel) feedback.trigger('reward');
     update(next);
+    if (next.upgrades[id] > beforeLevel) {
+      const button = root.querySelector(`[data-upgrade="${id}"]`);
+      transientClass(button?.closest('.upgrade-card') ?? button, 'fx-upgrade', 680);
+      const card = button?.closest('.upgrade-card') ?? button;
+      const center = elementCenter(card);
+      if (center && card instanceof HTMLElement) {
+        const zone = root.querySelector<HTMLElement>('.board-zone');
+        const zoneRect = zone?.getBoundingClientRect();
+        if (zone && zoneRect) {
+          const rect = card.getBoundingClientRect();
+          const burst = document.createElement('span');
+          burst.className = 'fx-burst';
+          burst.setAttribute('aria-hidden', 'true');
+          burst.style.left = `${rect.left - zoneRect.left + rect.width / 2}px`;
+          burst.style.top = `${rect.top - zoneRect.top + Math.min(58, rect.height / 2)}px`;
+          burst.innerHTML = '<i class="fx-burst__ring"></i>';
+          zone.appendChild(burst);
+          window.setTimeout(() => burst.remove(), 650);
+        }
+      }
+    }
   },
   rescueDeadlock: () => {
     settleOnline();
+    const before = state;
     const next = rescueDeadlock(state);
-    if (next !== state && next.cells.some((cell, index) => cell !== state.cells[index])) feedback.trigger('rescue');
+    const changed = changedCellIndexes(before, next);
+    if (next !== state && changed.length > 0) feedback.trigger('rescue');
     update(next);
+    for (const index of changed.slice(0, 8)) transientClass(cellElement(index), 'fx-rescue', 560);
   },
   select: (index) => activateCell(index),
   moveOrMerge: (from, to) => {
     settleOnline();
     const result = moveOrMerge(state, from, to);
     update(result.state);
-    if (result.merged) feedback.trigger('merge', cellElement(to));
+    if (result.merged) {
+      feedback.trigger('merge', cellElement(to));
+      runMergeFx(to);
+    }
   },
   setLocale: async (nextLocale) => {
     settleOnline();
@@ -141,10 +266,14 @@ async function handleRewardedSpawn(): Promise<void> {
   adBusy = false;
   settleOnline();
   if (rewarded) {
+    const before = state;
     const beforeSpawns = state.spawns;
     const next = spawnUnit(state, Math.random, true);
     update(next);
-    if (next.spawns > beforeSpawns) feedback.trigger('reward');
+    if (next.spawns > beforeSpawns) {
+      feedback.trigger('reward');
+      runSpawnFx(insertedCellIndex(before, next));
+    }
     return;
   }
   state = { ...state, messageKey: 'message.rewardUnavailable' };
