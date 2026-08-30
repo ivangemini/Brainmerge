@@ -230,7 +230,7 @@ function installMoveRejectFx(): void {
         transientClass(root.querySelector('.board-frame'), 'fx-board-reject', 420);
       }, 0);
     }
-  });
+  }, true);
 }
 
 function installPressFx(): void {
