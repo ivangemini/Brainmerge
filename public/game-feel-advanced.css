@@ -26,6 +26,11 @@
 .fx-coin-trail{position:fixed;z-index:130;width:14px;height:14px;border:2px solid #d89a19;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff8a9 0 17%,#ffd845 20% 62%,#e99f18 65% 100%);box-shadow:inset 0 2px rgba(255,255,255,.58),0 3px 7px rgba(88,57,27,.2);pointer-events:none;will-change:transform,opacity}
 .fx-coin-trail::after{content:'';position:absolute;inset:3px;border:1px solid rgba(161,102,14,.44);border-radius:50%}
 
+/* Brain Box spawn reads as one physical action: charged orb leaves the dock and lands in the new cell. */
+.fx-spawn-orb{position:fixed;z-index:132;width:18px;height:18px;border:3px solid rgba(255,250,183,.94);border-radius:50%;pointer-events:none;background:radial-gradient(circle at 42% 38%,#fff 0 12%,#fff79a 18% 38%,#75e4d3 44% 68%,#a66bd1 76% 100%);box-shadow:0 0 8px rgba(255,244,139,.95),0 0 18px rgba(102,220,207,.72),0 0 30px rgba(164,103,209,.42);will-change:transform,opacity}
+.fx-spawn-orb::after{content:'✦';position:absolute;left:50%;top:50%;transform:translate(-50%,-54%);color:#fff;font-size:10px;font-weight:950;text-shadow:0 0 4px rgba(255,255,255,.9)}
+.fx-spawn-spark{position:fixed;z-index:131;width:8px;height:8px;border-radius:2px;pointer-events:none;background:#fff5a0;box-shadow:0 0 8px rgba(255,234,105,.82);will-change:transform,opacity}
+
 /* Discovery is a board-level moment, not only a toast. */
 .game-shell.fx-discovery-celebration .board-frame{animation:bmDiscoveryHeroBoard .82s cubic-bezier(.18,.82,.2,1) both}
 .game-shell.fx-discovery-celebration .board-zone::after{content:'';position:absolute;z-index:28;inset:0;border-radius:28px;pointer-events:none;background:radial-gradient(circle at 50% 48%,rgba(255,245,158,.34),rgba(199,137,239,.08) 38%,transparent 68%);animation:bmDiscoveryWash .8s ease-out both}
@@ -49,6 +54,6 @@
 
 @media(prefers-reduced-motion:reduce){
   .cell[data-family] .unit-visual,.game-shell.fx-discovery-celebration .board-frame,.game-shell.fx-discovery-celebration .board-zone::after,.fx-discovery-tier,.cell.is-merge-target::before,.collection-chip.fx-collection-unlock,.side-card--collection.fx-collection-card{animation:none!important}
-  .fx-unit-flight,.fx-coin-trail,.fx-discovery-tier{display:none!important}
+  .fx-unit-flight,.fx-coin-trail,.fx-discovery-tier,.fx-spawn-orb,.fx-spawn-spark{display:none!important}
   .cell.fx-pointer-drag .unit-visual{transform:translateY(-3%) scale(calc(var(--unit-scale,1)*1.025))!important;filter:none}
 }
