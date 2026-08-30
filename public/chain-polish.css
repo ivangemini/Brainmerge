@@ -14,6 +14,10 @@
 .discovery-toast{position:absolute;z-index:30;left:50%;top:66px;min-width:270px;max-width:90%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:4px solid #e99514;border-radius:999px;background:linear-gradient(180deg,#fff76a,#ffc829 52%,#f29a18);color:#67431f;font-size:13px;font-weight:950;text-align:center;box-shadow:inset 0 4px rgba(255,255,255,.55),inset 0 -4px rgba(180,80,10,.16),0 8px 0 rgba(205,112,14,.25),0 18px 28px rgba(82,52,36,.20);animation:bmDiscoveryToast 1.2s cubic-bezier(.18,.82,.22,1) both;pointer-events:none}
 .discovery-toast__spark{color:#fff;text-shadow:0 1px 3px #b86b11;font-size:17px}
 @keyframes bmDiscoveryToast{0%{opacity:0;transform:translate(-50%,18px) scale(.82)}18%{opacity:1;transform:translate(-50%,-4px) scale(1.04)}32%,82%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-8px) scale(.96)}}
+/* A named discovery toast is the authoritative feedback for this event. Keep the
+ * generic message slot reserved so board-header geometry does not jump, but do not
+ * show the same discovery twice. */
+.has-new-discovery .board-header .message{visibility:hidden}
 
 /* Fix the old collection atlas ordering after the game switched from parallel families to one canonical chain. */
 .collection-chip[data-family='camera-dude']{--char-x:0%;--char-y:0%}
