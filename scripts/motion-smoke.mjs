@@ -120,11 +120,16 @@ try {
     const dragCell = page.locator('[data-cell="2"]');
     const dragBox = await dragCell.boundingBox();
     assert(dragBox, 'reduced-motion drag cell must have geometry');
-    await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
+    const cx = dragBox.x + dragBox.width / 2;
+    const cy = dragBox.y + dragBox.height / 2;
+    await page.mouse.move(cx, cy);
     await page.mouse.down();
-    await page.mouse.move(dragBox.x + dragBox.width / 2 + 18, dragBox.y + dragBox.height / 2, { steps: 2 });
+    await page.mouse.move(cx + 18, cy, { steps: 2 });
     assert(await page.locator('.fx-pointer-drag').count() === 0, 'reduced motion must suppress live pointer-drag choreography');
+    // Return to the source before release so this presentation-only check cannot mutate the board.
+    await page.mouse.move(cx, cy, { steps: 2 });
     await page.mouse.up();
+    await page.keyboard.press('Escape');
 
     await page.locator('[data-cell="0"]').click({ force: true });
     await page.locator('[data-cell="1"]').click({ force: true });
