@@ -14,6 +14,9 @@ Drive Brainmerge to production-ready state from `docs/ROADMAP.md`. Complete the 
 - capped explicit offline income, save v5, return-session `Next move`, cumulative missions, Collection, deadlock Rescue;
 - one primary currency remains intentional.
 
+## Character asset truth
+All eight canonical character visuals already exist in runtime. Toilet Buddy uses `public/assets/characters/toilet-buddy-form-a.webp`; Camera Dude through Tung Wood use the existing production `character-atlas.webp`. Splitting T2-T8 into separate files is not a release requirement and there is no outstanding missing-character-art blocker.
+
 ## Persistence / validation baseline
 - save migrations v1-v5 and malformed economy-state sanitization are covered;
 - online fractional production, offline cap/claim, duplicate resume, clock rollback, autosave and Yandex latest-snapshot/lifecycle flush behavior have deterministic tests;
@@ -21,110 +24,83 @@ Drive Brainmerge to production-ready state from `docs/ROADMAP.md`. Complete the 
 - short boot/resume gaps under 60 seconds use normal online accrual rather than surfacing tiny fake offline rewards; meaningful gaps still use capped explicit Collect;
 - packaged release audit rejects TODO/FIXME/HACK markers, placeholder/sample copy, debug-only attributes/flags and common secret/token formats.
 
-## Approved upgrade/offline art integration
-The user supplied production artwork for Base Drop Tier, Lucky +1, Global Income, Offline Capacity and Offline Reward.
+## UI / art architecture baseline
+The user-supplied Brain Lab/offline artwork remains integrated into existing code-driven UI rather than flattened screens. Runtime state owns prices, levels, progress, locks, buttons and localization; raster layers decorate them.
 
-Integration follows the existing code-first UI architecture rather than flattening screens into images:
-- runtime sprite: `public/assets/ui/upgrade-ui-atlas.webp`;
-- five atlas tiles: Base Drop / Lucky / Income / Offline Storage / Offline Reward;
-- `src/ui/game-view.ts` owns upgrade titles, levels, effects, costs, lock reasons, affordability, max state and real buttons;
-- `public/upgrade-art.css` owns only Brain Lab/offline visual treatment and raster presentation;
-- semantic icon binding follows the existing `data-upgrade` controls so card reordering cannot silently swap artwork;
-- affordable/locked/maxed presentation is driven by runtime classes;
-- offline artwork decorates the existing amount/description/Collect component rather than replacing it.
-
-## UI architecture baseline
-CSS ownership remains explicit:
+CSS ownership:
 - `public/code-ui.css` = structural code-first component layer;
 - feature CSS = feature-specific appearance/states;
 - `public/upgrade-art.css` = Brain Lab/offline presentation only;
 - `public/mobile-runtime.css` = responsive composition authority;
+- `public/game-feel.css` = transient motion/presentation only;
 - `public/accessibility.css` = final interaction override layer.
 
-At <=1180px board is first, Mission follows, then a reachable two-column right rail. Compact Collection keeps natural height rather than stretching to Brain Lab. At phone widths Brain Lab precedes Collection.
-
-`tests/ui-contract.test.mjs` guards stylesheet ordering, responsive ownership, compact rail geometry, code-owned Brain Lab state/actions, character sprite contracts, keyboard safety and discovery-feedback deduplication.
+At <=1180px board is first, Mission follows, then reachable supporting panels. Compact Collection keeps natural height rather than stretching to Brain Lab. At phone widths Brain Lab precedes Collection.
 
 ## Packaged Chromium runtime QA
-CI opens the actual packaged Yandex `dist/` with `?platform=local` solely to avoid external SDK dependence while testing the packaged HTML/CSS/compiled JS/assets.
+CI opens the actual packaged Yandex `dist/` for browser validation.
 
-Viewports:
+Base viewports:
 - desktop 1440x900;
 - compact 1024x576;
 - phone 390x844 with touch enabled.
 
-Fresh-session gate verifies 30 cells, key panels, overflow/broken-image/page-error health, responsive rail geometry, mouse/touch/keyboard merge and focus restoration.
-
-Controlled-state matrix additionally verifies:
-- complete T1-T8 board/Collection sprite range;
-- crowded-board best-pair guidance;
-- true deadlock + Rescue + disabled Brain Box;
-- real offline reward + Collect;
-- mission-ready state;
-- locked + affordable upgrades;
-- all four maxed upgrades + completed mission track;
-- T7 -> T8 discovery and Collection unlock.
+Fresh-session and controlled-state gates verify 30 cells, key panels, overflow/broken-image/page-error health, responsive rail geometry, mouse/touch/keyboard merge, T1-T8 rendering, crowded guidance, deadlock/Rescue, offline reward, mission state, upgrade states and T8 discovery.
 
 ## Packaged RC accessibility/migration gate
-`scripts/rc-smoke.mjs` is now a separate CI release gate on the same packaged `dist/`.
+`scripts/rc-smoke.mjs` verifies:
+- keyboard Tab reaches a board cell with a visible >=3px focus outline;
+- reduced-motion attention animations collapse to <=1 ms effective duration;
+- visible checked phone/coarse-pointer controls are at least 44x44 px;
+- a real legacy v2 localStorage payload migrates through packaged boot to canonical persisted v5 while preserving T5 discovery/Collection/mission compatibility and clearing stale selection.
 
-It verifies:
-- keyboard Tab reaches a merge-board cell and the focused cell exposes a visible >=3px focus outline;
-- Chromium reduced-motion mode is active and tutorial attention animations collapse to <=1ms effective duration;
-- visible phone/coarse-pointer controls checked by the gate are at least 44x44 px;
-- a real legacy v2 payload injected into localStorage before boot migrates through the packaged application, renders canonical Shark Sneakers as T5, preserves at least T1-T5 Collection discovery, persists save v5, sets maxDiscoveredTier=5, preserves mission compatibility at missionIndex=1 and clears stale selectedIndex.
+## Game-feel animation layer
+`public/game-feel.css` plus event choreography in `src/main.ts` now provides:
+- asynchronous character idle motion;
+- selected/merge-target lift;
+- Brain Box kick + spawned-unit pop;
+- merge result squash/overshoot + transient particle burst;
+- mission/offline/HUD reward feedback;
+- upgrade-card response;
+- Rescue cell response;
+- stronger discovery/high-tier treatment;
+- complete reduced-motion suppression for nonessential event motion and particles.
 
-The first two RC-gate failures were defects in the test harness, not the game: a global `URL` name was shadowed, then Chromium canonicalized `.001ms` to `1e-06s`. Both assertions were corrected without weakening the requirements. CI #175 is the first run where the complete RC gate passes.
-
-## Runtime visual review corrections
-Real CI screenshots, not isolated asset previews, drove the latest corrections:
-1. Compact Collection no longer stretches to Brain Lab height or inherits stale grid-row placement.
-2. Shared-atlas Camera Dude now uses an absolute board sprite slot and remains visible after merge.
-3. A named `NEW Tn: Character` discovery toast suppresses the duplicate generic discovery message while reserving header geometry.
-4. On phone, the fixed audio control moved from the bottom viewport anchor that overlapped Mission into a free system-control pocket below the HUD.
-5. Per-character `presentation.scale`, shadow scale and Collection scale were moderately re-tuned from runtime captures toward the Art Bible 72-82% useful visual-occupancy target. Gameplay hitboxes/rules are unchanged.
-6. Trivial sub-minute reload/resume gaps no longer produce +1/+2-style offline reward banners.
+`scripts/motion-smoke.mjs` exercises real packaged merge and Brain Box actions. It asserts emitted transition classes, `bmMergePop`/`bmSpawnPop`, particle creation and cleanup, then repeats merge under reduced motion and confirms gameplay still completes with no particle DOM creation.
 
 ## Yandex SDK lifecycle hardening
-The adapter contract now separates SDK initialization from Game Ready reporting:
+The adapter contract separates SDK initialization from Game Ready:
 - `initialize()` initializes SDK/storage/player only;
-- `gameReady()` is emitted after locale loading, save restoration and the first complete interactive render;
-- Yandex `LoadingAPI.ready()` is called from `gameReady()`, not early during SDK initialization;
-- `GameplayAPI.start()` follows Game Ready and remains paired with `stop()` across visibility/ad lifecycle events;
-- Game Ready is idempotent and deterministic tests reject duplicate ready/start calls;
-- cloud debounce, latest-state flush, storage fallback and write-race protections remain intact.
+- locale/save restoration and first interactive render happen before Game Ready;
+- `gameReady()` emits `LoadingAPI.ready()` once and starts `GameplayAPI`;
+- visibility/ad lifecycle pairs Gameplay start/stop;
+- cloud debounce/latest-state flush/storage fallback/write-race protections remain intact.
 
-This hardens the code against Yandex moderation timing requirements, but it is not a substitute for a real Yandex portal/debug-panel smoke.
+`scripts/yandex-browser-smoke.mjs` now boots the packaged build through the real `YandexPlatformAdapter` using an instrumented SDK contract. It verifies:
+- one SDK init and player/cloud-load path;
+- Yandex preferred RU locale is applied before Game Ready;
+- 30 interactive board cells exist when `LoadingAPI.ready()` fires;
+- Gameplay starts after Ready;
+- rewarded Brain Box invokes the SDK, stops/resumes Gameplay and delivers a spawn;
+- `pagehide` flushes canonical save v5 via `player.setData(..., true)`.
 
-## Keyboard/input hardening
-- global Space cannot buy a paid Brain Box;
-- Enter/Space on focused board cells uses the same select/move/merge path as pointer input;
-- ArrowLeft/Right/Up/Down move focus using board geometry;
-- Escape clears selection;
-- M remains a safe body-level mute toggle;
-- focus is restored after DOM rerenders;
-- real packaged mouse/touch/keyboard merge paths are CI-gated.
-
-Tutorial cells pulse continuously by design. Playwright uses forced pointer input for those cells so it exercises the real handlers without waiting for impossible visual stability.
+This substantially hardens the portal path but does not replace a final run inside the real Yandex Games portal/debug panel.
 
 ## Latest validation
-- deterministic/static suite: 51 passing tests, including Yandex Game Ready timing/idempotence;
-- Yandex package + release audit remain green;
-- main packaged runtime smoke remains green after the platform lifecycle changes;
-- CI #175 on `2e497e879724807c42dd13fbab492017b28b3209`: packaged runtime smoke and packaged RC focus/reduced-motion/touch-target/v2-migration smoke both passed; artifact upload followed successfully.
-- documentation commits after #175 change project truth only and must still receive their own CI before being treated as final RC HEAD.
+- deterministic/static suite: 51 passing tests;
+- CI #180 validated the complete game-feel runtime without regressing existing package/runtime/RC gates;
+- CI #187 on `6ac717efc03121592ae2e2b0d13e09a8721d584c` passed TypeScript/tests, EN/RU parity, Yandex package/integrity/release audit, full packaged state-matrix smoke, RC focus/reduced-motion/touch/migration smoke, packaged motion smoke, packaged real-adapter Yandex smoke and both artifact uploads;
+- documentation commits after #187 do not alter runtime behavior and receive normal CI separately.
 
 ## Figma source of truth
 Known Brainmerge Figma file key: `lIFT4QEPhnsFfSrRD8WFad`.
-The connector successfully identified page `Characters — Approved`. Deeper node inspection is currently blocked by the authenticated Starter/View MCP read quota, so technical screenshots must not be mislabeled as final Figma artistic acceptance.
+The connector previously identified page `Characters — Approved`. A fresh attempt still returns the authenticated Starter-plan MCP call-limit error. Therefore exact approved-target Mission/Collection/Brain Box/HUD comparison and final artistic acceptance remain externally blocked; technical screenshots must not be mislabeled as Figma acceptance.
 
 ## Remaining gates
-1. Full approved-Figma/art-direction comparison once node reads are available; align remaining Mission/Collection/Brain Box/HUD deltas and record final visual acceptance.
-2. Replace T2-T8 shared atlas entries with approved standalone assets when actual files are supplied; do not fabricate replacements.
-3. Final artistic contrast/focus review against approved targets.
-4. Real Yandex portal/debug-panel lifecycle/capability smoke, including Game Ready/GamePlay indicators and real ad/storage behavior.
-5. Final RC HEAD CI after all remaining gates.
-6. Decide on additional daily/return goals only if real session QA justifies them; no second currency is currently justified.
+1. Full approved-Figma/art-direction comparison once MCP reads are available; align remaining Mission/Collection/Brain Box/HUD deltas and perform final artistic contrast/focus acceptance.
+2. Real Yandex Games portal/debug-panel lifecycle/capability smoke, including actual Game Ready/Gameplay indicators, ads and storage behavior.
+3. Final release-candidate HEAD CI after those externally blocked gates are complete.
+4. Decide on daily/return goals only if real-session QA shows they create a useful decision; no second currency is currently justified.
 
 ## Source of truth
 - `docs/ROADMAP.md`
