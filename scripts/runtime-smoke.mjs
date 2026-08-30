@@ -143,13 +143,32 @@ try {
     for (const [familyId] of FAMILIES) assert((await page.locator(`.cell[data-family="${familyId}"]`).count()) >= 1, `high-tier: missing ${familyId}`);
     assert((await page.locator('.collection-chip.is-unlocked').count()) === 18, 'high-tier: Collection must unlock all 18 tiers');
     assert((await page.locator('.offline-reward').count()) === 0, 'high-tier: trivial boot gap must not surface offline reward');
-    for (const [familyId] of FAMILIES.slice(1, 8)) {
-      const sprite = await page.locator(`.cell[data-family="${familyId}"] .unit-visual`).evaluate((e) => { const p = getComputedStyle(e, '::before'); return { bg: p.backgroundImage, display: p.display, width: e.getBoundingClientRect().width }; });
-      assert(sprite.bg !== 'none' && sprite.display !== 'none' && sprite.width > 0, `high-tier: ${familyId} atlas sprite missing`);
-    }
-    for (const [familyId] of FAMILIES.slice(8)) {
-      const art = await page.locator(`.cell[data-family="${familyId}"] .unit-art`).evaluate((e) => ({ complete: e.complete, naturalWidth: e.naturalWidth, width: e.getBoundingClientRect().width, display: getComputedStyle(e).display, opacity: getComputedStyle(e).opacity }));
-      assert(art.complete && art.naturalWidth > 0 && art.width > 0 && art.display !== 'none' && Number(art.opacity) > 0, `high-tier: ${familyId} standalone art missing`);
+    for (const [familyId] of FAMILIES) {
+      const sprite = await page.locator(`.cell[data-family="${familyId}"] .unit-visual`).evaluate((e) => {
+        const p = getComputedStyle(e, '::before');
+        const image = e.querySelector('.unit-art');
+        const imageStyle = image instanceof HTMLElement ? getComputedStyle(image) : null;
+        return {
+          bg: p.backgroundImage,
+          bgSize: p.backgroundSize,
+          display: p.display,
+          position: p.position,
+          width: e.getBoundingClientRect().width,
+          imageOpacity: imageStyle?.opacity ?? null,
+          imageVisibility: imageStyle?.visibility ?? null
+        };
+      });
+      assert(sprite.bg.includes('character-atlas.webp') && sprite.bgSize === '600% 300%' && sprite.display !== 'none' && sprite.position === 'absolute' && sprite.width > 0, `high-tier: ${familyId} shared-atlas sprite missing`);
+      assert(sprite.imageOpacity === '0' || sprite.imageVisibility === 'hidden', `high-tier: ${familyId} fallback image must not override atlas`);
+
+      const collectionSprite = await page.locator(`.collection-chip[data-family="${familyId}"]`).evaluate((e) => {
+        const p = getComputedStyle(e, '::after');
+        const image = e.querySelector('img');
+        const imageStyle = image instanceof HTMLElement ? getComputedStyle(image) : null;
+        return { bg: p.backgroundImage, bgSize: p.backgroundSize, display: p.display, imageOpacity: imageStyle?.opacity ?? null, imageVisibility: imageStyle?.visibility ?? null };
+      });
+      assert(collectionSprite.bg.includes('character-atlas.webp') && collectionSprite.bgSize === '600% 300%' && collectionSprite.display !== 'none', `high-tier: ${familyId} Collection shared-atlas sprite missing`);
+      assert(collectionSprite.imageOpacity === '0' || collectionSprite.imageVisibility === 'hidden', `high-tier: ${familyId} Collection fallback image must not override atlas`);
     }
     await assertHealthyPage(page, 'high-tier'); await page.screenshot({ path: new URL('state-high-tiers.png', OUTPUT).pathname, fullPage: true }); await context.close();
   }
