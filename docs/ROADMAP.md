@@ -50,9 +50,9 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 - [x] Technical visual-state matrix covers T1-T8, crowded guidance, deadlock/Rescue, offline reward, mission-ready/completed, locked/affordable/maxed upgrades and T8 discovery without overflow, broken images or missing sprite geometry.
 - [x] Runtime-capture review corrected character perceived-mass normalization toward the Art Bible 72–82% useful-occupancy target without changing hitboxes or gameplay rules.
 - [x] Runtime-capture review removed duplicated discovery feedback and moved the fixed phone audio control out of production-card content.
-- [x] Code-driven game-feel animation layer adds asynchronous character idle motion, selected/merge-target lift, spawn pop, merge overshoot + particle burst, reward/HUD feedback, upgrade response and Rescue response without requiring new raster animation assets or changing gameplay state.
-- [x] Game-feel motion respects `prefers-reduced-motion`; event particles/floating values are short-lived presentation nodes and are disabled for reduced motion.
-- [x] Packaged motion smoke exercises real merge and Brain Box actions, validates merge/spawn animation names and transient classes, verifies particle cleanup, and confirms reduced-motion suppresses particle creation while gameplay still completes.
+- [x] Code-driven game-feel animation layer covers asynchronous family-specific idle motion, live pointer drag, selected/merge-target anticipation, merge flight + landing/burst, ordinary move arc + landing compression, mismatch/max-tier rejection, Brain Box dock/spawn-energy choreography, coin trails, discovery/T8 hero treatment, Collection unlock, reward/upgrade/Rescue response, CTA press/release microinteraction, and Mission/level/`Next move` progression feedback without adding animation raster assets or gameplay-state fields.
+- [x] Game-feel motion respects `prefers-reduced-motion`; event particles, flight ghosts, spawn energy and progression choreography are suppressed/collapsed while gameplay remains fully functional.
+- [x] Packaged motion smoke exercises real pointer drag, merge, ordinary move, invalid merge, tactile Brain Box activation, mission/`Next move` progression, discovery/Collection unlock, coin trails and spawn-energy choreography; it validates state preservation, emitted motion states, cleanup, and equivalent gameplay under reduced motion.
 - [ ] Align Mission, Collection, Brain Box dock and HUD to approved Figma/art direction in the complete runtime; technical browser QA is green but artistic target matching remains a separate gate.
 - [ ] Final approved-target visual acceptance remains pending because current Figma MCP read quota does not permit deeper node inspection; do not treat technical screenshots as a substitute.
 
@@ -90,7 +90,7 @@ The project is ready only when all P0/P1 blocks below are complete and validated
 4. [x] Approved Brain Lab/offline artwork integrated into existing code-driven components.
 5. [x] UI-layer responsibility cleanup + source-level keyboard/input hardening.
 6. [x] Packaged desktop/compact/mobile Chromium screenshot + mouse/touch/keyboard runtime QA and responsive correction.
-7. [x] Code-driven game-feel animation pass for board/action/reward feedback.
+7. [x] Complete code-driven game-feel pass for board movement, merge/reject, CTA microinteraction, rewards and progression feedback.
 8. [x] Packaged motion-event and Yandex-adapter browser hardening.
 9. [ ] Full approved-Figma/art-direction alignment and final visual acceptance.
 10. [ ] Final artistic contrast/visual QA against approved targets.
