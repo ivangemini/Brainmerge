@@ -1,75 +1,164 @@
 # Active Session — Brainmerge
 
 ## Objective
-Brainmerge autonomous implementation is at release-candidate stage. Preserve the validated merge-idle direction and continue only with unfinished acceptance/hardening work: approved Figma comparison, real Yandex Games Portal/debug-panel validation, and human pacing/retention sign-off.
+Brainmerge has moved from release-candidate-only hardening into the next product phase: **retention/meta progression**.
 
-## Canonical gameplay state
-- browser-first TypeScript, 6x5 merge board;
+The active product north star is:
+
+**complete the Brainverse Campaign while building permanent Collection/Prestige power; T1-T18 remains the core merge-idle loop.**
+
+Implementation priority:
+1. Collection Rewards;
+2. Prestige / Brain Reset + Brain Cells;
+3. coherent save v6 migration;
+4. Campaign framework/navigation;
+5. World 1 + World 2 including bosses;
+6. validate the complete fresh-run -> T18 -> Prestige -> persistent Campaign loop;
+7. expand to Worlds 3-8.
+
+Source of truth: `docs/CAMPAIGN_AND_META_PROGRESSION.md` + `docs/ROADMAP.md`.
+
+## Current production gameplay truth
+- browser-first TypeScript;
+- 6×5 merge board;
 - one sequential T1-T18 chain: Toilet Buddy -> Camera Dude -> Sigma Rock -> Rizz Head -> Shark Sneakers -> Crocodile Bomber -> Coffee Ballerina -> Tung Wood -> Brr Brr Patapim -> Boneca Ambalabu -> Cappuccino Assassino -> Frigo Camelo -> Lirili Larila -> Chimpanzini Bananini -> Cocofanto Elefanto -> Bombombini Gusini -> Trippi Troppi -> La Vacca Saturno Saturnita;
-- two identical non-terminal characters become exactly one next-tier character; T18 is terminal;
-- T8 remains a midgame checkpoint, not chain completion;
-- first discovery remains merge-only; upgraded Brain Boxes rebuild only already-discovered tiers;
-- passive coin production is merge-positive;
-- paid Brain Box price escalates; rewarded Box is free and never inflates paid price;
+- two identical non-terminal characters -> one next-tier character;
+- T18 is terminal for the current core chain;
+- first lifetime discovery remains merge-only;
+- Brain Box upgrades rebuild only already-discovered content;
+- passive production remains merge-positive;
+- paid Brain Box price escalates; rewarded Box is optional/free and does not inflate paid price;
 - Brain Lab: Base Drop Tier, Lucky Drop, Brain Income, Offline Storage;
-- capped explicit offline reward, save v5, missions, Collection, `Next move`, Rescue;
-- one primary currency remains intentional.
+- capped offline reward, save v5, first-cycle missions, Collection, `Next move`, Rescue.
 
-## Character / art truth
-All eighteen canonical character visuals are production-bound through one physical 6x3 `character-atlas.webp`. Board and Collection select T1-T18 from the same shared sprite pipeline; standalone WebP files remain source/reference assets rather than the production rendering path.
+## Current art / UI truth
+All T1-T18 production characters use one physical 6×3 `public/assets/characters/character-atlas.webp` on both board and Collection.
 
-The atlas migration is contract-tested at runtime so T1, T9-T18 and the original T2-T8 all resolve through the same sprite layer without standalone overrides. Yandex packaging validates all referenced raster assets structurally before browser smoke.
+Current approved standalone UI icons:
+- `icon-missions.webp`;
+- `icon-collection.webp`;
+- `icon-rewards.webp`;
+- `icon-brain-lab.webp`.
 
-The Art-Bible-guided production finish is implemented across HUD, board, Mission, Brain Box, Brain Lab and Collection. `public/visual-finish.css` remains presentation-only and contract-tested not to take over production-panel ordering/grid rows/fixed visibility.
+They are integrated into the production dock/panel/reward surfaces. Do not regenerate them without an explicit replacement pass.
 
-Phone composition is now board-first: the live board and Brain Box stay in the primary document flow while Mission, Collection and Brain Lab are opened from a fixed three-button bottom dock as modal sheets. The dock reflects existing localized DOM/state, does not own gameplay state, respects safe-area insets, keeps inactive sheets inert, and leaves desktop composition unchanged.
+Phone composition is board-first. Main board + Brain Box stay in flow. Missions / Collection / Brain Lab open from a fixed three-button bottom dock as modal sheets. Campaign should receive a prominent map/goal entry outside this three-item dock by default rather than making the dock cramped again.
 
-Known approved Figma file key: `lIFT4QEPhnsFfSrRD8WFad`. Exact approved-frame comparison remains an external acceptance gate until the target nodes are inspected in the authenticated Figma context.
+The latest UI icon/alignment production pass is commit `ef0cbd23318b9049c3a11da216561f7a8c6d2b7f`; CI run #257 completed successfully across tests, package, Chromium runtime, RC, motion, RU and Yandex adapter smoke before the documentation-only product-direction updates.
 
-## Motion / interaction truth
-The code-driven game-feel layer covers family idle motion, live drag, merge/move/reject feedback, Brain Box spawn choreography, coin trails, discovery/Collection unlock, reward/upgrade/Rescue response, CTA microinteraction and Mission/level/`Next move` progression feedback. Nonessential motion collapses under `prefers-reduced-motion`; gameplay remains functional.
+## New approved permanent systems
+### Collection Rewards
+- thresholds start at 5/18, 10/18, 15/18, 18/18;
+- claim once;
+- survive Prestige;
+- exact values are balance data and must be simulated before lock;
+- UI belongs inside Collection rather than a new mobile dock destination.
+
+### Prestige / Brain Reset
+- first unlock after reaching T18;
+- resets run-level board/economy/Brain Lab state;
+- preserves lifetime Collection, claimed Collection Rewards, Campaign progress, Prestige count, Brain Cells and permanent meta upgrades;
+- Brain Cells are a permanent-meta-only currency and explicit exception to the old one-currency rule;
+- first eligible Prestige must award at least one Brain Cell;
+- exact reward/permanent-upgrade curves remain data-driven.
+
+### Save v6
+The next implementation should migrate Collection Rewards + Prestige + Campaign state in one coherent v6 schema. Do not land unrelated unversioned localStorage meta fields.
+
+## New approved Campaign direction
+Target complete campaign:
+- 8 worlds;
+- 8 stages each;
+- 64 total stages;
+- stage 8 of each world is a boss;
+- up to 3 mastery stars per stage;
+- Campaign progress survives Prestige;
+- Worlds 1-2 are the framework proof milestone;
+- later worlds may require prior boss completion + Prestige progress.
+
+Campaign stages reuse the 6×5 merge rules through data-defined objectives rather than a separate gameplay engine.
+
+Initial objective primitives:
+- reach tier;
+- merge count;
+- earn stage coins;
+- Brain Box count/limit;
+- limited moves;
+- target orders;
+- crowded-board puzzle;
+- no-Box puzzle;
+- timed challenges later;
+- boss objective sets.
+
+Campaign stage state must be isolated from the persistent main idle board.
+
+## Boss direction
+Bosses are not a separate combat game.
+
+- large playful boss render;
+- code-owned progress/HP;
+- ordinary merges contribute progress;
+- requested target orders contribute larger progress;
+- completion unlocks the next world/map segment;
+- no gore/realistic combat UI;
+- boss art cannot contain health bars/text or cover board hit targets.
+
+## Immediate asset dependencies
+Generate before the first production Campaign milestone:
+1. Campaign / World Map icon — 512×512 transparent.
+2. Prestige / Brain Reset icon — 512×512 transparent.
+3. Brain Cell currency icon — 512×512 transparent.
+4. Stage node family: Normal / Challenge / Elite / Boss / Locked — 512×512 transparent sources.
+5. World 1 Backyard/Meme Yard environment — 1536×864, no text, center-safe.
+6. World 2 Brainrot City environment — 1536×864, no text, center-safe.
+7. World 1 boss — 1024×1024 transparent.
+8. World 2 boss — 1024×1024 transparent.
+9. Optional World 1/2 emblems — 512×512 transparent only if map UX proves needed.
+
+Full art spec and later World 3-8 queue live in `docs/ASSET_MANIFEST.md`.
 
 ## Persistence / lifecycle truth
-- migrations through save v5 and malformed-state sanitization are covered;
-- online/offline accrual, duplicate resume and clock rollback are deterministic;
-- autosave + lifecycle flush are implemented;
-- Yandex cloud latest-snapshot/local fallback/write-race behavior is covered;
-- `LoadingAPI.ready()` is emitted only after locale/save restore and first interactive render;
-- GameplayAPI transitions are idempotent;
-- rewarded/fullscreen ads stop gameplay, resume exactly once only when visible, never grant reward without `onRewarded`, and recover from close/error safely;
-- ad close while hidden does not incorrectly restart GameplayAPI; visibility resume starts it once.
+Current production runtime remains save v5 until meta implementation begins.
 
-## Return-session product decision
-Daily/return goals remain intentionally out of release scope. Deterministic return-session QA locks the useful sequence `Offline Collect -> earned mission reward -> active merge`, so an extra synthetic daily-task layer or second currency is not justified before real retention data.
+Existing guarantees stay mandatory:
+- v1-v5 migration/sanitization;
+- deterministic online/offline accrual;
+- no duplicate resume/clock rollback credit;
+- autosave + lifecycle flush;
+- Yandex latest-snapshot/cloud/local fallback behavior;
+- LoadingAPI/GamePlay lifecycle correctness;
+- rewarded ad reward only after `onRewarded`;
+- hidden-page ad close cannot incorrectly resume gameplay.
 
-## Automated release gates
-Current CI validates:
-- TypeScript build and EN/RU locale parity;
-- deterministic/static tests including the unified T1-T18 atlas and board-first mobile dock contracts;
-- Yandex package + raster integrity + release audit;
-- packaged desktop 1440x900 / compact 1024x576 / phone 390x844 runtime matrix;
-- mouse, touch and keyboard merge paths;
-- all T1-T18 characters on the high-tier runtime fixture;
-- a genuine terminal-T18 full-board deadlock with Rescue and disabled Brain Box;
-- crowded guidance, offline/mission/upgrades, maxed upgrades and T8 discovery;
-- RC focus/reduced-motion/coarse-pointer/v2->v5 migration smoke;
-- full motion smoke;
-- packaged RU visual smoke;
-- packaged Yandex-adapter smoke covering rewarded success, close-without-reward, SDK error, hidden-page lifecycle and pagehide cloud flush;
-- artifact upload for the Yandex package and runtime screenshots.
+New v6 work must extend rather than bypass this persistence path.
 
-Runtime screenshots are visually inspected after meaningful UI/art changes. Phone QA must verify the board-first default screen plus each modal sheet state, while desktop remains visually unchanged.
+## Validation required for the next slice
+- Collection reward one-time/no-double-claim tests;
+- Prestige eligibility + exact reset/preserve tests;
+- Brain Cell award/spend invariants;
+- v5 -> v6 migration/sanitization;
+- Campaign/main-board isolation;
+- stage objective/reward/star tests;
+- boss/world unlock tests;
+- Campaign progress surviving Prestige;
+- EN/RU parity;
+- desktop/compact/phone Campaign/Prestige screenshots;
+- touch/mouse/keyboard + reduced-motion Campaign flow;
+- Yandex package raster integrity for new assets.
 
-## External acceptance gates only
-1. Approved Figma node comparison for Mission / Collection / Brain Box / HUD / overall composition.
-2. Real Yandex Games Portal/debug-panel run confirming actual Game Ready/Gameplay indicators, rewarded callbacks and cloud storage.
-3. Human fresh-save + return-session pacing/retention sign-off.
+## External acceptance gates
+Still external:
+1. approved Figma comparison;
+2. real Yandex Games Portal/debug-panel run;
+3. human pacing/retention sign-off.
 
-These are intentionally not represented as missing core code features.
+Human retention sign-off should now explicitly include World 1-2 + first T18 + first Prestige, not only the old offline-return loop.
 
 ## Source of truth
 - `docs/ROADMAP.md`
+- `docs/CAMPAIGN_AND_META_PROGRESSION.md`
 - `docs/GAMEPLAY_AND_PROGRESSION.md`
 - `docs/ARCHITECTURE.md`
 - `docs/ASSET_MANIFEST.md`
 - `docs/ART_BIBLE.md`
+- `docs/PLATFORM_AND_LOCALIZATION.md`
