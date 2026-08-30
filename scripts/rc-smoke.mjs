@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 
 const ROOT = new URL('../dist/', import.meta.url);
 const SAVE_KEY = 'brainmerge.save.v1';
-const URL = 'http://127.0.0.1:4174/?platform=local';
+const APP_URL = 'http://127.0.0.1:4174/?platform=local';
 const mime = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.js', 'text/javascript; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'], ['.webp', 'image/webp'], ['.png', 'image/png'], ['.svg', 'image/svg+xml']
@@ -34,7 +34,7 @@ const server = createServer(async (req, res) => {
 });
 
 async function waitForRuntime(page) {
-  await page.goto(URL, { waitUntil: 'networkidle' });
+  await page.goto(APP_URL, { waitUntil: 'networkidle' });
   await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
   assert(await page.locator('.board-tray .cell').count() === 30, 'runtime must render 30 board cells');
 }
