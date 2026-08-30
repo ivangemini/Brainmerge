@@ -13,6 +13,7 @@
     "smoke:runtime": "node scripts/runtime-smoke.mjs",
     "smoke:rc": "node scripts/rc-smoke.mjs",
     "smoke:motion": "node scripts/motion-smoke.mjs",
+    "smoke:yandex": "node scripts/yandex-browser-smoke.mjs",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {
