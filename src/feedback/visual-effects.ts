@@ -250,7 +250,6 @@ function installPressFx(): void {
   });
   root.addEventListener('pointerup', clear);
   root.addEventListener('pointercancel', clear);
-  root.addEventListener('pointerleave', clear, true);
 }
 
 function installSpawnEnergyFx(): void {
