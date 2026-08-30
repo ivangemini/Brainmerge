@@ -118,6 +118,7 @@ try {
     await page.waitForTimeout(520);
     assert(await page.locator('.fx-reject').count() === 0, 'reject class must clean itself up');
 
+    // One real pointer press checks tactile compression and performs the Brain Box action on release.
     const spawnButton = page.locator('[data-action="spawn"]');
     assert(await spawnButton.isEnabled(), 'fresh economy after one merge must still allow a paid Brain Box');
     await spawnButton.scrollIntoViewIfNeeded();
@@ -131,7 +132,6 @@ try {
     await page.mouse.up();
     assert(!(await spawnButton.evaluate((el) => el.classList.contains('fx-pressed'))), 'CTA press state must clear on release');
 
-    await spawnButton.click({ force: true });
     assert(await page.locator('.spawn-dock.fx-spawn-dock').count() === 1, 'Brain Box action must animate the spawn dock');
     assert(await page.locator('.cell.fx-spawn').count() === 1, 'new Brain Box unit must receive spawn-pop choreography');
     await page.locator('.fx-spawn-orb').waitFor({ state: 'attached', timeout: 500 });
