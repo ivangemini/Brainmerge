@@ -70,6 +70,49 @@ export function runCoinTrail(from: FxPoint | null, hud: Element | null, amount: 
   }
 }
 
+function runSpawnEnergy(targetCell: HTMLElement): void {
+  if (!motionAllowed()) return;
+  const source = centerOf(document.querySelector('.spawn-dock'));
+  const target = centerOf(targetCell);
+  if (!source || !target) return;
+
+  const orb = document.createElement('span');
+  orb.className = 'fx-spawn-orb';
+  orb.setAttribute('aria-hidden', 'true');
+  orb.style.left = `${source.x}px`;
+  orb.style.top = `${source.y}px`;
+  document.body.appendChild(orb);
+
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const bend = Math.min(72, Math.max(28, Math.abs(dx) * 0.12 + Math.abs(dy) * 0.06));
+  const animation = orb.animate([
+    { transform: 'translate(-50%,-50%) scale(.55)', opacity: 0, offset: 0 },
+    { transform: `translate(calc(-50% + ${dx * 0.16}px),calc(-50% + ${dy * 0.12 - bend}px)) scale(1.22)`, opacity: 1, offset: 0.22 },
+    { transform: `translate(calc(-50% + ${dx * 0.62}px),calc(-50% + ${dy * 0.52 - bend * .72}px)) scale(.92)`, opacity: 1, offset: 0.7 },
+    { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.28)`, opacity: 0, offset: 1 }
+  ], { duration: 430, easing: 'cubic-bezier(.18,.76,.18,1)', fill: 'forwards' });
+  animation.finished.catch(() => undefined).finally(() => orb.remove());
+
+  for (let i = 0; i < 4; i += 1) {
+    const spark = document.createElement('span');
+    spark.className = 'fx-spawn-spark';
+    spark.setAttribute('aria-hidden', 'true');
+    spark.style.left = `${target.x}px`;
+    spark.style.top = `${target.y}px`;
+    document.body.appendChild(spark);
+    const angle = i / 4 * Math.PI * 2 + Math.PI / 4;
+    const sx = Math.cos(angle) * 20;
+    const sy = Math.sin(angle) * 20;
+    const sparkle = spark.animate([
+      { transform: 'translate(-50%,-50%) scale(.2)', opacity: 0, offset: 0 },
+      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: .25 },
+      { transform: `translate(calc(-50% + ${sx}px),calc(-50% + ${sy}px)) scale(.45)`, opacity: 0, offset: 1 }
+    ], { duration: 360, delay: 280 + i * 28, easing: 'ease-out', fill: 'forwards' });
+    sparkle.finished.catch(() => undefined).finally(() => spark.remove());
+  }
+}
+
 export function runDiscoveryCelebration(cell: HTMLElement | null, tier: number): void {
   if (!motionAllowed() || !cell || tier < 2) return;
   const shell = document.querySelector<HTMLElement>('.game-shell');
@@ -146,4 +189,22 @@ function installPointerDragFx(): void {
   root.addEventListener('pointercancel', clear);
 }
 
+function installSpawnEnergyFx(): void {
+  const root = document.querySelector<HTMLElement>('#app');
+  if (!root) return;
+  const observer = new MutationObserver((records) => {
+    if (!motionAllowed()) return;
+    for (const record of records) {
+      if (record.type !== 'attributes' || record.attributeName !== 'class' || !(record.target instanceof HTMLElement)) continue;
+      const cell = record.target;
+      if (cell.matches('[data-cell].fx-spawn') && cell.dataset.spawnEnergySeen !== 'true') {
+        cell.dataset.spawnEnergySeen = 'true';
+        runSpawnEnergy(cell);
+      }
+    }
+  });
+  observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['class'] });
+}
+
 installPointerDragFx();
+installSpawnEnergyFx();
