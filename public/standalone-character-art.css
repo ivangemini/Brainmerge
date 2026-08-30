@@ -1,0 +1,74 @@
+/* Standalone T9-T18 character renders. Loaded after chain-polish so these production assets replace the legacy T2-T8 atlas pseudo-sprites without changing live game markup, state ownership, or hit areas. */
+.cell:is(
+  [data-chain-tier='9'],
+  [data-chain-tier='10'],
+  [data-chain-tier='11'],
+  [data-chain-tier='12'],
+  [data-chain-tier='13'],
+  [data-chain-tier='14'],
+  [data-chain-tier='15'],
+  [data-chain-tier='16'],
+  [data-chain-tier='17'],
+  [data-chain-tier='18']
+) .unit-visual::before {
+  display: none !important;
+}
+
+.cell:is(
+  [data-chain-tier='9'],
+  [data-chain-tier='10'],
+  [data-chain-tier='11'],
+  [data-chain-tier='12'],
+  [data-chain-tier='13'],
+  [data-chain-tier='14'],
+  [data-chain-tier='15'],
+  [data-chain-tier='16'],
+  [data-chain-tier='17'],
+  [data-chain-tier='18']
+) .unit-art {
+  display: block !important;
+  opacity: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  filter: saturate(1.05) contrast(1.025) drop-shadow(0 4px 3px rgba(58,44,52,.13)) !important;
+}
+
+.collection-chip:is(
+  [data-chain-tier='9'],
+  [data-chain-tier='10'],
+  [data-chain-tier='11'],
+  [data-chain-tier='12'],
+  [data-chain-tier='13'],
+  [data-chain-tier='14'],
+  [data-chain-tier='15'],
+  [data-chain-tier='16'],
+  [data-chain-tier='17'],
+  [data-chain-tier='18']
+)::after {
+  display: none !important;
+}
+
+.collection-chip:is(
+  [data-chain-tier='9'],
+  [data-chain-tier='10'],
+  [data-chain-tier='11'],
+  [data-chain-tier='12'],
+  [data-chain-tier='13'],
+  [data-chain-tier='14'],
+  [data-chain-tier='15'],
+  [data-chain-tier='16'],
+  [data-chain-tier='17'],
+  [data-chain-tier='18']
+) img {
+  display: block !important;
+  opacity: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 4px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  transform: scale(var(--collection-scale, 1));
+  filter: saturate(1.05) contrast(1.025) drop-shadow(0 2px 1px rgba(57,45,51,.13));
+}
