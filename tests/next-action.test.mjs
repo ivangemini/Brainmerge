@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   affordableUpgradeIds,
+  claimCurrentMission,
   claimOfflineIncome,
   createInitialState,
   nextActionHint
@@ -29,6 +30,18 @@ test('offline collection and ready mission outrank other economy actions', () =>
   const mission = nextActionHint(afterCollect);
   assert.equal(mission.kind, 'mission');
   assert.equal(mission.amount, MISSION_TRACK[0].reward);
+});
+
+test('return session exposes a deterministic sequence of useful decisions without a synthetic daily task layer', () => {
+  const returned = { ...createInitialState(0), pendingOfflineCoins: 120, merges: 6 };
+  assert.equal(nextActionHint(returned).kind, 'offline', 'return value must be collected before unrelated spending');
+
+  const collected = claimOfflineIncome(returned);
+  assert.equal(nextActionHint(collected).kind, 'mission', 'an already-earned mission reward becomes the next explicit decision');
+
+  const claimed = claimCurrentMission(collected);
+  assert.equal(claimed.missionIndex, 1, 'claim must advance the journey');
+  assert.equal(nextActionHint(claimed).kind, 'merge', 'after return rewards, the player is routed back into active merge play');
 });
 
 test('true deadlock outranks spending recommendations', () => {
