@@ -58,7 +58,7 @@
   .cell,.cell.tone-1,.cell.tone-2,.cell.tone-3,.cell:nth-child(5n){border-radius:13px!important;border-width:2px!important;box-shadow:0 4px 0 #168f9b,0 6px 8px rgba(44,84,89,.13),inset 0 2px 0 rgba(255,255,255,.38)!important}
   .spawn-dock{margin-top:10px!important}
   .side-card{border-radius:28px}
-  .right-rail .side-card--lab{padding:14px!important}
+  .right-rail .side-card--lab{padding:56px 14px 14px!important}
   .upgrade-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
   .upgrade-card{min-width:0;padding:8px!important}
   .upgrade-card__top{align-items:flex-start}
