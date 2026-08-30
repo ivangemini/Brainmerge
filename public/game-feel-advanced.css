@@ -17,10 +17,29 @@
 @keyframes bmIdleBallerina{0%,100%{transform:translateY(0) rotate(-.7deg) scale(var(--unit-scale,1))}50%{transform:translateY(-3.1%) rotate(1.2deg) scale(calc(var(--unit-scale,1)*1.016))}}
 @keyframes bmIdleTung{0%,100%{transform:translateY(0) rotate(.1deg) scale(var(--unit-scale,1))}50%{transform:translateY(-1%) rotate(-.15deg) scale(calc(var(--unit-scale,1)*1.004))}}
 
-/* A cloned unit flies from source cell to destination before the merge result settles. */
+/* A cloned unit flies from source cell to destination before the result settles. */
 .fx-unit-flight{position:fixed!important;z-index:120!important;pointer-events:none!important;margin:0!important;transform-origin:50% 80%!important;animation:none!important;filter:brightness(1.04) saturate(1.06) drop-shadow(0 12px 8px rgba(65,42,52,.22))!important}
+.fx-unit-flight.is-move-flight{filter:brightness(1.025) saturate(1.03) drop-shadow(0 10px 7px rgba(65,42,52,.18))!important}
 .fx-unit-flight .unit-art{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
 .fx-unit-flight::before{position:absolute!important;inset:0!important}
+
+/* Plain board moves land with a toy-like compression instead of teleporting. */
+.cell.fx-move-land .unit-visual{animation:bmMoveLand .5s cubic-bezier(.18,.88,.2,1.16) both!important}
+.cell.fx-move-land .unit-shadow{animation:bmMoveShadow .48s ease-out both!important}
+@keyframes bmMoveLand{0%{transform:translateY(-8%) scale(calc(var(--unit-scale,1)*1.06))}42%{transform:translateY(2%) scaleX(calc(var(--unit-scale,1)*1.07)) scaleY(calc(var(--unit-scale,1)*.94))}70%{transform:translateY(-1.5%) scale(calc(var(--unit-scale,1)*1.018))}100%{transform:translateY(0) scale(var(--unit-scale,1))}}
+@keyframes bmMoveShadow{0%{opacity:.16;transform:translateX(-50%) scaleX(.68)}48%{opacity:.34;transform:translateX(-50%) scaleX(1.08)}100%{opacity:var(--unit-shadow-opacity,.28);transform:translateX(-50%) scaleX(var(--shadow-scale,1))}}
+
+/* Invalid actions reject physically but never move the unit or board layout. */
+.cell.fx-reject{animation:bmRejectCell .42s ease-out both!important}
+.cell.fx-reject .unit-visual{animation:bmRejectUnit .42s ease-out both!important}
+.cell.fx-max-reject{animation:bmMaxRejectCell .46s ease-out both!important}
+.cell.fx-max-reject .unit-visual{animation:bmMaxRejectUnit .46s ease-out both!important}
+.board-frame.fx-board-reject{animation:bmBoardReject .36s ease-out both!important}
+@keyframes bmRejectCell{0%,100%{filter:none}28%{filter:brightness(1.08) saturate(.88)}55%{filter:brightness(.98)}}
+@keyframes bmRejectUnit{0%,100%{transform:scale(var(--unit-scale,1)) translateX(0)}20%{transform:scale(var(--unit-scale,1)) translateX(-5px) rotate(-1.6deg)}42%{transform:scale(var(--unit-scale,1)) translateX(5px) rotate(1.6deg)}64%{transform:scale(var(--unit-scale,1)) translateX(-2px)}}
+@keyframes bmMaxRejectCell{0%,100%{filter:none}35%{filter:brightness(1.08) saturate(1.04)}}
+@keyframes bmMaxRejectUnit{0%,100%{transform:scale(var(--unit-scale,1)) translateY(0)}36%{transform:scale(calc(var(--unit-scale,1)*1.035)) translateY(-2%)}62%{transform:scale(calc(var(--unit-scale,1)*.99)) translateY(1%)}}
+@keyframes bmBoardReject{0%,100%{transform:translateX(0)}30%{transform:translateX(-2px)}58%{transform:translateX(2px)}}
 
 /* Coins arc toward the HUD for explicit rewards/merge rewards. */
 .fx-coin-trail{position:fixed;z-index:130;width:14px;height:14px;border:2px solid #d89a19;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff8a9 0 17%,#ffd845 20% 62%,#e99f18 65% 100%);box-shadow:inset 0 2px rgba(255,255,255,.58),0 3px 7px rgba(88,57,27,.2);pointer-events:none;will-change:transform,opacity}
@@ -44,6 +63,20 @@
 @keyframes bmCollectionUnlock{0%{transform:scale(.72) rotate(-6deg);filter:brightness(1.35) saturate(1.3)}38%{transform:scale(1.18) rotate(3deg);filter:brightness(1.16) saturate(1.16)}68%{transform:scale(.97) rotate(-1deg)}100%{transform:scale(1);filter:none}}
 @keyframes bmCollectionCard{0%,100%{filter:none;transform:scale(1)}38%{filter:brightness(1.06);transform:scale(1.012)}}
 
+/* Progression choreography: meaningful state changes pull attention briefly, never continuously. */
+.hud-pill--level.fx-level-up{animation:bmLevelUp .82s cubic-bezier(.16,.88,.2,1.14) both!important}
+.side-card--mission.fx-mission-progress{animation:bmMissionProgress .68s ease-out both!important}
+.side-card--mission.fx-mission-complete{animation:bmMissionComplete .94s cubic-bezier(.16,.88,.2,1.14) both!important}
+.next-action.fx-next-move{animation:bmNextMove .58s cubic-bezier(.18,.82,.2,1.08) both!important}
+@keyframes bmLevelUp{0%,100%{transform:scale(1);filter:none}34%{transform:scale(1.08) rotate(-1deg);filter:brightness(1.16) saturate(1.08)}66%{transform:scale(.99) rotate(.4deg)}}
+@keyframes bmMissionProgress{0%,100%{transform:scale(1);filter:none}36%{transform:scale(1.014);filter:brightness(1.06) saturate(1.04)}62%{transform:scale(.998)}}
+@keyframes bmMissionComplete{0%,100%{transform:scale(1);filter:none}28%{transform:scale(1.025) rotate(-.4deg);filter:brightness(1.11) saturate(1.08)}55%{transform:scale(.992) rotate(.25deg)}74%{transform:scale(1.01)}}
+@keyframes bmNextMove{0%{opacity:.62;transform:translateY(5px) scale(.985)}44%{opacity:1;transform:translateY(-2px) scale(1.016)}100%{opacity:1;transform:none}}
+
+/* All production CTAs get the same short toy-button compression. */
+[data-action],.locale-button,.audio-toggle{transform-origin:50% 60%;will-change:transform}
+[data-action].fx-pressed,.locale-button.fx-pressed,.audio-toggle.fx-pressed{transform:translateY(2px) scale(.965)!important;filter:brightness(.98) saturate(1.03)!important;transition:transform 70ms ease-out,filter 70ms ease-out!important}
+
 /* Drag/merge target gets stronger physical anticipation without changing hitboxes. */
 .cell.is-selected{filter:brightness(1.025)}
 .cell.is-merge-target::before{content:'';position:absolute;z-index:0;inset:4px;border:3px solid rgba(255,245,145,.9);border-radius:16px;box-shadow:0 0 0 3px rgba(255,213,72,.2),0 0 18px rgba(255,216,77,.46);pointer-events:none;animation:bmTargetHalo .72s ease-in-out infinite alternate}
@@ -53,7 +86,8 @@
 .cell.fx-pointer-drag .unit-shadow{opacity:.24!important;transform:translateX(-50%) scaleX(.7) scaleY(.65)!important}
 
 @media(prefers-reduced-motion:reduce){
-  .cell[data-family] .unit-visual,.game-shell.fx-discovery-celebration .board-frame,.game-shell.fx-discovery-celebration .board-zone::after,.fx-discovery-tier,.cell.is-merge-target::before,.collection-chip.fx-collection-unlock,.side-card--collection.fx-collection-card{animation:none!important}
+  .cell[data-family] .unit-visual,.game-shell.fx-discovery-celebration .board-frame,.game-shell.fx-discovery-celebration .board-zone::after,.fx-discovery-tier,.cell.is-merge-target::before,.collection-chip.fx-collection-unlock,.side-card--collection.fx-collection-card,.cell.fx-move-land .unit-visual,.cell.fx-move-land .unit-shadow,.cell.fx-reject,.cell.fx-reject .unit-visual,.cell.fx-max-reject,.cell.fx-max-reject .unit-visual,.board-frame.fx-board-reject,.hud-pill--level.fx-level-up,.side-card--mission.fx-mission-progress,.side-card--mission.fx-mission-complete,.next-action.fx-next-move{animation:none!important}
   .fx-unit-flight,.fx-coin-trail,.fx-discovery-tier,.fx-spawn-orb,.fx-spawn-spark{display:none!important}
+  [data-action].fx-pressed,.locale-button.fx-pressed,.audio-toggle.fx-pressed{transform:none!important;filter:none!important;transition:none!important}
   .cell.fx-pointer-drag .unit-visual{transform:translateY(-3%) scale(calc(var(--unit-scale,1)*1.025))!important;filter:none}
 }
