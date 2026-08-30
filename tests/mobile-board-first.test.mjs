@@ -2,20 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, css, runtime] = await Promise.all([
+const [html, css, runtime, iconCss] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/mobile-sheets.css', import.meta.url), 'utf8'),
-  readFile(new URL('../public/mobile-sheets.js', import.meta.url), 'utf8')
+  readFile(new URL('../public/mobile-sheets.js', import.meta.url), 'utf8'),
+  readFile(new URL('../public/ui-icon-pass.css', import.meta.url), 'utf8')
 ]);
 
-test('mobile sheet layer loads after visual/game-feel CSS but before accessibility', () => {
+test('mobile sheet and icon layers load after visual/game-feel CSS but before accessibility', () => {
   const visual = html.indexOf('./public/visual-finish.css');
   const advanced = html.indexOf('./public/game-feel-advanced.css');
   const sheets = html.indexOf('./public/mobile-sheets.css');
+  const icons = html.indexOf('./public/ui-icon-pass.css');
   const accessibility = html.indexOf('./public/accessibility.css');
   assert.ok(sheets > visual);
   assert.ok(sheets > advanced);
-  assert.ok(accessibility > sheets);
+  assert.ok(icons > sheets);
+  assert.ok(accessibility > icons);
   assert.match(html, /<script type="module" src="\.\/public\/mobile-sheets\.js"><\/script>/);
 });
 
@@ -31,7 +34,7 @@ test('phone keeps Mission Collection and Brain Lab out of document flow while re
   assert.match(css, /env\(safe-area-inset-bottom\)/);
 });
 
-test('mobile controller reflects existing localized DOM instead of owning game state', () => {
+test('mobile controller reflects existing localized DOM and binds approved icon assets', () => {
   assert.match(runtime, /\.side-card__eyebrow/);
   assert.match(runtime, /\.collection-count/);
   assert.match(runtime, /\.upgrade-card\.is-affordable/);
@@ -39,5 +42,19 @@ test('mobile controller reflects existing localized DOM instead of owning game s
   assert.match(runtime, /panel\.inert = mobile && !open/);
   assert.match(runtime, /aria-hidden/);
   assert.match(runtime, /aria-expanded/);
+  assert.match(runtime, /icon-missions\.webp/);
+  assert.match(runtime, /icon-collection\.webp/);
+  assert.match(runtime, /icon-brain-lab\.webp/);
+  assert.match(runtime, /mobile-dock__icon/);
   assert.doesNotMatch(runtime, /coins\s*=|merges\s*=|maxDiscoveredTier\s*=/);
+});
+
+test('icon pass owns reward art and alignment fixes without changing gameplay state', () => {
+  assert.match(iconCss, /icon-rewards\.webp/);
+  assert.match(iconCss, /\.mission-reward::before/);
+  assert.match(iconCss, /\.chain-progress strong b/);
+  assert.match(iconCss, /align-items:center!important/);
+  assert.match(iconCss, /\.cell \.unit-income/);
+  assert.match(iconCss, /\.cell \.tier-badge/);
+  assert.match(iconCss, /\.discovery-toast/);
 });

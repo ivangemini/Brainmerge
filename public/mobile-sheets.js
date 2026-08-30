@@ -5,9 +5,9 @@ let activePanel = null;
 let scheduled = false;
 
 const PANELS = [
-  { id: 'missions', selector: '.side-card--mission', glyph: '✓' },
-  { id: 'collection', selector: '.side-card--collection', glyph: '◆' },
-  { id: 'lab', selector: '.side-card--lab', glyph: '✦' }
+  { id: 'missions', selector: '.side-card--mission', icon: './public/assets/ui/icon-missions.webp' },
+  { id: 'collection', selector: '.side-card--collection', icon: './public/assets/ui/icon-collection.webp' },
+  { id: 'lab', selector: '.side-card--lab', icon: './public/assets/ui/icon-brain-lab.webp' }
 ];
 
 function panelStatus(id, panel) {
@@ -111,10 +111,12 @@ function enhance() {
     button.setAttribute('aria-expanded', 'false');
     item.panel.id = `mobile-sheet-${item.id}`;
 
-    const glyph = document.createElement('span');
-    glyph.className = 'mobile-dock__glyph';
-    glyph.setAttribute('aria-hidden', 'true');
-    glyph.textContent = item.glyph;
+    const icon = document.createElement('img');
+    icon.className = 'mobile-dock__icon';
+    icon.src = item.icon;
+    icon.alt = '';
+    icon.decoding = 'async';
+    icon.setAttribute('aria-hidden', 'true');
 
     const label = document.createElement('strong');
     label.textContent = item.label;
@@ -122,7 +124,7 @@ function enhance() {
     const status = document.createElement('small');
     status.textContent = panelStatus(item.id, item.panel);
 
-    button.append(glyph, label, status);
+    button.append(icon, label, status);
     button.addEventListener('click', () => setPanel(shell, item.id));
     nav.append(button);
   }
