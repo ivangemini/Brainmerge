@@ -120,11 +120,14 @@ try {
 
     const spawnButton = page.locator('[data-action="spawn"]');
     assert(await spawnButton.isEnabled(), 'fresh economy after one merge must still allow a paid Brain Box');
+    await spawnButton.scrollIntoViewIfNeeded();
     const spawnBox = await spawnButton.boundingBox();
     assert(spawnBox, 'spawn CTA must have geometry');
     await page.mouse.move(spawnBox.x + spawnBox.width / 2, spawnBox.y + spawnBox.height / 2);
     await page.mouse.down();
     assert(await spawnButton.evaluate((el) => el.classList.contains('fx-pressed')), 'production CTA must compress on pointer down');
+    const pressedTransform = await spawnButton.evaluate((el) => getComputedStyle(el).transform);
+    assert(pressedTransform !== 'none', 'pressed production CTA must expose a real transform');
     await page.mouse.up();
     assert(!(await spawnButton.evaluate((el) => el.classList.contains('fx-pressed'))), 'CTA press state must clear on release');
 
