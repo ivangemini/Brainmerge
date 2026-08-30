@@ -22,13 +22,15 @@ function createHarness() {
   let timerId = 0;
   let readyCalls = 0;
   const gameplay = [];
+  let fullscreenCallbacks = null;
+  let rewardedCallbacks = null;
   const sdk = {
     environment: { i18n: { lang: 'ru' } },
     async getPlayer() { return player; },
     async getStorage() { return storage; },
     adv: {
-      showFullscreenAdv() {},
-      showRewardedVideo() {}
+      showFullscreenAdv(options) { fullscreenCallbacks = options?.callbacks ?? null; },
+      showRewardedVideo(options) { rewardedCallbacks = options?.callbacks ?? null; }
     },
     features: {
       LoadingAPI: { ready() { readyCalls += 1; } },
@@ -50,11 +52,14 @@ function createHarness() {
   };
   return {
     windowMock,
+    sdk,
     cloudWrites,
     storageMap,
     gameplay,
     readyCalls() { return readyCalls; },
     setCloudData(data) { cloudData = data; },
+    fullscreenCallbacks() { return fullscreenCallbacks; },
+    rewardedCallbacks() { return rewardedCallbacks; },
     runTimers() {
       const callbacks = [...timers.values()];
       timers.clear();
@@ -75,6 +80,17 @@ async function withWindow(windowMock, callback) {
   }
 }
 
+async function withDocument(hidden, callback) {
+  const previousDocument = globalThis.document;
+  globalThis.document = { hidden };
+  try {
+    return await callback();
+  } finally {
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+  }
+}
+
 test('Yandex adapter delays Game Ready and gameplay start until the rendered game explicitly signals readiness', async () => {
   const harness = createHarness();
   await withWindow(harness.windowMock, async () => {
@@ -91,6 +107,102 @@ test('Yandex adapter delays Game Ready and gameplay start until the rendered gam
     await adapter.gameReady();
     assert.equal(harness.readyCalls(), 1, 'Game Ready must be emitted once');
     assert.deepEqual(harness.gameplay, ['start'], 'duplicate readiness must not duplicate GameplayAPI.start');
+  });
+});
+
+test('Yandex GameplayAPI transitions are idempotent across duplicate lifecycle signals', async () => {
+  const harness = createHarness();
+  await withWindow(harness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    adapter.setGameplayActive(true);
+    adapter.setGameplayActive(true);
+    adapter.setGameplayActive(false);
+    adapter.setGameplayActive(false);
+    adapter.setGameplayActive(true);
+    assert.deepEqual(harness.gameplay, ['start', 'stop', 'start']);
+  });
+});
+
+test('rewarded ad grants reward only after onRewarded and resumes once on close', async () => {
+  const harness = createHarness();
+  await withWindow(harness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const rewardPromise = adapter.showRewarded('brain-box');
+    assert.deepEqual(harness.gameplay, ['start', 'stop']);
+    harness.rewardedCallbacks().onRewarded?.();
+    harness.rewardedCallbacks().onClose?.(true);
+    assert.equal(await rewardPromise, true);
+    assert.deepEqual(harness.gameplay, ['start', 'stop', 'start']);
+  });
+});
+
+test('rewarded close without reward and ad error never grant a free reward', async () => {
+  const closeHarness = createHarness();
+  await withWindow(closeHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const rewardPromise = adapter.showRewarded('brain-box');
+    closeHarness.rewardedCallbacks().onClose?.(true);
+    assert.equal(await rewardPromise, false);
+    assert.deepEqual(closeHarness.gameplay, ['start', 'stop', 'start']);
+  });
+
+  const errorHarness = createHarness();
+  await withWindow(errorHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const rewardPromise = adapter.showRewarded('brain-box');
+    errorHarness.rewardedCallbacks().onError?.(new Error('ad failed'));
+    assert.equal(await rewardPromise, false);
+    assert.deepEqual(errorHarness.gameplay, ['start', 'stop', 'start']);
+  });
+});
+
+test('ad close while the document is hidden does not incorrectly resume GameplayAPI', async () => {
+  const harness = createHarness();
+  await withWindow(harness.windowMock, async () => withDocument(false, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const rewardPromise = adapter.showRewarded('brain-box');
+    globalThis.document.hidden = true;
+    harness.rewardedCallbacks().onRewarded?.();
+    harness.rewardedCallbacks().onClose?.(true);
+    assert.equal(await rewardPromise, true, 'reward event remains valid even if the page was hidden before close');
+    assert.deepEqual(harness.gameplay, ['start', 'stop'], 'hidden page must remain stopped after ad close');
+    globalThis.document.hidden = false;
+    adapter.setGameplayActive(true);
+    assert.deepEqual(harness.gameplay, ['start', 'stop', 'start'], 'visibility resume starts gameplay exactly once');
+  }));
+});
+
+test('fullscreen ads report shown state and recover safely from error', async () => {
+  const shownHarness = createHarness();
+  await withWindow(shownHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const shownPromise = adapter.showInterstitial('break');
+    shownHarness.fullscreenCallbacks().onClose?.(true);
+    assert.equal(await shownPromise, true);
+    assert.deepEqual(shownHarness.gameplay, ['start', 'stop', 'start']);
+  });
+
+  const errorHarness = createHarness();
+  await withWindow(errorHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const shownPromise = adapter.showInterstitial('break');
+    errorHarness.fullscreenCallbacks().onError?.(new Error('ad failed'));
+    assert.equal(await shownPromise, false);
+    assert.deepEqual(errorHarness.gameplay, ['start', 'stop', 'start']);
   });
 });
 
