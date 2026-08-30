@@ -47,7 +47,7 @@ function deadlockState() {
   return baseState({ cells: Array.from({ length: 30 }, (_, i) => unit('tung-wood', 8, i)), coins: 777, maxDiscoveredTier: 8, merges: 100, spawns: 50, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
 }
 function rewardAndUpgradeState() {
-  const cells = Array(30).fill(null); cells[0] = unit('toilet-buddy', 1, 0); cells[1] = unit('camera-dude', 2, 1);
+  const cells = Array(30).fill(null); cells[0] = unit('toilet-buddy', 1, 0);
   return baseState({ cells, coins: 99999, merges: 6, spawns: 12, maxDiscoveredTier: 1, missionIndex: 0, pendingOfflineCoins: 12345 });
 }
 function maxedUpgradeState() {
