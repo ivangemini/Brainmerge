@@ -118,6 +118,10 @@ const TOILET_BUDDY = './public/assets/characters/toilet-buddy-form-a.webp';
 /**
  * Canonical core progression. First discovery of every tier above T1 must come
  * from merging. Brain Box upgrades only accelerate rebuilding of discovered tiers.
+ *
+ * Presentation scales are capture-tuned perceived-mass corrections. The shared
+ * atlas cells contain different amounts of transparent breathing room, so equal
+ * raw scales make some characters read much smaller than others in the live board.
  */
 export const FAMILIES: readonly FamilyDefinition[] = [
   {
@@ -126,7 +130,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 1,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[1]!,
     asset: TOILET_BUDDY,
-    presentation: { scale: 1, yPercent: 0, shadowScale: 0.9, collectionScale: 1 }
+    presentation: { scale: 1.08, yPercent: 0, shadowScale: 0.94, collectionScale: 1.04 }
   },
   {
     id: 'camera-dude',
@@ -134,7 +138,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 2,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[2]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 1.04, yPercent: 0, shadowScale: 0.9, collectionScale: 1.03 }
+    presentation: { scale: 1.14, yPercent: 0, shadowScale: 0.95, collectionScale: 1.08 }
   },
   {
     id: 'sigma-rock',
@@ -142,7 +146,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 3,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[3]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.92, collectionScale: 1 }
+    presentation: { scale: 1.08, yPercent: 0, shadowScale: 0.96, collectionScale: 1.03 }
   },
   {
     id: 'rizz-head',
@@ -150,7 +154,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 4,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[4]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 1.02, yPercent: 0, shadowScale: 0.82, collectionScale: 1 }
+    presentation: { scale: 1.09, yPercent: 0, shadowScale: 0.86, collectionScale: 1.03 }
   },
   {
     id: 'shark-sneakers',
@@ -158,7 +162,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 5,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[5]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 0.90, yPercent: 0, shadowScale: 1, collectionScale: 1.03 }
+    presentation: { scale: 0.96, yPercent: 0, shadowScale: 1.04, collectionScale: 1.06 }
   },
   {
     id: 'crocodile-bomber',
@@ -166,7 +170,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 6,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[6]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 1, yPercent: 0, shadowScale: 1, collectionScale: 1 }
+    presentation: { scale: 1.05, yPercent: 0, shadowScale: 1.04, collectionScale: 1.03 }
   },
   {
     id: 'coffee-ballerina',
@@ -174,7 +178,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 7,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[7]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 1.06, yPercent: 0, shadowScale: 0.86, collectionScale: 1.05 }
+    presentation: { scale: 1.12, yPercent: 0, shadowScale: 0.9, collectionScale: 1.08 }
   },
   {
     id: 'tung-wood',
@@ -182,7 +186,7 @@ export const FAMILIES: readonly FamilyDefinition[] = [
     tier: 8,
     incomePerMinute: INCOME_PER_MINUTE_BY_TIER[8]!,
     asset: BASE_CHARACTER_ATLAS,
-    presentation: { scale: 0.96, yPercent: 0, shadowScale: 0.82, collectionScale: 0.96 }
+    presentation: { scale: 1.03, yPercent: 0, shadowScale: 0.88, collectionScale: 1.01 }
   }
 ] as const;
 
