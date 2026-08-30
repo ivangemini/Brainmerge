@@ -73,11 +73,19 @@ test('Box and wait guidance use the current escalating price and production rate
   assert.equal(wait.minutes, 7);
 });
 
-test('completed T8 journey stops presenting another Box as mandatory progression', () => {
-  const state = {
+test('T8 checkpoint keeps progression active while terminal T18 stops mandatory Box guidance', () => {
+  const completedUpgrades = { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 };
+  const checkpoint = {
     ...singleUnitState(8, 0),
     missionIndex: MISSION_TRACK.length,
-    upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 }
+    upgrades: completedUpgrades
   };
-  assert.equal(nextActionHint(state).kind, 'complete');
+  assert.notEqual(nextActionHint(checkpoint).kind, 'complete', 'T8 is now a mid-chain checkpoint');
+
+  const terminal = {
+    ...singleUnitState(FAMILIES.length, 0),
+    missionIndex: MISSION_TRACK.length,
+    upgrades: completedUpgrades
+  };
+  assert.equal(nextActionHint(terminal).kind, 'complete');
 });
