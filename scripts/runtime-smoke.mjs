@@ -139,6 +139,7 @@ try {
     const { context, page } = await openFixture(highTierState(), 'high-tier');
     for (const [familyId] of FAMILIES) assert((await page.locator(`.cell[data-family="${familyId}"]`).count()) >= 1, `high-tier: missing ${familyId}`);
     assert((await page.locator('.collection-chip.is-unlocked').count()) === 8, 'high-tier: Collection must unlock all tiers');
+    assert((await page.locator('.offline-reward').count()) === 0, 'high-tier: trivial boot gap must not surface offline reward');
     for (const [familyId] of FAMILIES.slice(1)) {
       const sprite = await page.locator(`.cell[data-family="${familyId}"] .unit-visual`).evaluate((e) => { const p = getComputedStyle(e, '::before'); return { bg: p.backgroundImage, display: p.display, width: e.getBoundingClientRect().width }; });
       assert(sprite.bg !== 'none' && sprite.display !== 'none' && sprite.width > 0, `high-tier: ${familyId} sprite missing`);
