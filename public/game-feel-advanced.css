@@ -1,0 +1,46 @@
+/* Advanced Brainmerge motion layer. Presentation only; no layout or gameplay ownership. */
+
+/* Family-specific idle personalities keep the board alive without synchronized motion. */
+.cell[data-family='camera-dude'] .unit-visual{animation-name:bmIdleCamera;animation-duration:3.1s}
+.cell[data-family='sigma-rock'] .unit-visual{animation-name:bmIdleSigma;animation-duration:4.6s}
+.cell[data-family='rizz-head'] .unit-visual{animation-name:bmIdleRizz;animation-duration:3.8s}
+.cell[data-family='shark-sneakers'] .unit-visual{animation-name:bmIdleShark;animation-duration:4.2s}
+.cell[data-family='crocodile-bomber'] .unit-visual{animation-name:bmIdleCroc;animation-duration:3.5s}
+.cell[data-family='coffee-ballerina'] .unit-visual{animation-name:bmIdleBallerina;animation-duration:3s}
+.cell[data-family='tung-wood'] .unit-visual{animation-name:bmIdleTung;animation-duration:4.8s}
+
+@keyframes bmIdleCamera{0%,100%{transform:translateY(0) rotate(-.5deg) scale(var(--unit-scale,1))}42%{transform:translateY(-2.8%) rotate(.9deg) scale(calc(var(--unit-scale,1)*1.015))}58%{transform:translateY(-1.2%) rotate(-.6deg) scale(calc(var(--unit-scale,1)*1.006))}}
+@keyframes bmIdleSigma{0%,100%{transform:translateY(0) rotate(.15deg) scale(var(--unit-scale,1))}50%{transform:translateY(-1.2%) rotate(-.15deg) scale(calc(var(--unit-scale,1)*1.006))}}
+@keyframes bmIdleRizz{0%,100%{transform:translateY(0) rotate(-.25deg) scale(var(--unit-scale,1))}46%{transform:translateY(-2%) rotate(.55deg) scale(calc(var(--unit-scale,1)*1.01))}63%{transform:translateY(-1%) rotate(-.35deg) scale(calc(var(--unit-scale,1)*1.004))}}
+@keyframes bmIdleShark{0%,100%{transform:translateY(0) rotate(.25deg) scale(var(--unit-scale,1))}52%{transform:translateY(-1.4%) rotate(-.3deg) scale(calc(var(--unit-scale,1)*1.007))}}
+@keyframes bmIdleCroc{0%,100%{transform:translateY(0) rotate(-.35deg) scale(var(--unit-scale,1))}38%{transform:translateY(-2.1%) rotate(.75deg) scale(calc(var(--unit-scale,1)*1.012))}70%{transform:translateY(-.8%) rotate(-.45deg) scale(calc(var(--unit-scale,1)*1.004))}}
+@keyframes bmIdleBallerina{0%,100%{transform:translateY(0) rotate(-.7deg) scale(var(--unit-scale,1))}50%{transform:translateY(-3.1%) rotate(1.2deg) scale(calc(var(--unit-scale,1)*1.016))}}
+@keyframes bmIdleTung{0%,100%{transform:translateY(0) rotate(.1deg) scale(var(--unit-scale,1))}50%{transform:translateY(-1%) rotate(-.15deg) scale(calc(var(--unit-scale,1)*1.004))}}
+
+/* A cloned unit flies from source cell to destination before the merge result settles. */
+.fx-unit-flight{position:fixed!important;z-index:120!important;pointer-events:none!important;margin:0!important;transform-origin:50% 80%!important;animation:none!important;filter:brightness(1.04) saturate(1.06) drop-shadow(0 12px 8px rgba(65,42,52,.22))!important}
+.fx-unit-flight .unit-art{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important}
+.fx-unit-flight::before{position:absolute!important;inset:0!important}
+
+/* Coins arc toward the HUD for explicit rewards/merge rewards. */
+.fx-coin-trail{position:fixed;z-index:130;width:14px;height:14px;border:2px solid #d89a19;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff8a9 0 17%,#ffd845 20% 62%,#e99f18 65% 100%);box-shadow:inset 0 2px rgba(255,255,255,.58),0 3px 7px rgba(88,57,27,.2);pointer-events:none;will-change:transform,opacity}
+.fx-coin-trail::after{content:'';position:absolute;inset:3px;border:1px solid rgba(161,102,14,.44);border-radius:50%}
+
+/* Discovery is a board-level moment, not only a toast. */
+.game-shell.fx-discovery-celebration .board-frame{animation:bmDiscoveryHeroBoard .82s cubic-bezier(.18,.82,.2,1) both}
+.game-shell.fx-discovery-celebration .board-zone::after{content:'';position:absolute;z-index:28;inset:0;border-radius:28px;pointer-events:none;background:radial-gradient(circle at 50% 48%,rgba(255,245,158,.34),rgba(199,137,239,.08) 38%,transparent 68%);animation:bmDiscoveryWash .8s ease-out both}
+.fx-discovery-tier{position:fixed;z-index:135;pointer-events:none;transform:translate(-50%,-50%);display:grid;place-items:center;min-width:52px;height:38px;padding:0 12px;border:3px solid #fff0a2;border-radius:999px;background:linear-gradient(180deg,#a96bd5,#74469d);color:#fff;font-size:17px;font-weight:950;text-shadow:0 2px #5d357c;box-shadow:0 0 0 4px rgba(255,235,134,.28),0 12px 26px rgba(72,43,93,.25);animation:bmDiscoveryTier .9s cubic-bezier(.16,.88,.2,1.16) both}
+.fx-discovery-tier.is-max{min-width:68px;height:46px;font-size:21px;border-width:4px;background:linear-gradient(180deg,#f2b44d,#b76ad4 58%,#75469f);box-shadow:0 0 0 6px rgba(255,236,137,.34),0 16px 30px rgba(72,43,93,.3);animation-duration:1.15s}
+@keyframes bmDiscoveryHeroBoard{0%{transform:scale(1);filter:brightness(1)}30%{transform:scale(1.012);filter:brightness(1.11) saturate(1.06)}65%{transform:scale(.998);filter:brightness(1.03)}100%{transform:scale(1);filter:none}}
+@keyframes bmDiscoveryWash{0%{opacity:0;transform:scale(.86)}25%{opacity:1}100%{opacity:0;transform:scale(1.08)}}
+@keyframes bmDiscoveryTier{0%{opacity:0;transform:translate(-50%,-15%) scale(.45) rotate(-10deg)}34%{opacity:1;transform:translate(-50%,-72%) scale(1.18) rotate(3deg)}62%{transform:translate(-50%,-92%) scale(.97) rotate(-1deg)}100%{opacity:0;transform:translate(-50%,-155%) scale(1.02) rotate(0)}}
+
+/* Drag/merge target gets stronger physical anticipation without changing hitboxes. */
+.cell.is-selected{filter:brightness(1.025)}
+.cell.is-merge-target::before{content:'';position:absolute;z-index:0;inset:4px;border:3px solid rgba(255,245,145,.9);border-radius:16px;box-shadow:0 0 0 3px rgba(255,213,72,.2),0 0 18px rgba(255,216,77,.46);pointer-events:none;animation:bmTargetHalo .72s ease-in-out infinite alternate}
+@keyframes bmTargetHalo{to{opacity:.58;transform:scale(.96)}}
+
+@media(prefers-reduced-motion:reduce){
+  .cell[data-family] .unit-visual,.game-shell.fx-discovery-celebration .board-frame,.game-shell.fx-discovery-celebration .board-zone::after,.fx-discovery-tier,.cell.is-merge-target::before{animation:none!important}
+  .fx-unit-flight,.fx-coin-trail,.fx-discovery-tier{display:none!important}
+}
