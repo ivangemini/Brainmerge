@@ -1,0 +1,104 @@
+import { createServer } from 'node:http';
+import { readFile, stat } from 'node:fs/promises';
+import { extname, join, normalize } from 'node:path';
+import { chromium } from 'playwright';
+
+const ROOT = new URL('../dist/', import.meta.url);
+const APP_URL = 'http://127.0.0.1:4175/?platform=local';
+const mime = new Map([
+  ['.html', 'text/html; charset=utf-8'], ['.js', 'text/javascript; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'], ['.webp', 'image/webp'], ['.png', 'image/png'], ['.svg', 'image/svg+xml']
+]);
+
+function assert(condition, message) { if (!condition) throw new Error(message); }
+function safePath(urlPath) {
+  const clean = decodeURIComponent(urlPath.split('?')[0]).replace(/^\/+/, '') || 'index.html';
+  const normalized = normalize(clean);
+  if (normalized.startsWith('..')) throw new Error('Unsafe path');
+  return join(ROOT.pathname, normalized);
+}
+
+const server = createServer(async (req, res) => {
+  try {
+    let filePath = safePath(req.url ?? '/');
+    try { const info = await stat(filePath); if (info.isDirectory()) filePath = join(filePath, 'index.html'); }
+    catch { if (!extname(filePath)) filePath = join(ROOT.pathname, 'index.html'); }
+    const body = await readFile(filePath);
+    res.writeHead(200, { 'content-type': mime.get(extname(filePath)) ?? 'application/octet-stream', 'cache-control': 'no-store' });
+    res.end(body);
+  } catch {
+    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end('Not found');
+  }
+});
+
+async function openRuntime(context) {
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(APP_URL, { waitUntil: 'networkidle' });
+  await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+  assert(errors.length === 0, `boot page errors: ${errors.join(' | ')}`);
+  return { page, errors };
+}
+
+await new Promise((resolve) => server.listen(4175, '127.0.0.1', resolve));
+const browser = await chromium.launch({ headless: true });
+
+try {
+  // Normal-motion path: real merge and Brain Box actions must emit transient choreography.
+  {
+    const context = await browser.newContext({ viewport: { width: 1024, height: 576 } });
+    const { page, errors } = await openRuntime(context);
+
+    const occupied = page.locator('.cell.is-occupied');
+    assert(await occupied.count() >= 4, 'fresh board must expose the starter merge pair');
+
+    await page.locator('[data-cell="0"]').click({ force: true });
+    await page.locator('[data-cell="1"]').click({ force: true });
+
+    const mergeCell = page.locator('[data-cell="1"]');
+    assert(await mergeCell.evaluate((el) => el.classList.contains('fx-merge-result')), 'merge result class must be emitted by the real merge transition');
+    assert(await page.locator('.fx-burst').count() >= 1, 'merge must emit a transient particle burst');
+    const mergeAnimation = await mergeCell.locator('.unit-visual').evaluate((el) => getComputedStyle(el).animationName);
+    assert(mergeAnimation.includes('bmMergePop'), `merge result must run bmMergePop, got ${mergeAnimation}`);
+
+    await page.waitForTimeout(800);
+    assert(await page.locator('.fx-burst').count() === 0, 'merge particle burst must clean itself up');
+
+    const spawnButton = page.locator('[data-action="spawn"]');
+    assert(await spawnButton.isEnabled(), 'fresh economy after one merge must still allow a paid Brain Box');
+    await spawnButton.click({ force: true });
+    assert(await page.locator('.spawn-dock.fx-spawn-dock').count() === 1, 'Brain Box action must animate the spawn dock');
+    assert(await page.locator('.cell.fx-spawn').count() === 1, 'new Brain Box unit must receive spawn-pop choreography');
+    const spawnAnimation = await page.locator('.cell.fx-spawn .unit-visual').evaluate((el) => getComputedStyle(el).animationName);
+    assert(spawnAnimation.includes('bmSpawnPop'), `spawned unit must run bmSpawnPop, got ${spawnAnimation}`);
+
+    await page.waitForTimeout(800);
+    assert(await page.locator('.cell.fx-spawn').count() === 0, 'spawn transition class must be transient');
+    assert(errors.length === 0, `motion path page errors: ${errors.join(' | ')}`);
+    await context.close();
+  }
+
+  // Reduced-motion path: state transition still works while particles and animated event classes resolve statically.
+  {
+    const context = await browser.newContext({ viewport: { width: 1024, height: 576 }, reducedMotion: 'reduce' });
+    const { page, errors } = await openRuntime(context);
+    assert(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), 'reduced-motion media query must be active');
+
+    await page.locator('[data-cell="0"]').click({ force: true });
+    await page.locator('[data-cell="1"]').click({ force: true });
+    assert(await page.locator('[data-cell="1"][data-chain-tier="2"]').count() === 1, 'merge gameplay must still complete with reduced motion');
+    assert(await page.locator('.fx-burst').count() === 0, 'reduced motion must suppress particle DOM creation');
+    const duration = await page.locator('[data-cell="1"] .unit-visual').evaluate((el) => getComputedStyle(el).animationDuration);
+    const seconds = duration.endsWith('ms') ? Number.parseFloat(duration) / 1000 : Number.parseFloat(duration);
+    assert(Number.isFinite(seconds) && seconds <= 0.001, `reduced-motion merge animation must collapse to <=1ms, got ${duration}`);
+    assert(errors.length === 0, `reduced-motion path page errors: ${errors.join(' | ')}`);
+    await context.close();
+  }
+
+  console.log('Packaged motion smoke OK: merge + spawn choreography + cleanup + reduced motion');
+} finally {
+  await browser.close();
+  await new Promise((resolve) => server.close(resolve));
+}
