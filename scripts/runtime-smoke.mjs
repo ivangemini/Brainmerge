@@ -8,7 +8,10 @@ const OUTPUT = new URL('../runtime-artifacts/', import.meta.url);
 const SAVE_KEY = 'brainmerge.save.v1';
 const FAMILIES = [
   ['toilet-buddy', 1], ['camera-dude', 2], ['sigma-rock', 3], ['rizz-head', 4],
-  ['shark-sneakers', 5], ['crocodile-bomber', 6], ['coffee-ballerina', 7], ['tung-wood', 8]
+  ['shark-sneakers', 5], ['crocodile-bomber', 6], ['coffee-ballerina', 7], ['tung-wood', 8],
+  ['brr-brr-patapim', 9], ['boneca-ambalabu', 10], ['cappuccino-assassino', 11], ['frigo-camelo', 12],
+  ['lirili-larila', 13], ['chimpanzini-bananini', 14], ['cocofanto-elefanto', 15], ['bombombini-gusini', 16],
+  ['trippi-troppi', 17], ['la-vacca-saturno-saturnita', 18]
 ];
 
 const mime = new Map([
@@ -35,7 +38,7 @@ function baseState(overrides = {}) {
 function highTierState() {
   const cells = Array(30).fill(null);
   FAMILIES.forEach(([familyId, tier], index) => { cells[index] = unit(familyId, tier, index); });
-  return baseState({ cells, coins: 50000, xp: 4000, merges: 80, spawns: 45, paidBoxes: 30, maxDiscoveredTier: 8, missionIndex: 7, upgrades: { boxBaseTier: 2, luckyDrop: 3, income: 3, offline: 2 } });
+  return baseState({ cells, coins: 50000, xp: 12000, merges: 180, spawns: 95, paidBoxes: 60, maxDiscoveredTier: 18, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
 }
 function crowdedState() {
   const cells = Array(30).fill(null);
@@ -44,7 +47,7 @@ function crowdedState() {
   return baseState({ cells, maxDiscoveredTier: 5, merges: 35, spawns: 25, missionIndex: 4 });
 }
 function deadlockState() {
-  return baseState({ cells: Array.from({ length: 30 }, (_, i) => unit('tung-wood', 8, i)), coins: 777, maxDiscoveredTier: 8, merges: 100, spawns: 50, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
+  return baseState({ cells: Array.from({ length: 30 }, (_, i) => unit('la-vacca-saturno-saturnita', 18, i)), coins: 777, maxDiscoveredTier: 18, merges: 220, spawns: 120, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
 }
 function rewardAndUpgradeState() {
   const cells = Array(30).fill(null); cells[0] = unit('toilet-buddy', 1, 0);
@@ -138,11 +141,15 @@ try {
   {
     const { context, page } = await openFixture(highTierState(), 'high-tier');
     for (const [familyId] of FAMILIES) assert((await page.locator(`.cell[data-family="${familyId}"]`).count()) >= 1, `high-tier: missing ${familyId}`);
-    assert((await page.locator('.collection-chip.is-unlocked').count()) === 8, 'high-tier: Collection must unlock all tiers');
+    assert((await page.locator('.collection-chip.is-unlocked').count()) === 18, 'high-tier: Collection must unlock all 18 tiers');
     assert((await page.locator('.offline-reward').count()) === 0, 'high-tier: trivial boot gap must not surface offline reward');
-    for (const [familyId] of FAMILIES.slice(1)) {
+    for (const [familyId] of FAMILIES.slice(1, 8)) {
       const sprite = await page.locator(`.cell[data-family="${familyId}"] .unit-visual`).evaluate((e) => { const p = getComputedStyle(e, '::before'); return { bg: p.backgroundImage, display: p.display, width: e.getBoundingClientRect().width }; });
-      assert(sprite.bg !== 'none' && sprite.display !== 'none' && sprite.width > 0, `high-tier: ${familyId} sprite missing`);
+      assert(sprite.bg !== 'none' && sprite.display !== 'none' && sprite.width > 0, `high-tier: ${familyId} atlas sprite missing`);
+    }
+    for (const [familyId] of FAMILIES.slice(8)) {
+      const art = await page.locator(`.cell[data-family="${familyId}"] .unit-art`).evaluate((e) => ({ complete: e.complete, naturalWidth: e.naturalWidth, width: e.getBoundingClientRect().width, display: getComputedStyle(e).display, opacity: getComputedStyle(e).opacity }));
+      assert(art.complete && art.naturalWidth > 0 && art.width > 0 && art.display !== 'none' && Number(art.opacity) > 0, `high-tier: ${familyId} standalone art missing`);
     }
     await assertHealthyPage(page, 'high-tier'); await page.screenshot({ path: new URL('state-high-tiers.png', OUTPUT).pathname, fullPage: true }); await context.close();
   }
