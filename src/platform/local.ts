@@ -16,6 +16,8 @@ export class LocalPlatformAdapter implements PlatformAdapter {
 
   async initialize(): Promise<void> {}
 
+  async gameReady(): Promise<void> {}
+
   preferredLocale(): Locale | null {
     return null;
   }
