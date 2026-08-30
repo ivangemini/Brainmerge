@@ -1,74 +1,65 @@
-/* Standalone T9-T18 character renders. Loaded after chain-polish so these production assets replace the legacy T2-T8 atlas pseudo-sprites without changing live game markup, state ownership, or hit areas. */
-.cell:is(
-  [data-chain-tier='9'],
-  [data-chain-tier='10'],
-  [data-chain-tier='11'],
-  [data-chain-tier='12'],
-  [data-chain-tier='13'],
-  [data-chain-tier='14'],
-  [data-chain-tier='15'],
-  [data-chain-tier='16'],
-  [data-chain-tier='17'],
-  [data-chain-tier='18']
-) .unit-visual::before {
-  display: none !important;
-}
+/* Unified T1-T18 character atlas routing.
+ * The historical filename is retained so stylesheet ordering stays stable, but
+ * runtime character pixels now come from the existing 6x3 shared atlas.
+ * Standalone <img> elements remain compatibility/fallback markup only and are
+ * visually suppressed; board and Collection both use the same atlas slots. */
 
-.cell:is(
-  [data-chain-tier='9'],
-  [data-chain-tier='10'],
-  [data-chain-tier='11'],
-  [data-chain-tier='12'],
-  [data-chain-tier='13'],
-  [data-chain-tier='14'],
-  [data-chain-tier='15'],
-  [data-chain-tier='16'],
-  [data-chain-tier='17'],
-  [data-chain-tier='18']
-) .unit-art {
+.cell[data-chain-tier] .unit-visual::before {
   display: block !important;
-  opacity: 1 !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain !important;
-  object-position: center !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  background-image: var(--character-atlas) !important;
+  background-repeat: no-repeat !important;
+  background-size: 600% 300% !important;
+  background-position: var(--char-x, 0%) var(--char-y, 0%) !important;
   filter: saturate(1.05) contrast(1.025) drop-shadow(0 4px 3px rgba(58,44,52,.13)) !important;
 }
 
-.collection-chip:is(
-  [data-chain-tier='9'],
-  [data-chain-tier='10'],
-  [data-chain-tier='11'],
-  [data-chain-tier='12'],
-  [data-chain-tier='13'],
-  [data-chain-tier='14'],
-  [data-chain-tier='15'],
-  [data-chain-tier='16'],
-  [data-chain-tier='17'],
-  [data-chain-tier='18']
-)::after {
-  display: none !important;
+.cell[data-chain-tier] .unit-art {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-.collection-chip:is(
-  [data-chain-tier='9'],
-  [data-chain-tier='10'],
-  [data-chain-tier='11'],
-  [data-chain-tier='12'],
-  [data-chain-tier='13'],
-  [data-chain-tier='14'],
-  [data-chain-tier='15'],
-  [data-chain-tier='16'],
-  [data-chain-tier='17'],
-  [data-chain-tier='18']
-) img {
+.collection-chip[data-chain-tier]::after {
   display: block !important;
-  opacity: 1 !important;
-  width: 100% !important;
-  height: 100% !important;
-  padding: 4px !important;
-  object-fit: contain !important;
-  object-position: center !important;
+  background-image: var(--character-atlas) !important;
+  background-repeat: no-repeat !important;
+  background-size: 600% 300% !important;
+  background-position: var(--char-x, 0%) var(--char-y, 0%) !important;
   transform: scale(var(--collection-scale, 1));
+  transform-origin: center;
   filter: saturate(1.05) contrast(1.025) drop-shadow(0 2px 1px rgba(57,45,51,.13));
 }
+
+.collection-chip[data-chain-tier] img {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Row 1: T1-T6 */
+[data-chain-tier='1'] { --char-x: 0%; --char-y: 0%; }
+[data-chain-tier='2'] { --char-x: 20%; --char-y: 0%; }
+[data-chain-tier='3'] { --char-x: 40%; --char-y: 0%; }
+[data-chain-tier='4'] { --char-x: 60%; --char-y: 0%; }
+[data-chain-tier='5'] { --char-x: 80%; --char-y: 0%; }
+[data-chain-tier='6'] { --char-x: 100%; --char-y: 0%; }
+
+/* Row 2: T7-T12 */
+[data-chain-tier='7'] { --char-x: 0%; --char-y: 50%; }
+[data-chain-tier='8'] { --char-x: 20%; --char-y: 50%; }
+[data-chain-tier='9'] { --char-x: 40%; --char-y: 50%; }
+[data-chain-tier='10'] { --char-x: 60%; --char-y: 50%; }
+[data-chain-tier='11'] { --char-x: 80%; --char-y: 50%; }
+[data-chain-tier='12'] { --char-x: 100%; --char-y: 50%; }
+
+/* Row 3: T13-T18 */
+[data-chain-tier='13'] { --char-x: 0%; --char-y: 100%; }
+[data-chain-tier='14'] { --char-x: 20%; --char-y: 100%; }
+[data-chain-tier='15'] { --char-x: 40%; --char-y: 100%; }
+[data-chain-tier='16'] { --char-x: 60%; --char-y: 100%; }
+[data-chain-tier='17'] { --char-x: 80%; --char-y: 100%; }
+[data-chain-tier='18'] { --char-x: 100%; --char-y: 100%; }
