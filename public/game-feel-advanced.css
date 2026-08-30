@@ -31,9 +31,13 @@
 .game-shell.fx-discovery-celebration .board-zone::after{content:'';position:absolute;z-index:28;inset:0;border-radius:28px;pointer-events:none;background:radial-gradient(circle at 50% 48%,rgba(255,245,158,.34),rgba(199,137,239,.08) 38%,transparent 68%);animation:bmDiscoveryWash .8s ease-out both}
 .fx-discovery-tier{position:fixed;z-index:135;pointer-events:none;transform:translate(-50%,-50%);display:grid;place-items:center;min-width:52px;height:38px;padding:0 12px;border:3px solid #fff0a2;border-radius:999px;background:linear-gradient(180deg,#a96bd5,#74469d);color:#fff;font-size:17px;font-weight:950;text-shadow:0 2px #5d357c;box-shadow:0 0 0 4px rgba(255,235,134,.28),0 12px 26px rgba(72,43,93,.25);animation:bmDiscoveryTier .9s cubic-bezier(.16,.88,.2,1.16) both}
 .fx-discovery-tier.is-max{min-width:68px;height:46px;font-size:21px;border-width:4px;background:linear-gradient(180deg,#f2b44d,#b76ad4 58%,#75469f);box-shadow:0 0 0 6px rgba(255,236,137,.34),0 16px 30px rgba(72,43,93,.3);animation-duration:1.15s}
+.collection-chip.fx-collection-unlock{z-index:12!important;animation:bmCollectionUnlock .9s cubic-bezier(.18,.9,.2,1.18) both!important}
+.side-card--collection.fx-collection-card{animation:bmCollectionCard .68s ease-out both!important}
 @keyframes bmDiscoveryHeroBoard{0%{transform:scale(1);filter:brightness(1)}30%{transform:scale(1.012);filter:brightness(1.11) saturate(1.06)}65%{transform:scale(.998);filter:brightness(1.03)}100%{transform:scale(1);filter:none}}
 @keyframes bmDiscoveryWash{0%{opacity:0;transform:scale(.86)}25%{opacity:1}100%{opacity:0;transform:scale(1.08)}}
 @keyframes bmDiscoveryTier{0%{opacity:0;transform:translate(-50%,-15%) scale(.45) rotate(-10deg)}34%{opacity:1;transform:translate(-50%,-72%) scale(1.18) rotate(3deg)}62%{transform:translate(-50%,-92%) scale(.97) rotate(-1deg)}100%{opacity:0;transform:translate(-50%,-155%) scale(1.02) rotate(0)}}
+@keyframes bmCollectionUnlock{0%{transform:scale(.72) rotate(-6deg);filter:brightness(1.35) saturate(1.3)}38%{transform:scale(1.18) rotate(3deg);filter:brightness(1.16) saturate(1.16)}68%{transform:scale(.97) rotate(-1deg)}100%{transform:scale(1);filter:none}}
+@keyframes bmCollectionCard{0%,100%{filter:none;transform:scale(1)}38%{filter:brightness(1.06);transform:scale(1.012)}}
 
 /* Drag/merge target gets stronger physical anticipation without changing hitboxes. */
 .cell.is-selected{filter:brightness(1.025)}
@@ -44,7 +48,7 @@
 .cell.fx-pointer-drag .unit-shadow{opacity:.24!important;transform:translateX(-50%) scaleX(.7) scaleY(.65)!important}
 
 @media(prefers-reduced-motion:reduce){
-  .cell[data-family] .unit-visual,.game-shell.fx-discovery-celebration .board-frame,.game-shell.fx-discovery-celebration .board-zone::after,.fx-discovery-tier,.cell.is-merge-target::before{animation:none!important}
+  .cell[data-family] .unit-visual,.game-shell.fx-discovery-celebration .board-frame,.game-shell.fx-discovery-celebration .board-zone::after,.fx-discovery-tier,.cell.is-merge-target::before,.collection-chip.fx-collection-unlock,.side-card--collection.fx-collection-card{animation:none!important}
   .fx-unit-flight,.fx-coin-trail,.fx-discovery-tier{display:none!important}
   .cell.fx-pointer-drag .unit-visual{transform:translateY(-3%) scale(calc(var(--unit-scale,1)*1.025))!important;filter:none}
 }
