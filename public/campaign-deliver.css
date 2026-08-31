@@ -1,10 +1,26 @@
-.campaign-run-shell[data-phase='deliver'] .campaign-run-objective__counter {
+.campaign-run-shell:is([data-phase='deliver'], [data-phase='restore'], [data-phase='mastery']) .campaign-run-objective__counter {
   background: linear-gradient(180deg, #efe2ff, #dbc6f0);
   box-shadow: inset 0 2px rgba(255,255,255,.82), 0 4px 0 rgba(100,72,126,.14);
 }
-.campaign-run-shell[data-phase='deliver'] .campaign-run-objective__counter strong { color: #654885; }
+.campaign-run-shell:is([data-phase='deliver'], [data-phase='restore'], [data-phase='mastery']) .campaign-run-objective__counter strong { color: #654885; }
 .campaign-run-shell[data-phase='deliver'] .campaign-run-progress i {
   background: linear-gradient(90deg, #8d68be, #f2a349);
+}
+.campaign-run-shell[data-phase='restore'] .campaign-run-objective__counter {
+  background: linear-gradient(180deg, #fff0b8, #f4d979);
+  box-shadow: inset 0 2px rgba(255,255,255,.85), 0 4px 0 rgba(150,112,50,.16);
+}
+.campaign-run-shell[data-phase='restore'] .campaign-run-objective__counter strong { color: #805c25; }
+.campaign-run-shell[data-phase='restore'] .campaign-run-progress i {
+  background: linear-gradient(90deg, #f0b849, #76bd66);
+}
+.campaign-run-shell[data-phase='mastery'] .campaign-run-objective__counter {
+  background: linear-gradient(180deg, #f2d7ff, #d9b2ef);
+  box-shadow: inset 0 2px rgba(255,255,255,.82), 0 4px 0 rgba(94,60,126,.18);
+}
+.campaign-run-shell[data-phase='mastery'] .campaign-run-objective__counter strong { color: #633d82; }
+.campaign-run-shell[data-phase='mastery'] .campaign-run-progress i {
+  background: linear-gradient(90deg, #8450b7, #ee7f59);
 }
 
 .campaign-run-cell.is-order-match:not(.is-selected):not(.is-overgrown) {
@@ -16,6 +32,8 @@
   background: #a75d2d;
   box-shadow: 0 0 0 2px rgba(255,232,147,.7);
 }
+.campaign-run-shell[data-phase='restore'] .campaign-run-cell.is-order-match .campaign-run-tier { background: #7b7c35; }
+.campaign-run-shell[data-phase='mastery'] .campaign-run-cell.is-order-match .campaign-run-tier { background: #75419a; }
 
 .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) {
   grid-template-columns: minmax(0,1fr) auto auto;
@@ -32,6 +50,14 @@
   font: inherit;
   font-weight: 1000;
   cursor: pointer;
+}
+.campaign-run-shell[data-phase='restore'] .campaign-run-deliver {
+  background: linear-gradient(180deg, #efc65d, #c89138);
+  box-shadow: inset 0 3px rgba(255,255,255,.46), 0 5px 0 #916528, 0 8px 14px rgba(80,58,34,.16);
+}
+.campaign-run-shell[data-phase='mastery'] .campaign-run-deliver {
+  background: linear-gradient(180deg, #a776d1, #70429d);
+  box-shadow: inset 0 3px rgba(255,255,255,.42), 0 5px 0 #4e2f70, 0 8px 14px rgba(62,43,78,.18);
 }
 .campaign-run-deliver:not(:disabled):hover { transform: translateY(-1px); }
 .campaign-run-deliver:not(:disabled):active {
