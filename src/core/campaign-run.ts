@@ -8,7 +8,7 @@ import {
   isCampaignWorldUnlocked,
   type CampaignProgress
 } from './campaign.js';
-import type { CampaignRunState, Cell, FamilyId, Unit } from './types.js';
+import type { CampaignRunState, Cell, FamilyId, GameState, Unit } from './types.js';
 
 export const SNEAKER_GARDEN_LOCATION_ID = 'w1-sneaker-garden';
 export const SNEAKER_GARDEN_WORLD_ID = 1;
@@ -19,6 +19,13 @@ let campaignSequence = 0;
 
 export interface CampaignRunMoveResult {
   run: CampaignRunState;
+  changed: boolean;
+  merged: boolean;
+  clearedIndex: number | null;
+}
+
+export interface CampaignGameMoveResult {
+  state: GameState;
   changed: boolean;
   merged: boolean;
   clearedIndex: number | null;
@@ -99,6 +106,7 @@ function isSneakerGardenStabilizeAvailable(campaign: CampaignProgress): boolean 
 }
 
 export function createSneakerGardenStabilizeRun(maxDiscoveredTier: number): CampaignRunState {
+  void maxDiscoveredTier;
   const cells: Cell[] = Array.from({ length: BOARD_SIZE }, () => null);
   for (const index of SNEAKER_GARDEN_STARTING_CELLS) cells[index] = createCampaignUnit(1);
   const overgrowth = initialOvergrowth();
@@ -163,9 +171,7 @@ export function startCampaignRun(
   worldId: number,
   locationId: string
 ): CampaignRunState | null {
-  if (current) {
-    return current.worldId === worldId && current.locationId === locationId ? current : current;
-  }
+  if (current) return current;
   if (worldId !== SNEAKER_GARDEN_WORLD_ID || locationId !== SNEAKER_GARDEN_LOCATION_ID) return null;
   if (!isSneakerGardenStabilizeAvailable(campaign)) return null;
   return createSneakerGardenStabilizeRun(maxDiscoveredTier);
@@ -268,6 +274,50 @@ export function commitCampaignRunCompletion(campaign: CampaignProgress, run: Cam
   const locationProgress = worldProgress?.locations[SNEAKER_GARDEN_LOCATION_ID];
   if (!locationProgress || locationProgress.stabilize >= 1) return campaign;
   return advanceCampaignLocationPhase(campaign, SNEAKER_GARDEN_WORLD_ID, SNEAKER_GARDEN_LOCATION_ID, 'stabilize', 1);
+}
+
+/** Starts or resumes a Campaign run without mutating the main board/economy. */
+export function beginCampaignRun(state: GameState, worldId: number, locationId: string): GameState {
+  const campaignRun = startCampaignRun(state.campaignRun, state.campaign, state.maxDiscoveredTier, worldId, locationId);
+  if (campaignRun === state.campaignRun) return state;
+  return { ...state, campaignRun };
+}
+
+/** Free Campaign-only supply; ordinary coins and paid-box inflation are untouched. */
+export function spawnCampaignRunSupply(state: GameState, random = Math.random): GameState {
+  if (!state.campaignRun) return state;
+  const campaignRun = spawnCampaignSupply(state.campaignRun, state.maxDiscoveredTier, random);
+  if (campaignRun === state.campaignRun) return state;
+  return { ...state, campaignRun };
+}
+
+export function selectCampaignBoardCell(state: GameState, index: number | null): GameState {
+  if (!state.campaignRun) return state;
+  const campaignRun = selectCampaignRunCell(state.campaignRun, index);
+  if (campaignRun === state.campaignRun) return state;
+  return { ...state, campaignRun };
+}
+
+export function moveOrMergeCampaignBoard(state: GameState, from: number, to: number): CampaignGameMoveResult {
+  if (!state.campaignRun) return { state, changed: false, merged: false, clearedIndex: null };
+  const result = moveOrMergeCampaignRun(state.campaignRun, from, to);
+  if (result.run === state.campaignRun) return { state, changed: result.changed, merged: result.merged, clearedIndex: result.clearedIndex };
+  const campaign = result.run.completed
+    ? commitCampaignRunCompletion(state.campaign, result.run)
+    : state.campaign;
+  return {
+    state: { ...state, campaignRun: result.run, campaign },
+    changed: result.changed,
+    merged: result.merged,
+    clearedIndex: result.clearedIndex
+  };
+}
+
+/** Clears only the completed temporary board; permanent 20% Stabilize progress remains. */
+export function acknowledgeCampaignRunCompletion(state: GameState): GameState {
+  if (!state.campaignRun?.completed) return state;
+  const campaign = commitCampaignRunCompletion(state.campaign, state.campaignRun);
+  return { ...state, campaign, campaignRun: null };
 }
 
 export function campaignRunPresentationSnapshot(run: CampaignRunState | null): CampaignRunPresentation | null {
