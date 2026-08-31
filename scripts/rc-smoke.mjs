@@ -133,7 +133,7 @@ try {
     await context.close();
   }
 
-  // A real legacy v2 payload must migrate through packaged boot, render, and persist as v5.
+  // A real legacy v2 payload must migrate through packaged boot, render, and persist as canonical v6.
   {
     const legacyCells = Array(30).fill(null);
     legacyCells[0] = { id: 'legacy-shark', familyId: 'shark-sneakers', tier: 1 };
@@ -159,15 +159,19 @@ try {
     assert(await page.locator('.cell[data-family="shark-sneakers"][data-chain-tier="5"]').count() === 1, 'migration: legacy Shark must render as canonical T5');
     assert(await page.locator('.collection-chip.is-unlocked').count() >= 5, 'migration: Collection must preserve discovered T5 progress');
     const persisted = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), SAVE_KEY);
-    assert(persisted?.version === 5, `migration: persisted save version must be 5, got ${persisted?.version}`);
+    assert(persisted?.version === 6, `migration: persisted save version must be 6, got ${persisted?.version}`);
     assert(persisted?.maxDiscoveredTier === 5, `migration: expected maxDiscoveredTier 5, got ${persisted?.maxDiscoveredTier}`);
     assert(persisted?.selectedIndex === null, 'migration: stale legacy selection must be cleared');
     assert(persisted?.missionIndex === 1, `migration: mission compatibility expected index 1, got ${persisted?.missionIndex}`);
+    assert(Array.isArray(persisted?.collectionRewardClaims) && persisted.collectionRewardClaims.length === 0, 'migration: Collection Reward claims must initialize empty');
+    assert(persisted?.prestigeCount === 0 && persisted?.brainCells === 0, 'migration: Prestige meta must initialize to zero');
+    assert(persisted?.campaign?.worlds?.['1'] && persisted?.campaign?.worlds?.['2'], 'migration: Campaign v6 foundation must initialize Worlds 1-2');
+    assert(persisted.campaign.worlds['1'].raidProgress === 0 && persisted.campaign.worlds['1'].raidCleared === false, 'migration: World 1 Raid must initialize clean');
     await assertNoPageErrors(page, errors, 'migrated save');
     await context.close();
   }
 
-  console.log('Packaged RC smoke OK: focus + reduced motion + touch targets + v2 migration');
+  console.log('Packaged RC smoke OK: focus + reduced motion + touch targets + v2->v6 migration');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
