@@ -1,9 +1,9 @@
 # Brainmerge — Production Roadmap
 
 ## Product goal
-Brainmerge is a browser/mobile merge-idle game with one T1 -> T18 chain, a board-first mobile runtime and a long-term reason to continue playing: **complete the Brainverse Campaign while building permanent meta progression through Collection Rewards and Prestige**.
+Brainmerge is a browser/mobile merge-idle game with one T1 -> T18 chain and a board-first mobile runtime. The long-term reason to play is now **restore the Brainverse** through persistent Campaign Locations, landmarks and multi-session World Raids, while Collection Rewards and Prestige provide permanent account growth.
 
-The original release-candidate foundation is complete. Current development is the post-RC retention/meta expansion.
+The previous `8 short stages per world / 64 one-shot stages / 3 stars` Campaign model is retired.
 
 ## Current production baseline — complete
 - [x] 6x5 touch/mouse/keyboard merge board.
@@ -16,184 +16,228 @@ The original release-candidate foundation is complete. Current development is th
 - [x] EN/RU production locale parity and runtime locale QA.
 - [x] Unified physical 6x3 `character-atlas.webp` for T1-T18.
 - [x] Board-first mobile layout with Missions / Collection / Brain Lab modal sheets.
-- [x] Missions / Collection / Rewards / Brain Lab production icon set.
+- [x] Production Missions / Collection / Rewards / Brain Lab icon set.
 - [x] Desktop/compact/mobile Chromium runtime QA, motion QA, accessibility QA and Yandex adapter smoke.
 
-## Brainverse Campaign target
-- [ ] Complete campaign target: **8 worlds × 8 stages = 64 stages**, including 8 boss stages.
-- [ ] Campaign progress survives Prestige.
-- [ ] Stage framework is data-driven and reuses real merge primitives.
-- [ ] Worlds unlock sequentially; later worlds may use Prestige gates.
-- [ ] Up to 3 stars/mastery per stage for replay value.
-- [ ] Bosses use merge objectives/progress, not a separate combat engine.
+## Brainverse Campaign north star
+Target complete Campaign:
 
-Detailed system contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
+- [ ] **8 worlds**.
+- [ ] **7 persistent Locations per world**.
+- [ ] **1 persistent World Raid per world**.
+- [ ] 56 Locations + 8 World Raids total.
+- [ ] Every Location progresses through Stabilize -> Deliver Orders -> Restore Landmark -> Mastery.
+- [ ] World Progress is derived from Location restoration.
+- [ ] Initial Raid gate: >=80% World Restored + >=5 restored landmarks.
+- [ ] World Raids are persistent 3-phase bosses with progress surviving sessions.
+- [ ] Campaign progress survives Prestige.
+- [ ] Each world has a meaningful board modifier, not only different art.
+
+Detailed contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 
 ## Approved Campaign Art Pack — complete
-The first production art pack is approved and integrated into the repository.
-
 ### Meta / navigation UI
 - [x] Campaign / World Map icon.
 - [x] Prestige / Brain Reset icon.
 - [x] Brain Cell currency icon.
 
-### Campaign node family
-- [x] Normal stage node.
-- [x] Challenge stage node.
-- [x] Elite/mastery stage node.
-- [x] Boss stage node.
-- [x] Locked stage node.
+### Reusable Campaign UI family
+- [x] Normal node art — used for persistent Locations.
+- [x] Challenge node art — reusable for Deliver/Challenge phase treatment.
+- [x] Elite/mastery node art — reusable for Landmark/Mastery treatment.
+- [x] Boss node art — World Raid node / raid phase treatment.
+- [x] Locked node art — locked phase treatment.
 
 ### World 1 — Backyard Brainrot Zone
-- [x] Surreal brainrot world environment, text-free and without baked stage circles.
+- [x] Surreal brainrot world environment, text-free and without baked node circles.
 - [x] World 1 boss — flamingo/lawn-machine/garden/sneaker surreal hybrid.
 
 ### World 2 — Surreal Brainrot City
-- [x] Surreal city world environment, text-free and without baked stage circles.
+- [x] Surreal city world environment, text-free and without baked node circles.
 - [x] World 2 boss — pigeon/vending-machine/city-sign/sneaker surreal hybrid.
 
-Runtime optimized files are documented in `docs/ASSET_MANIFEST.md`.
-
-## Campaign Map visual shell — complete
-This is a presentation milestone, not yet the authoritative campaign state system.
-
-- [x] Prominent Campaign entry near the main header instead of a fourth mobile dock button.
+## Campaign foundation — implemented
+- [x] Prominent Campaign entry outside the cramped mobile dock.
 - [x] Full-screen responsive Campaign map shell.
 - [x] World 1 / World 2 switcher.
-- [x] Approved world backgrounds integrated.
-- [x] Eight code-positioned stage nodes per world using the approved semantic node family.
-- [x] Approved boss art integrated into each map.
-- [x] EN/RU Campaign-shell copy resources.
-- [x] Escape/back close behavior and mobile safe-area handling.
-- [x] Dedicated packaged Chromium Campaign screenshot smoke on desktop and phone.
-- [ ] Stage nodes do not yet own persistent completion/unlock state.
-- [ ] Stage start/play flow is not yet implemented.
+- [x] Approved world backgrounds and bosses.
+- [x] Connected map route 1 -> 8 with desktop/mobile geometry.
+- [x] Map semantics changed from 8 short stages to **7 Locations + World Raid**.
+- [x] World summary surface: World Restored %, landmarks, Raid gate.
+- [x] Location nodes display persistent-progress affordance.
+- [x] Location overview shows the four-phase long loop and landmark identity.
+- [x] Raid overview shows the three-phase persistent-boss loop.
+- [x] EN/RU Campaign copy for new model.
+- [x] Core Campaign domain foundation in `src/core/campaign.ts`.
+- [x] Core tests for phase weighting, world restoration and Raid unlock requirements.
+- [x] Chromium Campaign smoke validates 7 Locations, Raid, route and overview geometry.
 
-## P0 — Collection Rewards
-Goal: make Collection permanent progression rather than only a gallery.
+Current limitation:
+- map progress is still presentation-default `0%` until save v6/state wiring lands;
+- Locations do not yet start a real `CampaignRunState`.
 
-- [ ] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
-- [ ] Add `Rewards` section/tab inside Collection; no new mobile dock item.
-- [ ] Model exact permanent reward values before locking balance.
-- [ ] Persist milestone claim state through Prestige.
-- [ ] Prevent duplicate claims and sanitize invalid claim state.
-- [ ] EN/RU strings and desktop/mobile geometry QA.
+## P0 — Save v6 permanent-meta foundation
+Goal: land one coherent versioned schema for Campaign + Collection Rewards + Prestige.
 
-## P0 — Prestige / Brain Reset
-Goal: make first T18 completion the beginning of the long-term loop.
-
-- [ ] Prestige unlocks after reaching T18.
-- [ ] Confirmation screen explicitly shows reset vs preserved state.
-- [ ] Reset run-level board/economy/Brain Lab state only.
-- [ ] Preserve lifetime Collection, Collection Rewards, Campaign and permanent meta.
-- [ ] Introduce Brain Cells as permanent-meta-only currency.
-- [ ] Add a small data-driven permanent upgrade tree.
-- [ ] First valid Prestige awards at least one Brain Cell.
-- [ ] Deterministic exact reset/preserve/no-double-award tests.
-
-## P0 — Save v6
-Collection Rewards + Prestige + Campaign persistence land as one coherent schema migration.
-
+- [ ] Per-world unlock/clear state.
+- [ ] Per-Location Stabilize progress.
+- [ ] Per-Location Deliver/order progress.
+- [ ] Per-Location Landmark level/restoration.
+- [ ] Per-Location Mastery progress.
+- [ ] World Raid phase/progress/clear state.
 - [ ] Collection reward claim state.
 - [ ] Prestige count, Brain Cells and permanent upgrade levels.
-- [ ] Campaign world/stage/star completion state.
-- [ ] Decide whether active campaign runs are resumable.
+- [ ] Decide whether active CampaignRunState is resumable.
 - [ ] v1-v5 -> v6 migration without losing valid current state.
-- [ ] Corrupt/negative meta-state sanitization.
-- [ ] Yandex/local persistence coverage for v6.
+- [ ] Clamp/sanitize corrupt Campaign/meta values.
+- [ ] Yandex/local persistence coverage.
 
-## P1 — Stateful Campaign framework
-The current map shell becomes a real progression surface only after this layer lands.
+## P0 — Stateful Location engine
+Goal: make a Location a multi-session merge objective instead of a short level.
 
-- [ ] Data definitions for worlds, stages, objectives, mastery conditions and rewards.
-- [ ] Isolated `CampaignRunState` so campaign stages cannot destroy the main idle board.
-- [ ] Stage start / restart / abandon / complete flows.
-- [ ] Persistent stage completion and stars.
-- [ ] Exact-once stage reward commit.
-- [ ] World unlock progression.
-- [ ] Map node state driven from campaign save data rather than static presentation.
-- [ ] Touch/mouse/keyboard and reduced-motion coverage.
+- [ ] Isolated `CampaignRunState` with its own 6x5 board/counters/orders/modifier state.
+- [ ] Start / resume / abandon / restart Location flow.
+- [ ] Main board remains untouched by Campaign actions.
+- [ ] Stabilize phase objective framework.
+- [ ] Deliver Orders framework: requested Campaign unit is consumed on delivery.
+- [ ] Exact-once persistent order progress commit.
+- [ ] Landmark restoration/upgrade transition.
+- [ ] Mastery phase framework.
+- [ ] Location restoration % wired to map node and World Progress.
+- [ ] Lifetime-discovery gating so Campaign does not bypass the main T1-T18 chain.
 
-## P1 — Stage objective primitives
-- [ ] Reach target tier.
-- [ ] Complete N merges.
-- [ ] Earn N stage coins.
-- [ ] Brain Box count/limit objective.
-- [ ] Limited-move challenge.
-- [ ] Target-order challenge.
-- [ ] Crowded-board deterministic puzzle.
-- [ ] No-Box deterministic puzzle.
-- [ ] Timed challenge after untimed primitives are stable.
+## P0 — World 1 vertical slice
+Prove the whole new loop before authoring the rest of the world.
 
-## P1 — Boss framework
-- [ ] Code-owned boss progress/HP.
-- [ ] Ordinary merges contribute baseline progress.
-- [ ] Target orders create larger progress hits.
-- [ ] Boss art never covers board hit targets.
-- [ ] Boss clear unlocks the next map segment/world.
-- [ ] Deterministic boss-completion/world-unlock tests.
+### Location 1 — Sneaker Garden
+- [ ] World 1 Overgrowth board modifier.
+- [ ] Stabilize objectives playable.
+- [ ] Multi-order delivery sequence playable.
+- [ ] Giant Sneaker Flower Bed restoration progression.
+- [ ] Landmark gameplay perk.
+- [ ] Mastery rules.
+- [ ] Progress persists across reload/session and Prestige.
+- [ ] Desktop/mobile/EN/RU runtime QA.
 
-## P1 — Campaign content milestone
-- [ ] World 1: 7 stages + boss playable end-to-end.
-- [ ] World 2: 7 stages + boss playable end-to-end.
-- [ ] Fresh account -> World 1/2 -> T18 -> Prestige -> Campaign persistence playtest.
-- [ ] Adding a stage is primarily a data/config change.
+Success criterion: Location 1 takes multiple meaningful sessions/cycles rather than minutes and creates a real `merge upward vs deliver now` decision.
 
-## P2 — Full campaign expansion
-After Worlds 1-2 prove pacing and architecture:
-- [ ] World 3 — surreal Meme Factory.
-- [ ] World 4 — surreal Mediterranean/Italian-chaos world.
-- [ ] World 5 — surreal Sky world.
-- [ ] World 6 — surreal Brain Lab world.
-- [ ] World 7 — surreal Space Brainrot world.
-- [ ] World 8 — Brainverse Core / final boss.
-- [ ] Remaining content to 64 stages total.
+## P0 — World 1 full restoration loop
+After Location 1 proves the engine:
 
-Every future environment must follow the locked Brainmerge rule: **toy-like rendering + environment-wide viral surreal brainrot logic**, not a generic casual-game location with a few meme props pasted onto it.
+- [ ] Toilet Pond.
+- [ ] Watermelon Grill.
+- [ ] Hose Tunnels.
+- [ ] Gnome Yard.
+- [ ] Mushroom Field.
+- [ ] Backyard Core.
+- [ ] Data-driven order pressure increases across Locations.
+- [ ] >=80% + 5-landmark Raid gate.
+- [ ] Visible Landmark/restoration state on map without generating seven entirely new backgrounds.
+
+## P0 — World 1 persistent Raid
+- [ ] Three Raid phases.
+- [ ] Persistent boss HP/progress across sessions.
+- [ ] Merge/order contributions to Raid progress.
+- [ ] Stronger Overgrowth pressure in later phases.
+- [ ] High-tier final deliveries.
+- [ ] World 2 unlock on exact-once Raid clear.
+- [ ] World 1 100% completion rule.
+
+## P0 — Collection Rewards
+Still approved and shares save v6 permanent meta.
+
+- [ ] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
+- [ ] `Rewards` section inside Collection; no new mobile dock item.
+- [ ] Permanent bounded reward data.
+- [ ] Persist claims through Prestige.
+- [ ] Prevent double claim.
+- [ ] Campaign-relevant rewards may exist, but must not trivialize Locations/Raids.
+
+## P0 — Prestige / Brain Reset
+Still approved and now explicitly supports long Campaign progression.
+
+- [ ] Unlock after first T18.
+- [ ] Confirmation clearly shows reset vs preserved state.
+- [ ] Reset run-level board/economy/Brain Lab only.
+- [ ] Preserve Collection + Locations + Landmarks + Raids.
+- [ ] Introduce Brain Cells as permanent-meta-only currency.
+- [ ] Data-driven permanent upgrade tree.
+- [ ] First valid Prestige always awards at least one Brain Cell.
+- [ ] Deterministic reset/preserve/no-double-award tests.
+
+## P1 — World 2
+- [ ] World 2 Traffic Lock board modifier.
+- [ ] Sneaker Transit.
+- [ ] Pigeon Plaza.
+- [ ] Vending Block.
+- [ ] Long-Neck Junction.
+- [ ] Sunglasses Strip.
+- [ ] Appliance District.
+- [ ] City Core.
+- [ ] Persistent three-phase World 2 Raid.
+- [ ] Validate first T18 -> Prestige -> World 1 -> World 2 long loop.
+
+## P2 — Worlds 3–8
+Only after Worlds 1–2 prove duration, decision quality and retention.
+
+- [ ] World 3 — Meme Factory.
+- [ ] World 4 — Italian / Mediterranean Chaos.
+- [ ] World 5 — Sky Brainrot.
+- [ ] World 6 — Surreal Brain Lab.
+- [ ] World 7 — Space Brainrot.
+- [ ] World 8 — Brainverse Core / final Raid.
+
+Future worlds should add one readable board modifier each. Do not create 56 bespoke gameplay branches.
 
 ## P2 — Rare / Shiny
 - [ ] Rarity remains orthogonal to T1-T18 tier.
-- [ ] Reuse the character atlas plus reusable frames/FX rather than 18 duplicate renders.
+- [ ] Reuse character atlas + effects instead of 18 duplicate renders.
 - [ ] Track normal/rare Collection separately if shipped.
 - [ ] Preserve rarity through Prestige/Campaign state.
 
 ## P2 — Live ops
-- [ ] Re-evaluate Daily Missions / streaks after Campaign + Prestige are playable.
-- [ ] Events reuse merge/campaign primitives and localization.
-- [ ] Avoid a bespoke art pipeline per event.
+- [ ] Re-evaluate Daily Missions / streaks after the long Campaign loop is playable.
+- [ ] Events reuse Location/order/Raid primitives.
+- [ ] Avoid bespoke gameplay/art pipelines per event.
 
 ## Current missing art
-No additional art is required to build the first **stateful** World 1 / World 2 campaign framework.
+No new generated art is required for the **stateful World 1 Location engine**.
 
-Defer new generation until runtime proves a concrete need. Possible later requirements:
-- World Complete / mastery reward treatment if existing Rewards art is insufficient;
-- Prestige confirmation illustration only if code-owned icon/layout treatment is not enough;
-- Worlds 3–8 environments and bosses after the first two worlds validate the framework.
+Use existing world art and code-owned visual restoration treatments first. Generate additional Landmark-state art only after the first playable Location proves that static-map treatment is insufficient.
 
-## Automated quality gates for new meta systems
+Potential later art:
+- upgraded Landmark overlays/states if code-owned treatment is not expressive enough;
+- World Complete treatment;
+- Worlds 3–8 environments/bosses after Worlds 1–2 validation.
+
+## Automated quality gates
+- [x] Campaign shell desktop/mobile screenshot smoke.
+- [x] 7 Location + 1 Raid semantic shell smoke.
+- [x] Campaign core percentage/Raid-gate unit tests.
 - [ ] v5 -> v6 migration smoke.
+- [ ] Location progress serialization/sanitization.
+- [ ] Campaign/main-board isolation tests.
+- [ ] Delivery consumes Campaign unit only.
+- [ ] Exact-once order/Landmark progress tests.
+- [ ] Raid progress persistence and world-unlock tests.
 - [ ] Collection reward one-time claim tests.
 - [ ] Prestige reset/preserve tests.
-- [ ] Brain Cell award/spend invariants.
-- [ ] Campaign/main-board isolation tests.
-- [ ] Deterministic stage objective/reward tests.
-- [ ] Boss/world unlock tests.
 - [ ] Campaign progress survives Prestige.
-- [x] Campaign shell desktop/mobile screenshot smoke.
-- [ ] Stateful Campaign EN/RU runtime smoke after v6 integration.
+- [ ] Stateful Campaign EN/RU runtime smoke.
 
 ## External acceptance gates
-- [ ] Approved Figma acceptance for current core UI plus Campaign/Prestige surfaces.
+- [ ] Approved Figma acceptance for core UI plus Campaign/Prestige surfaces.
 - [ ] Real Yandex Games Portal/debug-panel run.
-- [ ] Human pacing/retention sign-off including first Prestige and Worlds 1-2.
+- [ ] Human pacing/retention sign-off: Location 1, World 1 Raid, first Prestige and World 2 entry.
 
 ## Guardrails
 - First lifetime discovery stays merge-first.
-- T1-T18 stays one readable sequential chain.
-- Coins remain ordinary merge-economy currency; Brain Cells are permanent-meta-only.
-- Campaign reuses core merge primitives rather than becoming an unrelated second game.
-- Permanent Campaign/Collection/meta progress survives Prestige.
-- No mandatory rewarded ads, energy systems or arbitrary real-time waits for progression.
-- Generated world/boss art contains no baked player-facing text or stage state.
-- Map nodes, objectives, stars, locks, prices and progression remain code-owned.
+- Campaign orders initially cannot request an unseen lifetime tier.
+- T1-T18 remains one readable sequential chain.
+- Coins remain ordinary run currency; Brain Cells remain permanent-meta-only.
+- CampaignRunState remains isolated from the main board.
+- Delivery consumes only Campaign-board units.
+- Persistent Campaign/Collection/meta progress survives Prestige.
+- No mandatory ads, energy gates or arbitrary real-time waits.
+- World/landmark/raid state is code-owned; generated art does not bake progression UI.
 - Mobile default gameplay remains board-first.
