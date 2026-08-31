@@ -50,6 +50,33 @@ export interface CampaignWorldProgress {
   raidCleared: boolean;
 }
 
+export interface CampaignProgress {
+  worlds: Record<string, CampaignWorldProgress>;
+}
+
+export interface CampaignLocationPresentation {
+  id: string;
+  index: number;
+  percent: number;
+  currentPhase: CampaignLocationPhaseOrComplete;
+  phases: CampaignLocationProgress;
+}
+
+export interface CampaignWorldPresentation {
+  id: number;
+  unlocked: boolean;
+  percent: number;
+  restoredLandmarks: number;
+  raidProgressPercent: number;
+  raidUnlocked: boolean;
+  raidCleared: boolean;
+  locations: CampaignLocationPresentation[];
+}
+
+export interface CampaignPresentationSnapshot {
+  worlds: CampaignWorldPresentation[];
+}
+
 function location(
   id: string,
   index: number,
@@ -110,6 +137,12 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
+function asRecord(candidate: unknown): Record<string, unknown> | null {
+  return candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+    ? candidate as Record<string, unknown>
+    : null;
+}
+
 export function createInitialLocationProgress(): CampaignLocationProgress {
   return { stabilize: 0, deliver: 0, restore: 0, mastery: 0 };
 }
@@ -119,6 +152,55 @@ export function createInitialWorldProgress(world: CampaignWorldDefinition): Camp
     world.locations.map((entry) => [entry.id, createInitialLocationProgress()])
   );
   return { locations, raidProgress: 0, raidCleared: false };
+}
+
+export function createInitialCampaignProgress(): CampaignProgress {
+  return {
+    worlds: Object.fromEntries(
+      CAMPAIGN_WORLDS.map((world) => [String(world.id), createInitialWorldProgress(world)])
+    )
+  };
+}
+
+export function sanitizeLocationProgress(candidate: unknown): CampaignLocationProgress {
+  const raw = asRecord(candidate);
+  if (!raw) return createInitialLocationProgress();
+  return {
+    stabilize: clamp01(typeof raw.stabilize === 'number' ? raw.stabilize : 0),
+    deliver: clamp01(typeof raw.deliver === 'number' ? raw.deliver : 0),
+    restore: clamp01(typeof raw.restore === 'number' ? raw.restore : 0),
+    mastery: clamp01(typeof raw.mastery === 'number' ? raw.mastery : 0)
+  };
+}
+
+export function sanitizeWorldProgress(
+  world: CampaignWorldDefinition,
+  candidate: unknown
+): CampaignWorldProgress {
+  const raw = asRecord(candidate);
+  const rawLocations = asRecord(raw?.locations);
+  const locations = Object.fromEntries(
+    world.locations.map((entry) => [entry.id, sanitizeLocationProgress(rawLocations?.[entry.id])])
+  );
+  const raidProgress = clamp01(typeof raw?.raidProgress === 'number' ? raw.raidProgress : 0);
+  return {
+    locations,
+    raidProgress,
+    raidCleared: raw?.raidCleared === true || raidProgress >= 1
+  };
+}
+
+export function sanitizeCampaignProgress(candidate: unknown): CampaignProgress {
+  const raw = asRecord(candidate);
+  const rawWorlds = asRecord(raw?.worlds);
+  return {
+    worlds: Object.fromEntries(
+      CAMPAIGN_WORLDS.map((world) => [
+        String(world.id),
+        sanitizeWorldProgress(world, rawWorlds?.[String(world.id)])
+      ])
+    )
+  };
 }
 
 export function locationProgressPercent(progress: CampaignLocationProgress): number {
@@ -182,4 +264,101 @@ export function campaignLocationById(
   locationId: string
 ): CampaignLocationDefinition | null {
   return world.locations.find((entry) => entry.id === locationId) ?? null;
+}
+
+export function campaignWorldProgress(
+  progress: CampaignProgress,
+  worldId: number
+): CampaignWorldProgress | null {
+  const world = campaignWorldById(worldId);
+  if (!world) return null;
+  return sanitizeWorldProgress(world, progress.worlds[String(worldId)]);
+}
+
+export function isCampaignWorldUnlocked(progress: CampaignProgress, worldId: number): boolean {
+  if (worldId <= 1) return true;
+  const previous = campaignWorldById(worldId - 1);
+  if (!previous) return false;
+  const previousProgress = campaignWorldProgress(progress, previous.id);
+  return previousProgress?.raidCleared === true;
+}
+
+function earlierPhasesComplete(progress: CampaignLocationProgress, phase: CampaignLocationPhase): boolean {
+  const targetIndex = CAMPAIGN_LOCATION_PHASES.indexOf(phase);
+  return CAMPAIGN_LOCATION_PHASES.slice(0, targetIndex).every((entry) => clamp01(progress[entry]) >= 1);
+}
+
+export function advanceCampaignLocationPhase(
+  campaign: CampaignProgress,
+  worldId: number,
+  locationId: string,
+  phase: CampaignLocationPhase,
+  delta: number
+): CampaignProgress {
+  if (!Number.isFinite(delta) || delta <= 0 || !isCampaignWorldUnlocked(campaign, worldId)) return campaign;
+  const world = campaignWorldById(worldId);
+  if (!world || !campaignLocationById(world, locationId)) return campaign;
+  const worldProgress = campaignWorldProgress(campaign, worldId);
+  if (!worldProgress) return campaign;
+  const locationProgress = worldProgress.locations[locationId] ?? createInitialLocationProgress();
+  if (!earlierPhasesComplete(locationProgress, phase) || locationProgress[phase] >= 1) return campaign;
+
+  const nextLocation: CampaignLocationProgress = {
+    ...locationProgress,
+    [phase]: clamp01(locationProgress[phase] + delta)
+  };
+  const nextWorld: CampaignWorldProgress = {
+    ...worldProgress,
+    locations: { ...worldProgress.locations, [locationId]: nextLocation }
+  };
+  return {
+    worlds: { ...campaign.worlds, [String(worldId)]: nextWorld }
+  };
+}
+
+export function advanceCampaignRaid(
+  campaign: CampaignProgress,
+  worldId: number,
+  delta: number
+): CampaignProgress {
+  if (!Number.isFinite(delta) || delta <= 0 || !isCampaignWorldUnlocked(campaign, worldId)) return campaign;
+  const world = campaignWorldById(worldId);
+  const worldProgress = campaignWorldProgress(campaign, worldId);
+  if (!world || !worldProgress || worldProgress.raidCleared || !isWorldRaidUnlocked(world, worldProgress)) return campaign;
+  const raidProgress = clamp01(worldProgress.raidProgress + delta);
+  const nextWorld: CampaignWorldProgress = {
+    ...worldProgress,
+    raidProgress,
+    raidCleared: raidProgress >= 1
+  };
+  return {
+    worlds: { ...campaign.worlds, [String(worldId)]: nextWorld }
+  };
+}
+
+export function campaignPresentationSnapshot(campaign: CampaignProgress): CampaignPresentationSnapshot {
+  return {
+    worlds: CAMPAIGN_WORLDS.map((world) => {
+      const progress = campaignWorldProgress(campaign, world.id) ?? createInitialWorldProgress(world);
+      return {
+        id: world.id,
+        unlocked: isCampaignWorldUnlocked(campaign, world.id),
+        percent: worldProgressPercent(world, progress),
+        restoredLandmarks: restoredLandmarkCount(world, progress),
+        raidProgressPercent: Math.round(clamp01(progress.raidProgress) * 100),
+        raidUnlocked: isWorldRaidUnlocked(world, progress),
+        raidCleared: progress.raidCleared,
+        locations: world.locations.map((entry) => {
+          const locationProgress = progress.locations[entry.id] ?? createInitialLocationProgress();
+          return {
+            id: entry.id,
+            index: entry.index,
+            percent: locationProgressPercent(locationProgress),
+            currentPhase: currentLocationPhase(locationProgress),
+            phases: { ...locationProgress }
+          };
+        })
+      };
+    })
+  };
 }
