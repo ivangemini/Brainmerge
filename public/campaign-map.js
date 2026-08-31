@@ -93,6 +93,19 @@ function nodeLabel(type, stage) {
   return interpolate(copy.stageLabel, { stage });
 }
 
+function routePoints(nodes, xIndex, yIndex) {
+  return nodes.map((node) => `${node[xIndex]},${node[yIndex]}`).join(' ');
+}
+
+function routeSvg(points, mode) {
+  return `
+    <svg class="campaign-route__svg campaign-route__svg--${mode}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline class="campaign-route__stroke campaign-route__stroke--shadow" points="${points}" vector-effect="non-scaling-stroke"></polyline>
+      <polyline class="campaign-route__stroke campaign-route__stroke--road" points="${points}" vector-effect="non-scaling-stroke"></polyline>
+      <polyline class="campaign-route__stroke campaign-route__stroke--center" points="${points}" vector-effect="non-scaling-stroke"></polyline>
+    </svg>`;
+}
+
 async function setBossSource(image, source) {
   image.dataset.source = source;
   if (!source.endsWith('.b64')) {
@@ -114,8 +127,9 @@ function renderWorld() {
   const kicker = overlay.querySelector('.campaign-world__kicker');
   const name = overlay.querySelector('.campaign-world__name');
   const boss = overlay.querySelector('.campaign-boss');
+  const route = overlay.querySelector('.campaign-route');
   const nodes = overlay.querySelector('.campaign-nodes');
-  if (!(scene instanceof HTMLElement) || !(kicker instanceof HTMLElement) || !(name instanceof HTMLElement) || !(boss instanceof HTMLImageElement) || !(nodes instanceof HTMLElement)) return;
+  if (!(scene instanceof HTMLElement) || !(kicker instanceof HTMLElement) || !(name instanceof HTMLElement) || !(boss instanceof HTMLImageElement) || !(route instanceof HTMLElement) || !(nodes instanceof HTMLElement)) return;
 
   scene.dataset.world = String(activeWorld);
   scene.style.backgroundImage = `url('${config.background}')`;
@@ -123,6 +137,11 @@ function renderWorld() {
   name.textContent = copy[config.nameKey];
   void setBossSource(boss, config.boss);
   boss.alt = '';
+
+  const desktopPoints = routePoints(config.nodes, 1, 2);
+  const mobilePoints = routePoints(config.nodes, 3, 4);
+  route.innerHTML = routeSvg(desktopPoints, 'desktop') + routeSvg(mobilePoints, 'mobile');
+
   nodes.innerHTML = config.nodes.map(([type, x, y, mx, my], index) => {
     const stage = index + 1;
     return `<span class="campaign-node campaign-node--${type}" role="img" aria-label="${nodeLabel(type, stage)}" style="--x:${x}%;--y:${y}%;--mx:${mx}%;--my:${my}%"><img src="${NODE_ART[type]}" alt="" aria-hidden="true"><b>${stage}</b></span>`;
@@ -160,6 +179,7 @@ function createOverlay() {
         <div class="campaign-world__title"><small class="campaign-world__kicker"></small><strong class="campaign-world__name"></strong></div>
         <div class="campaign-scene" data-world="1">
           <div class="campaign-scene__veil" aria-hidden="true"></div>
+          <div class="campaign-route" aria-hidden="true"></div>
           <div class="campaign-nodes"></div>
           <img class="campaign-boss" alt="" aria-hidden="true">
         </div>
