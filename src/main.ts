@@ -3,6 +3,7 @@ import {
   acknowledgeCampaignRunCompletion,
   beginCampaignRun,
   campaignRunPresentationSnapshot,
+  deliverCampaignBoardUnit,
   moveOrMergeCampaignBoard,
   selectCampaignBoardCell,
   spawnCampaignRunSupply
@@ -407,6 +408,14 @@ window.addEventListener('brainmerge:campaign-command', (event) => {
     if (!Number.isInteger(from) || !Number.isInteger(to)) return;
     settleOnline();
     update(moveOrMergeCampaignBoard(state, from, to).state);
+    return;
+  }
+
+  if (type === 'deliver') {
+    const index = typeof command.index === 'number' ? command.index : Number.NaN;
+    if (!Number.isInteger(index)) return;
+    settleOnline();
+    update(deliverCampaignBoardUnit(state, index));
     return;
   }
 
