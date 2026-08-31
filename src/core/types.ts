@@ -64,6 +64,26 @@ export interface PrestigeUpgradeLevels {
   campaignPower: number;
 }
 
+export type CampaignRunPhase = 'stabilize';
+
+/**
+ * Temporary/resumable Campaign-board state. It is intentionally isolated from
+ * the main idle board: units, selection and World modifier state live here.
+ */
+export interface CampaignRunState {
+  worldId: number;
+  locationId: string;
+  phase: CampaignRunPhase;
+  cells: Cell[];
+  /** True entries are unusable World-modifier cells. */
+  overgrowth: boolean[];
+  overgrowthTotal: number;
+  merges: number;
+  spawns: number;
+  selectedIndex: number | null;
+  completed: boolean;
+}
+
 export type NextActionKind = 'offline' | 'mission' | 'rescue' | 'merge' | 'upgrade' | 'box' | 'wait' | 'complete';
 
 export interface NextActionHint {
@@ -105,6 +125,8 @@ export interface GameState {
   prestigeUpgrades: PrestigeUpgradeLevels;
   /** Permanent Brainverse location / landmark / raid progress. */
   campaign: CampaignProgress;
+  /** Optional resumable Campaign board. Never aliases or consumes main-board cells. */
+  campaignRun: CampaignRunState | null;
   selectedIndex: number | null;
   messageKey: string | null;
 }

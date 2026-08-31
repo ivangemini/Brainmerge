@@ -10,6 +10,7 @@ button:focus-visible{outline:4px solid rgba(57,112,182,.88);outline-offset:3px}
   .locale-button{min-width:44px;min-height:44px}
   .side-action,.rescue-button,.offline-reward button,.upgrade-card button{min-height:44px}
   .spawn-button,.rewarded-button{min-height:56px}
+  .campaign-run-cell,.campaign-run-back,.campaign-run-supply,.campaign-run-complete button,.campaign-detail__run-button{min-height:44px}
   .cell{cursor:default}
 }
 

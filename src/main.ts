@@ -1,4 +1,12 @@
 import { BOARD_COLUMNS } from './core/catalog.js';
+import {
+  acknowledgeCampaignRunCompletion,
+  beginCampaignRun,
+  campaignRunPresentationSnapshot,
+  moveOrMergeCampaignBoard,
+  selectCampaignBoardCell,
+  spawnCampaignRunSupply
+} from './core/campaign-run.js';
 import { campaignPresentationSnapshot } from './core/campaign.js';
 import {
   accrueOfflineIncome,
@@ -274,7 +282,10 @@ const view = new GameView(root, {
 
 function publishCampaignSnapshot(): void {
   window.dispatchEvent(new CustomEvent('brainmerge:campaign-state', {
-    detail: campaignPresentationSnapshot(state.campaign)
+    detail: {
+      ...campaignPresentationSnapshot(state.campaign),
+      activeRun: campaignRunPresentationSnapshot(state.campaignRun)
+    }
   }));
 }
 
@@ -361,6 +372,49 @@ window.setInterval(() => {
 }, AUTOSAVE_MS);
 
 window.addEventListener('brainmerge:campaign-state-request', publishCampaignSnapshot);
+
+window.addEventListener('brainmerge:campaign-command', (event) => {
+  if (!(event instanceof CustomEvent) || !event.detail || typeof event.detail !== 'object') return;
+  const command = event.detail as Record<string, unknown>;
+  const type = command.type;
+  if (typeof type !== 'string') return;
+
+  if (type === 'start') {
+    const worldId = typeof command.worldId === 'number' ? command.worldId : Number.NaN;
+    const locationId = typeof command.locationId === 'string' ? command.locationId : '';
+    if (!Number.isInteger(worldId) || !locationId) return;
+    settleOnline();
+    update(beginCampaignRun(state, worldId, locationId));
+    return;
+  }
+
+  if (type === 'spawn') {
+    settleOnline();
+    update(spawnCampaignRunSupply(state));
+    return;
+  }
+
+  if (type === 'select') {
+    const index = command.index === null ? null : typeof command.index === 'number' ? command.index : Number.NaN;
+    if (index !== null && !Number.isInteger(index)) return;
+    update(selectCampaignBoardCell(state, index), false);
+    return;
+  }
+
+  if (type === 'moveOrMerge') {
+    const from = typeof command.from === 'number' ? command.from : Number.NaN;
+    const to = typeof command.to === 'number' ? command.to : Number.NaN;
+    if (!Number.isInteger(from) || !Number.isInteger(to)) return;
+    settleOnline();
+    update(moveOrMergeCampaignBoard(state, from, to).state);
+    return;
+  }
+
+  if (type === 'acknowledge') {
+    settleOnline();
+    update(acknowledgeCampaignRunCompletion(state));
+  }
+});
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
