@@ -5,12 +5,14 @@ Brainrot-themed browser merge-idle game for Yandex Games and additional web port
 ## Product direction
 The playable core is a 6×5 merge board with one canonical T1→T18 character chain, passive production, Brain Box economy, Brain Lab upgrades, missions, Collection, offline income and platform-safe persistence.
 
-The next product phase adds the long-term reason to keep playing:
+The long-term product layer is now:
 - **Collection Rewards** — permanent rewards for discovery milestones;
 - **Prestige / Brain Reset** — T18 resets into permanent Brain Cells/meta upgrades;
-- **Brainverse Campaign** — target 8 worlds × 8 stages with merge challenges, mastery stars and bosses.
+- **Brainverse Campaign** — 8 worlds built from **7 persistent Locations + 1 persistent World Raid per world**.
 
-Campaign progress and permanent meta survive Prestige. See `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
+Each Campaign Location progresses through **Stabilize → Deliver Orders → Restore Landmark → Mastery**. World Progress, landmark restoration and Raid progress persist between sessions and survive Prestige. The old 64 short-stage / star model is obsolete.
+
+See `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 
 ## Run locally
 
@@ -41,6 +43,8 @@ Production packaging / browser smoke is also exercised by CI.
 - local/Yandex save through the platform-adapter boundary;
 - board-first mobile layout with Missions / Collection / Brain Lab modal dock;
 - production Missions / Collection / Rewards / Brain Lab icon set;
+- responsive Campaign map with World 1/2 art, connected route, seven Location nodes, World Raid node, World restoration summary and Location/Raid overview surfaces;
+- Campaign core domain model for Location phases, World Progress and Raid gating;
 - desktop/compact/mobile Chromium QA in CI.
 
 ## Source-of-truth docs
