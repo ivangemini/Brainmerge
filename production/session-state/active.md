@@ -36,13 +36,13 @@ Target full Campaign:
 - 56 Locations + 8 Raids;
 - Campaign progress survives Prestige.
 
-Initial Location phase weighting:
+Location phase weighting:
 - Stabilize 20%;
 - Deliver Orders 25%;
 - Restore Landmark 45%;
 - Mastery 10%.
 
-Initial World Raid gate:
+World Raid gate:
 - >=80% World Restored;
 - >=5 restored landmarks.
 
@@ -50,61 +50,80 @@ World Raids are persistent 3-phase bosses whose progress survives sessions.
 
 ## Implemented Campaign foundation
 - `src/core/campaign.ts` owns persistent Campaign domain state;
-- first two production worlds each define seven stable Location ids;
-- pure Location/World progress calculations;
-- restored-landmark counting;
+- `src/core/world1-campaign-run.ts` owns the data-driven World 1 run engine;
+- all seven World 1 Locations have stable run configs, Location-specific Overgrowth layouts and order-tier pressure;
+- pure Location/World progress calculations and restored-landmark counting;
 - Raid unlock calculation;
 - Campaign map reads canonical save-v6 presentation snapshots;
 - World Restored / Landmarks / Raid-gate summary;
 - Location overview with four persistent phases and landmark;
 - Raid overview with three persistent phases;
-- EN/RU Campaign copy;
-- browser smoke verifies Campaign progress survives a clean storage handoff.
+- generic World 1 CampaignRun UI binds the same isolated 6x5 board to whichever unlocked Location owns the active run;
+- EN/RU Campaign copy is parameterized by Location/Landmark identity;
+- browser smoke verifies Campaign progress and active runs survive clean reload/storage handoff.
 
-## First complete Campaign Location vertical slice
-World 1 / Location 1 — **Sneaker Garden** now has all four playable phases on one isolated 6x5 Campaign board.
+## World 1 route contract
+- Location 1 starts unlocked;
+- Location N unlocks when Location N-1 completes **Restore Landmark** (`restore = 1` / 90% cumulative Location restoration);
+- Mastery is optional for forward route progression but required for that Location's 100% completion;
+- locked route nodes use locked art, expose `aria-disabled=true`, and cannot launch a Campaign run;
+- first lifetime discovery remains main-chain merge-first; Campaign orders are capped by `maxDiscoveredTier`.
 
+## Location 1 — Sneaker Garden — complete 0 -> 100%
 ### Stabilize — 20%
 - six Overgrowth cells start blocked;
 - four T1 Campaign units create an immediate merge decision;
 - free Campaign Supply never spends main-board coins or paid Brain Box inflation;
-- supply tiers are capped by lifetime `maxDiscoveredTier`;
-- each successful merge clears exactly one nearest Overgrowth blocker;
-- six clearing pulses commit `stabilize = 1` exactly once.
+- each successful merge clears exactly one nearest Overgrowth blocker.
 
 ### Deliver Orders — +25%
 - deterministic four-order queue `[T2, T2, T3, T4]`, capped by lifetime discovery;
 - delivery consumes only the matching Campaign-board unit;
-- each order commits one quarter of Deliver exactly once;
-- partial order cursor survives exit/reload;
-- completing all four raises Sneaker Garden from 20% to 45%.
+- partial order cursor survives exit/reload.
 
 ### Restore Landmark — +45%
-- six restoration orders are grouped into three two-order batches;
-- only a completed two-order batch commits permanent Landmark progress;
+- six restoration orders are grouped into three atomic two-order batches;
 - batches map to Giant Sneaker Flower Bed levels 1, 2 and 3;
-- Landmark level permanently increases stronger Campaign Supply chance from 25% baseline up to 40% at level 3;
-- completing all three levels raises Sneaker Garden from 45% to 90%.
+- Landmark level raises stronger Campaign Supply chance from 25% baseline up to 40% at level 3.
 
 ### Mastery — +10%
 - three final high-pressure orders;
-- stronger five-cell Overgrowth remains locked during the phase and cannot be cleared by merge pulses;
-- Landmark Supply bonus remains active;
-- completing all Mastery orders commits the final 10%, taking Sneaker Garden to 100%.
+- stronger five-cell Overgrowth stays locked during Mastery;
+- completion takes Sneaker Garden to 100%.
 
-### Isolation / persistence contract
+## Location 2 — Toilet Pond — first generic-location validation complete
+- unlocks after Sneaker Garden Landmark reaches Restore=100%; Sneaker Mastery is not required;
+- starts a separate Toilet Pond Stabilize run on the same generic 6x5 Campaign engine;
+- Toilet Pond Stabilize uses seven Location-specific Overgrowth blockers;
+- order ranges are data-driven from the Location definition and remain lifetime-discovery capped;
+- main board/economy remains untouched;
+- active Toilet Pond run persists in save v6 and resumes after reload;
+- Chromium World 1 smoke verifies route locking, launch, merge/blocker progress and reload/resume on mobile.
+
+## Locations 3–7 — engine/config ready, content validation pending
+The generic runtime already supports:
+- Watermelon Grill;
+- Hose Tunnels;
+- Gnome Yard;
+- Mushroom Field;
+- Backyard Core.
+
+Each has its own Overgrowth layouts and increasing order-tier range, but these five Locations are **not yet pacing/content-sign-off complete**. Validate them through the same browser/runtime path rather than creating bespoke gameplay branches.
+
+## Isolation / persistence contract
 - Campaign board never aliases or consumes main-board cells;
 - Campaign actions do not change main-board coins, XP, main merge count or paid Brain Box inflation;
-- active Stabilize/Deliver/Restore/Mastery runs are persisted in save v6 and resume after reload;
+- active Stabilize/Deliver/Restore/Mastery runs persist in save v6 and resume after reload;
 - completed temporary run state can be dismissed without erasing permanent Location progress.
 
-Validation status:
-- unit/integration suite covers Stabilize, Deliver, Restore batch atomicity, Landmark perk and Mastery completion;
+## Current validation status
+- unit/integration suite covers Sneaker Garden end-to-end plus generic World 1 unlock/order/isolation/persistence behavior;
 - packaged runtime smoke passes;
 - Campaign shell smoke covers save/reload + Stabilize/Deliver resume;
-- dedicated Restore + Mastery Chromium smoke verifies Landmark Lv1 persistence and final 100% completion;
-- packaged RC, motion, RU runtime and Yandex adapter smokes pass;
-- package/release audit passes.
+- Restore + Mastery Chromium smoke verifies Landmark persistence and 100% Sneaker Garden completion;
+- World 1 Chromium smoke verifies Toilet Pond unlock/locked-next-node semantics and active-run reload;
+- packaged RC, motion, RU runtime and Yandex adapter smokes remain required gates;
+- package/release audit remains required.
 
 ## Approved Campaign Art Pack
 Repository-ready:
@@ -116,12 +135,11 @@ Repository-ready:
 - World 2 Surreal Brainrot City environment + boss.
 
 ## Next implementation sequence
-1. Generalize the proven Sneaker Garden phase engine into data-driven World 1 Location configs.
-2. Make Toilet Pond playable using the same phase framework with Location-specific goals/landmark identity.
-3. Implement Watermelon Grill, Hose Tunnels, Gnome Yard, Mushroom Field and Backyard Core.
-4. Build persistent 3-phase World 1 Raid using the same isolated Campaign board/state boundary.
-5. Collection Rewards + Prestige integration on the same v6 meta.
-6. World 2 Traffic Lock + seven Locations + Raid.
+1. Validate/tune Watermelon Grill, Hose Tunnels, Gnome Yard, Mushroom Field and Backyard Core through the generic World 1 engine.
+2. Complete enough World 1 Locations to naturally satisfy the >=80% + 5 Landmark Raid gate.
+3. Build persistent 3-phase World 1 Raid on the isolated Campaign state boundary.
+4. Collection Rewards + Prestige integration on save v6 meta.
+5. World 2 Traffic Lock + seven Locations + Raid.
 
 ## Source of truth
 - `docs/ROADMAP.md`
