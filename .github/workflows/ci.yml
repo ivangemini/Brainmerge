@@ -22,6 +22,8 @@ jobs:
         run: npm run smoke:runtime
       - name: Run Campaign shell smoke
         run: npm run smoke:campaign
+      - name: Capture Campaign asset diagnostic
+        run: node scripts/campaign-assets-diagnostic.mjs
       - name: Run packaged RC smoke
         run: npm run smoke:rc
       - name: Run packaged motion smoke
