@@ -72,8 +72,8 @@ function ensureEntry() {
   if (existing instanceof HTMLButtonElement) {
     entryButton = existing;
     const label = existing.querySelector('span');
-    if (label) label.textContent = copy.entry;
-    existing.setAttribute('aria-label', copy.entry);
+    if (label && label.textContent !== copy.entry) label.textContent = copy.entry;
+    if (existing.getAttribute('aria-label') !== copy.entry) existing.setAttribute('aria-label', copy.entry);
     return;
   }
 
@@ -185,11 +185,13 @@ async function refresh() {
   if (!await loadCopy()) return;
   ensureEntry();
   if (overlay?.classList.contains('is-open')) {
-    overlay.setAttribute('aria-label', copy.title);
-    const heading = overlay.querySelector('.campaign-heading');
-    if (heading) heading.innerHTML = `<span>${copy.title}</span><strong>${copy.subtitle}</strong>`;
+    if (overlay.getAttribute('aria-label') !== copy.title) overlay.setAttribute('aria-label', copy.title);
+    const headingLabel = overlay.querySelector('.campaign-heading span');
+    const headingSubtitle = overlay.querySelector('.campaign-heading strong');
+    if (headingLabel && headingLabel.textContent !== copy.title) headingLabel.textContent = copy.title;
+    if (headingSubtitle && headingSubtitle.textContent !== copy.subtitle) headingSubtitle.textContent = copy.subtitle;
     const back = overlay.querySelector('.campaign-back');
-    if (back) back.setAttribute('aria-label', copy.back);
+    if (back && back.getAttribute('aria-label') !== copy.back) back.setAttribute('aria-label', copy.back);
     renderWorld();
   }
 }
@@ -206,7 +208,9 @@ function scheduleRefresh() {
 const appRoot = document.querySelector('#app');
 if (appRoot) {
   const appObserver = new MutationObserver(scheduleRefresh);
-  appObserver.observe(appRoot, { childList: true, subtree: true });
+  // GameView replaces the direct children of #app on each render. Observing only
+  // that boundary avoids reacting to Campaign's own label/icon updates inside it.
+  appObserver.observe(appRoot, { childList: true });
 }
 const langObserver = new MutationObserver(scheduleRefresh);
 langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
