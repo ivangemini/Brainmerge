@@ -18,6 +18,7 @@ import {
   offlineHoursForLevel,
   upgradeCost
 } from './catalog.js';
+import { sanitizeCampaignRunState } from './campaign-run.js';
 import { createInitialCampaignProgress, sanitizeCampaignProgress } from './campaign.js';
 import type {
   Cell,
@@ -126,6 +127,7 @@ export function createInitialState(now = Date.now()): GameState {
     brainCells: 0,
     prestigeUpgrades: { ...DEFAULT_PRESTIGE_UPGRADES },
     campaign: createInitialCampaignProgress(),
+    campaignRun: null,
     selectedIndex: null,
     messageKey: 'message.welcome'
   };
@@ -155,6 +157,7 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
   const savedDiscovered = version >= 3 && typeof state.maxDiscoveredTier === 'number'
     ? Math.max(1, Math.min(MAX_RUNTIME_TIER, Math.floor(state.maxDiscoveredTier)))
     : discoveredFromBoard;
+  const maxDiscoveredTier = Math.max(discoveredFromBoard, savedDiscovered);
   const spawns = version >= 2 && typeof state.spawns === 'number'
     ? Math.max(0, Math.floor(state.spawns))
     : 0;
@@ -177,6 +180,10 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
   const pendingOfflineCoins = version >= 5 && typeof state.pendingOfflineCoins === 'number' && Number.isFinite(state.pendingOfflineCoins)
     ? Math.max(0, Math.floor(state.pendingOfflineCoins))
     : 0;
+  const campaign = version >= 6 ? sanitizeCampaignProgress(state.campaign) : createInitialCampaignProgress();
+  const campaignRun = version >= 6
+    ? sanitizeCampaignRunState(state.campaignRun, campaign, maxDiscoveredTier)
+    : null;
 
   return {
     version: 6,
@@ -188,7 +195,7 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
     paidBoxes: version >= 5 && typeof state.paidBoxes === 'number' && Number.isFinite(state.paidBoxes)
       ? Math.max(0, Math.floor(state.paidBoxes))
       : 0,
-    maxDiscoveredTier: Math.max(discoveredFromBoard, savedDiscovered),
+    maxDiscoveredTier,
     missionIndex,
     upgrades: version >= 5 ? sanitizeUpgrades(state.upgrades) : { ...DEFAULT_UPGRADES },
     incomeRemainder,
@@ -198,7 +205,8 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
     prestigeCount: version >= 6 ? sanitizeNonnegativeInt(state.prestigeCount, 1_000_000) : 0,
     brainCells: version >= 6 ? sanitizeNonnegativeInt(state.brainCells, 1_000_000_000) : 0,
     prestigeUpgrades: version >= 6 ? sanitizePrestigeUpgrades(state.prestigeUpgrades) : { ...DEFAULT_PRESTIGE_UPGRADES },
-    campaign: version >= 6 ? sanitizeCampaignProgress(state.campaign) : createInitialCampaignProgress(),
+    campaign,
+    campaignRun,
     selectedIndex: null,
     messageKey: null
   };
