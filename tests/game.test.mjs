@@ -284,12 +284,17 @@ test('first discovery bonus is paid once, then repeat merges use base reward', (
   assert.equal(repeated.coins - repeatBase.coins, mergeRewardForTier(3));
 });
 
-test('initial state starts save v5 with immediate merge and economy defaults', () => {
+test('initial state starts save v6 with immediate merge and permanent-meta defaults', () => {
   const state = createInitialState(1234);
-  assert.equal(state.version, 5);
+  assert.equal(state.version, 6);
   assert.equal(state.missionIndex, 0);
   assert.equal(state.paidBoxes, 0);
   assert.deepEqual(state.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
+  assert.deepEqual(state.collectionRewardClaims, []);
+  assert.equal(state.prestigeCount, 0);
+  assert.equal(state.brainCells, 0);
+  assert.deepEqual(state.prestigeUpgrades, { income: 0, boxDiscount: 0, startingCoins: 0, offline: 0, campaignPower: 0 });
+  assert.deepEqual(Object.keys(state.campaign.worlds), ['1', '2']);
   assert.equal(state.lastAccrualAt, 1234);
   assert.equal(state.cells.filter(Boolean).length, 4);
   assert.equal(hasAnyMerge(state), true);
@@ -305,7 +310,7 @@ test('best merge hint prefers the highest-tier available pair', () => {
   assert.deepEqual(findBestMergePair({ ...second, cells }), [1, 3]);
 });
 
-test('legacy v2 save migrates chain identity and mission completion into save v5', () => {
+test('legacy v2 save migrates chain identity and mission completion into save v6', () => {
   const current = createInitialState(0);
   const cells = current.cells.slice();
   cells[0] = { id: 'legacy-shark', familyId: 'shark-sneakers', tier: 1 };
@@ -321,7 +326,7 @@ test('legacy v2 save migrates chain identity and mission completion into save v5
     messageKey: 'message.moved'
   };
   const migrated = sanitizeState(legacy, 50_000);
-  assert.equal(migrated?.version, 5);
+  assert.equal(migrated?.version, 6);
   assert.equal(migrated?.cells[0]?.tier, 5);
   assert.equal(migrated?.maxDiscoveredTier, 5);
   assert.equal(migrated?.missionIndex, 1);
@@ -329,9 +334,12 @@ test('legacy v2 save migrates chain identity and mission completion into save v5
   assert.deepEqual(migrated?.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
   assert.equal(migrated?.lastAccrualAt, 50_000);
   assert.equal(migrated?.selectedIndex, null);
+  assert.equal(migrated?.prestigeCount, 0);
+  assert.equal(migrated?.brainCells, 0);
+  assert.deepEqual(Object.keys(migrated?.campaign.worlds ?? {}), ['1', '2']);
 });
 
-test('save v5 clamps corrupted economy fields safely', () => {
+test('save v6 clamps corrupted economy and permanent-meta fields safely', () => {
   const current = createInitialState(10_000);
   const restored = sanitizeState({
     ...current,
@@ -341,7 +349,22 @@ test('save v5 clamps corrupted economy fields safely', () => {
     upgrades: { boxBaseTier: 999, luckyDrop: -5, income: 999, offline: 999 },
     incomeRemainder: 99,
     lastAccrualAt: 999_999,
-    pendingOfflineCoins: -40
+    pendingOfflineCoins: -40,
+    collectionRewardClaims: ['collection-5', 'collection-5', 42, ''],
+    prestigeCount: -7,
+    brainCells: -9,
+    prestigeUpgrades: { income: 999, boxDiscount: -2, startingCoins: 3.9, offline: 999, campaignPower: 2 },
+    campaign: {
+      worlds: {
+        '1': {
+          locations: {
+            'w1-sneaker-garden': { stabilize: 2, deliver: -1, restore: 0.5, mastery: 999 }
+          },
+          raidProgress: 2,
+          raidCleared: false
+        }
+      }
+    }
   }, 20_000);
   assert.equal(restored?.missionIndex, MISSION_TRACK.length);
   assert.equal(restored?.maxDiscoveredTier, MAX_RUNTIME_TIER);
@@ -353,6 +376,13 @@ test('save v5 clamps corrupted economy fields safely', () => {
   assert.ok((restored?.incomeRemainder ?? 0) < 1);
   assert.equal(restored?.lastAccrualAt, 20_000);
   assert.equal(restored?.pendingOfflineCoins, 0);
+  assert.deepEqual(restored?.collectionRewardClaims, ['collection-5']);
+  assert.equal(restored?.prestigeCount, 0);
+  assert.equal(restored?.brainCells, 0);
+  assert.deepEqual(restored?.prestigeUpgrades, { income: 20, boxDiscount: 0, startingCoins: 3, offline: 20, campaignPower: 2 });
+  assert.deepEqual(restored?.campaign.worlds['1'].locations['w1-sneaker-garden'], { stabilize: 1, deliver: 0, restore: 0.5, mastery: 1 });
+  assert.equal(restored?.campaign.worlds['1'].raidProgress, 1);
+  assert.equal(restored?.campaign.worlds['1'].raidCleared, true);
 });
 
 test('collection discovery persists after lower characters are consumed', () => {
