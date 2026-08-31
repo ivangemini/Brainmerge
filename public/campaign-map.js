@@ -10,13 +10,13 @@ const WORLD_CONFIG = {
     kickerKey: 'world1Kicker',
     nameKey: 'world1Name',
     locations: [
-      ['w1Location1Name', 'w1Landmark1Name', 12, 79, 18, 82],
-      ['w1Location2Name', 'w1Landmark2Name', 27, 66, 39, 72],
-      ['w1Location3Name', 'w1Landmark3Name', 41, 56, 64, 65],
-      ['w1Location4Name', 'w1Landmark4Name', 55, 46, 39, 55],
-      ['w1Location5Name', 'w1Landmark5Name', 68, 37, 66, 45],
-      ['w1Location6Name', 'w1Landmark6Name', 79, 28, 42, 35],
-      ['w1Location7Name', 'w1Landmark7Name', 87, 19, 68, 25]
+      ['w1-sneaker-garden', 'w1Location1Name', 'w1Landmark1Name', 12, 79, 18, 82],
+      ['w1-toilet-pond', 'w1Location2Name', 'w1Landmark2Name', 27, 66, 39, 72],
+      ['w1-watermelon-grill', 'w1Location3Name', 'w1Landmark3Name', 41, 56, 64, 65],
+      ['w1-hose-tunnels', 'w1Location4Name', 'w1Landmark4Name', 55, 46, 39, 55],
+      ['w1-gnome-yard', 'w1Location5Name', 'w1Landmark5Name', 68, 37, 66, 45],
+      ['w1-mushroom-field', 'w1Location6Name', 'w1Landmark6Name', 79, 28, 42, 35],
+      ['w1-backyard-core', 'w1Location7Name', 'w1Landmark7Name', 87, 19, 68, 25]
     ],
     raid: [93, 10, 42, 12]
   },
@@ -26,13 +26,13 @@ const WORLD_CONFIG = {
     kickerKey: 'world2Kicker',
     nameKey: 'world2Name',
     locations: [
-      ['w2Location1Name', 'w2Landmark1Name', 10, 80, 17, 83],
-      ['w2Location2Name', 'w2Landmark2Name', 23, 69, 39, 73],
-      ['w2Location3Name', 'w2Landmark3Name', 38, 58, 64, 66],
-      ['w2Location4Name', 'w2Landmark4Name', 54, 49, 38, 56],
-      ['w2Location5Name', 'w2Landmark5Name', 67, 39, 66, 46],
-      ['w2Location6Name', 'w2Landmark6Name', 78, 29, 41, 36],
-      ['w2Location7Name', 'w2Landmark7Name', 87, 19, 68, 26]
+      ['w2-sneaker-transit', 'w2Location1Name', 'w2Landmark1Name', 10, 80, 17, 83],
+      ['w2-pigeon-plaza', 'w2Location2Name', 'w2Landmark2Name', 23, 69, 39, 73],
+      ['w2-vending-block', 'w2Location3Name', 'w2Landmark3Name', 38, 58, 64, 66],
+      ['w2-long-neck-junction', 'w2Location4Name', 'w2Landmark4Name', 54, 49, 38, 56],
+      ['w2-sunglasses-strip', 'w2Location5Name', 'w2Landmark5Name', 67, 39, 66, 46],
+      ['w2-appliance-district', 'w2Location6Name', 'w2Landmark6Name', 78, 29, 41, 36],
+      ['w2-city-core', 'w2Location7Name', 'w2Landmark7Name', 87, 19, 68, 26]
     ],
     raid: [94, 10, 41, 12]
   }
@@ -44,6 +44,7 @@ const NODE_ART = {
   deliver: './public/assets/ui/stage-challenge.webp',
   restore: './public/assets/ui/stage-elite.webp',
   mastery: './public/assets/ui/stage-locked.webp',
+  complete: './public/assets/ui/stage-elite.webp',
   raid: './public/assets/ui/stage-boss.webp'
 };
 
@@ -54,6 +55,8 @@ let overlay = null;
 let scheduled = false;
 let entryButton = null;
 let detailReturnTarget = null;
+let campaignSnapshot = null;
+let campaignSnapshotSignature = '';
 
 function currentLocale() {
   return document.documentElement.lang?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
@@ -101,9 +104,17 @@ function ensureEntry() {
   entryButton = button;
 }
 
+function snapshotWorld(worldId) {
+  return campaignSnapshot?.worlds?.find((world) => world.id === worldId) ?? null;
+}
+
+function snapshotLocation(worldId, locationId) {
+  return snapshotWorld(worldId)?.locations?.find((location) => location.id === locationId) ?? null;
+}
+
 function routePoints(config, xIndex, yIndex) {
   const points = config.locations.map((location) => [location[xIndex], location[yIndex]]);
-  points.push([config.raid[xIndex - 2], config.raid[yIndex - 2]]);
+  points.push([config.raid[xIndex - 3], config.raid[yIndex - 3]]);
   return points.map(([x, y]) => `${x},${y}`).join(' ');
 }
 
@@ -130,25 +141,38 @@ async function setBossSource(image, source) {
   image.src = `data:image/webp;base64,${encoded}`;
 }
 
-function phaseCard(type, statusKey) {
+function phaseStatus(type, locationProgress) {
+  const value = locationProgress?.phases?.[type] ?? 0;
+  if (value >= 1) return '100%';
+  if (locationProgress?.currentPhase === type) return copy.phaseReady;
+  return copy.phaseLocked;
+}
+
+function phaseCard(type, locationProgress) {
   const titleKey = `phase${type[0].toUpperCase()}${type.slice(1)}`;
   return `
-    <div class="campaign-phase campaign-phase--${type}">
+    <div class="campaign-phase campaign-phase--${type}" data-phase-status="${locationProgress?.currentPhase === type ? 'active' : (locationProgress?.phases?.[type] >= 1 ? 'complete' : 'locked')}">
       <img src="${NODE_ART[type]}" alt="" aria-hidden="true">
       <div>
-        <small>${copy[statusKey]}</small>
+        <small>${phaseStatus(type, locationProgress)}</small>
         <strong>${copy[titleKey]}</strong>
         <p>${copy[`${titleKey}Desc`]}</p>
       </div>
     </div>`;
 }
 
-function raidPhaseCard(index) {
+function raidPhaseCard(index, worldProgress) {
+  const raidFraction = Math.max(0, Math.min(1, (worldProgress?.raidProgressPercent ?? 0) / 100));
+  const start = (index - 1) / 3;
+  const end = index / 3;
+  const complete = raidFraction >= end || worldProgress?.raidCleared;
+  const ready = worldProgress?.raidUnlocked && raidFraction >= start && !complete;
+  const status = complete ? '100%' : ready ? copy.phaseReady : copy.phaseLocked;
   return `
-    <div class="campaign-phase campaign-phase--raid">
+    <div class="campaign-phase campaign-phase--raid" data-phase-status="${complete ? 'complete' : ready ? 'active' : 'locked'}">
       <img src="${NODE_ART.raid}" alt="" aria-hidden="true">
       <div>
-        <small>${copy.phaseLocked}</small>
+        <small>${status}</small>
         <strong>${copy[`raidPhase${index}`]}</strong>
         <p>${copy[`raidPhase${index}Desc`]}</p>
       </div>
@@ -170,6 +194,8 @@ function openLocation(index, trigger) {
   const config = WORLD_CONFIG[activeWorld];
   const location = config.locations[index];
   if (!location) return;
+  const [locationId, nameKey, landmarkKey] = location;
+  const progress = snapshotLocation(activeWorld, locationId);
   const detail = overlay.querySelector('.campaign-detail');
   const kicker = overlay.querySelector('.campaign-detail__kicker');
   const title = overlay.querySelector('.campaign-detail__title');
@@ -186,16 +212,16 @@ function openLocation(index, trigger) {
 
   detailReturnTarget = trigger;
   kicker.textContent = interpolate(copy.locationLabel, { location: index + 1 });
-  title.textContent = copy[location[0]];
+  title.textContent = copy[nameKey];
   progressLabel.textContent = copy.locationProgressLabel;
-  progressValue.textContent = '0%';
+  progressValue.textContent = `${progress?.percent ?? 0}%`;
   landmarkLabel.textContent = copy.landmarkLabel;
-  landmark.textContent = copy[location[1]];
+  landmark.textContent = copy[landmarkKey];
   body.innerHTML =
-    phaseCard('stabilize', 'phaseReady') +
-    phaseCard('deliver', 'phaseLocked') +
-    phaseCard('restore', 'phaseLocked') +
-    phaseCard('mastery', 'phaseLocked');
+    phaseCard('stabilize', progress) +
+    phaseCard('deliver', progress) +
+    phaseCard('restore', progress) +
+    phaseCard('mastery', progress);
   note.textContent = copy.locationLongLoop;
   detail.classList.add('is-open');
   detail.setAttribute('aria-hidden', 'false');
@@ -204,6 +230,7 @@ function openLocation(index, trigger) {
 
 function openRaid(trigger) {
   if (!overlay || !copy) return;
+  const progress = snapshotWorld(activeWorld);
   const detail = overlay.querySelector('.campaign-detail');
   const kicker = overlay.querySelector('.campaign-detail__kicker');
   const title = overlay.querySelector('.campaign-detail__title');
@@ -222,10 +249,10 @@ function openRaid(trigger) {
   kicker.textContent = copy.raidGateLabel;
   title.textContent = copy.raidLabel;
   progressLabel.textContent = copy.raidProgressLabel;
-  progressValue.textContent = '0%';
+  progressValue.textContent = `${progress?.raidProgressPercent ?? 0}%`;
   landmarkLabel.textContent = copy.raidGateLabel;
-  landmark.textContent = copy.raidLocked;
-  body.innerHTML = raidPhaseCard(1) + raidPhaseCard(2) + raidPhaseCard(3);
+  landmark.textContent = progress?.raidUnlocked || progress?.raidCleared ? copy.raidUnlocked : copy.raidLocked;
+  body.innerHTML = raidPhaseCard(1, progress) + raidPhaseCard(2, progress) + raidPhaseCard(3, progress);
   note.textContent = copy.raidLongLoop;
   detail.classList.add('is-open');
   detail.setAttribute('aria-hidden', 'false');
@@ -235,6 +262,7 @@ function openRaid(trigger) {
 function renderWorld() {
   if (!overlay || !copy) return;
   const config = WORLD_CONFIG[activeWorld];
+  const progress = snapshotWorld(activeWorld);
   const scene = overlay.querySelector('.campaign-scene');
   const kicker = overlay.querySelector('.campaign-world__kicker');
   const name = overlay.querySelector('.campaign-world__name');
@@ -243,6 +271,7 @@ function renderWorld() {
   const nodes = overlay.querySelector('.campaign-nodes');
   const worldProgressLabel = overlay.querySelector('.campaign-summary__progress small');
   const worldProgressValue = overlay.querySelector('.campaign-summary__progress strong');
+  const worldProgressBar = overlay.querySelector('.campaign-summary__progress i');
   const landmarksLabel = overlay.querySelector('.campaign-summary__landmarks small');
   const landmarksValue = overlay.querySelector('.campaign-summary__landmarks strong');
   const raidLabel = overlay.querySelector('.campaign-summary__raid small');
@@ -250,10 +279,9 @@ function renderWorld() {
   if (!(scene instanceof HTMLElement) || !(kicker instanceof HTMLElement) || !(name instanceof HTMLElement) ||
       !(boss instanceof HTMLImageElement) || !(route instanceof HTMLElement) || !(nodes instanceof HTMLElement) ||
       !(worldProgressLabel instanceof HTMLElement) || !(worldProgressValue instanceof HTMLElement) ||
-      !(landmarksLabel instanceof HTMLElement) || !(landmarksValue instanceof HTMLElement) ||
-      !(raidLabel instanceof HTMLElement) || !(raidValue instanceof HTMLElement)) return;
+      !(worldProgressBar instanceof HTMLElement) || !(landmarksLabel instanceof HTMLElement) ||
+      !(landmarksValue instanceof HTMLElement) || !(raidLabel instanceof HTMLElement) || !(raidValue instanceof HTMLElement)) return;
 
-  closeDetail({ restoreFocus: false });
   scene.dataset.world = String(activeWorld);
   scene.style.backgroundImage = `url('${config.background}')`;
   kicker.textContent = copy[config.kickerKey];
@@ -261,25 +289,36 @@ function renderWorld() {
   void setBossSource(boss, config.boss);
   boss.alt = '';
 
+  const worldPercent = progress?.percent ?? 0;
   worldProgressLabel.textContent = copy.worldProgressLabel;
-  worldProgressValue.textContent = '0%';
+  worldProgressValue.textContent = `${worldPercent}%`;
+  worldProgressBar.style.width = `${worldPercent}%`;
   landmarksLabel.textContent = copy.landmarksLabel;
-  landmarksValue.textContent = `0 / ${config.locations.length}`;
+  landmarksValue.textContent = `${progress?.restoredLandmarks ?? 0} / ${config.locations.length}`;
   raidLabel.textContent = copy.raidGateLabel;
-  raidValue.textContent = copy.raidLocked;
+  raidValue.textContent = progress?.raidCleared
+    ? '100%'
+    : progress?.raidUnlocked
+      ? `${copy.raidUnlocked} ${progress.raidProgressPercent}%`
+      : copy.raidLocked;
 
-  const desktopPoints = routePoints(config, 2, 3);
-  const mobilePoints = routePoints(config, 4, 5);
+  const desktopPoints = routePoints(config, 3, 4);
+  const mobilePoints = routePoints(config, 5, 6);
   route.innerHTML = routeSvg(desktopPoints, 'desktop') + routeSvg(mobilePoints, 'mobile');
 
   const locationNodes = config.locations.map((location, index) => {
-    const [, , x, y, mx, my] = location;
+    const [locationId, , , x, y, mx, my] = location;
+    const locationProgress = snapshotLocation(activeWorld, locationId);
+    const percent = locationProgress?.percent ?? 0;
+    const phase = locationProgress?.currentPhase ?? 'stabilize';
     const label = interpolate(copy.locationLabel, { location: index + 1 });
-    return `<button class="campaign-node campaign-node--location" type="button" data-location-index="${index}" aria-label="${label}" style="--x:${x}%;--y:${y}%;--mx:${mx}%;--my:${my}%"><img src="${NODE_ART.location}" alt="" aria-hidden="true"><b>${index + 1}</b><em>0%</em></button>`;
+    return `<button class="campaign-node campaign-node--location ${phase === 'complete' ? 'is-complete' : ''}" type="button" data-location-index="${index}" data-location-id="${locationId}" aria-label="${label}" style="--x:${x}%;--y:${y}%;--mx:${mx}%;--my:${my}%"><img src="${NODE_ART[phase] ?? NODE_ART.location}" alt="" aria-hidden="true"><b>${index + 1}</b><em>${percent}%</em></button>`;
   }).join('');
 
   const [bx, by, bmx, bmy] = config.raid;
-  const raidNode = `<button class="campaign-node campaign-node--boss is-locked" type="button" data-raid="true" aria-label="${copy.raidLabel}" style="--x:${bx}%;--y:${by}%;--mx:${bmx}%;--my:${bmy}%"><img src="${NODE_ART.raid}" alt="" aria-hidden="true"><b>8</b><em>0%</em></button>`;
+  const raidPercent = progress?.raidProgressPercent ?? 0;
+  const raidLocked = !(progress?.raidUnlocked || progress?.raidCleared);
+  const raidNode = `<button class="campaign-node campaign-node--boss ${raidLocked ? 'is-locked' : ''} ${progress?.raidCleared ? 'is-complete' : ''}" type="button" data-raid="true" aria-label="${copy.raidLabel}" style="--x:${bx}%;--y:${by}%;--mx:${bmx}%;--my:${bmy}%"><img src="${NODE_ART.raid}" alt="" aria-hidden="true"><b>8</b><em>${raidPercent}%</em></button>`;
   nodes.innerHTML = locationNodes + raidNode;
 
   nodes.querySelectorAll('.campaign-node--location').forEach((node) => {
@@ -289,8 +328,11 @@ function renderWorld() {
 
   overlay.querySelectorAll('.campaign-world-tab').forEach((tab) => {
     if (!(tab instanceof HTMLButtonElement)) return;
-    const selected = Number(tab.dataset.world) === activeWorld;
+    const worldId = Number(tab.dataset.world) === 2 ? 2 : 1;
+    const worldSnapshot = snapshotWorld(worldId);
+    const selected = worldId === activeWorld;
     tab.classList.toggle('is-active', selected);
+    tab.classList.toggle('is-locked', worldSnapshot?.unlocked === false);
     tab.setAttribute('aria-pressed', selected ? 'true' : 'false');
   });
 }
@@ -350,6 +392,7 @@ function createOverlay() {
   section.querySelector('.campaign-detail__backdrop').addEventListener('click', () => closeDetail());
   section.querySelectorAll('.campaign-world-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
+      closeDetail({ restoreFocus: false });
       activeWorld = Number(tab.dataset.world) === 2 ? 2 : 1;
       renderWorld();
     });
@@ -359,6 +402,7 @@ function createOverlay() {
 
 function openCampaign() {
   if (!copy) return;
+  window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
   if (!overlay) {
     overlay = createOverlay();
     document.body.append(overlay);
@@ -398,6 +442,15 @@ function scheduleRefresh() {
   });
 }
 
+window.addEventListener('brainmerge:campaign-state', (event) => {
+  if (!(event instanceof CustomEvent) || !event.detail || typeof event.detail !== 'object') return;
+  const signature = JSON.stringify(event.detail);
+  if (signature === campaignSnapshotSignature) return;
+  campaignSnapshotSignature = signature;
+  campaignSnapshot = event.detail;
+  if (overlay?.classList.contains('is-open')) renderWorld();
+});
+
 const appRoot = document.querySelector('#app');
 if (appRoot) {
   const appObserver = new MutationObserver(scheduleRefresh);
@@ -418,3 +471,4 @@ document.addEventListener('keydown', (event) => {
 }, true);
 
 void refresh();
+window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
