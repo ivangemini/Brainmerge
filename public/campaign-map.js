@@ -17,7 +17,7 @@ const WORLD_CONFIG = {
   },
   2: {
     background: './public/assets/campaign/campaign-world-02.webp',
-    boss: './public/assets/campaign/boss-world-02.webp',
+    boss: './public/assets/campaign/boss-world-02.b64',
     kickerKey: 'world2Kicker',
     nameKey: 'world2Name',
     nodes: [
@@ -93,6 +93,20 @@ function nodeLabel(type, stage) {
   return interpolate(copy.stageLabel, { stage });
 }
 
+async function setBossSource(image, source) {
+  image.dataset.source = source;
+  if (!source.endsWith('.b64')) {
+    image.src = source;
+    return;
+  }
+  image.removeAttribute('src');
+  const response = await fetch(source);
+  if (!response.ok) return;
+  const encoded = (await response.text()).trim();
+  if (image.dataset.source !== source) return;
+  image.src = `data:image/webp;base64,${encoded}`;
+}
+
 function renderWorld() {
   if (!overlay || !copy) return;
   const config = WORLD_CONFIG[activeWorld];
@@ -107,7 +121,7 @@ function renderWorld() {
   scene.style.backgroundImage = `url('${config.background}')`;
   kicker.textContent = copy[config.kickerKey];
   name.textContent = copy[config.nameKey];
-  boss.src = config.boss;
+  void setBossSource(boss, config.boss);
   boss.alt = '';
   nodes.innerHTML = config.nodes.map(([type, x, y, mx, my], index) => {
     const stage = index + 1;
