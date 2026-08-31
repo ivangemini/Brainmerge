@@ -137,7 +137,7 @@ try {
     await page.waitForFunction(() => window.__yandexProbe.setData.some((entry) => entry.flush === true));
     const finalProbe = await page.evaluate(() => window.__yandexProbe);
     const flushed = finalProbe.setData.find((entry) => entry.flush === true);
-    assert(flushed?.data?.brainmerge?.version === 5, 'pagehide must flush canonical save v5 through real Yandex player.setData');
+    assert(flushed?.data?.brainmerge?.version === 6, 'pagehide must flush canonical save v6 through real Yandex player.setData');
     assert(finalProbe.gameplayStop === 2, `pagehide must stop gameplay once after ad flow, got ${finalProbe.gameplayStop}`);
     assert(errors.length === 0, `Yandex runtime page errors: ${errors.join(' | ')}`);
     await context.close();
