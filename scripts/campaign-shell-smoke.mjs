@@ -2,10 +2,13 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright';
+import { createInitialState } from '../build/core/game.js';
 
 const ROOT = new URL('../dist/', import.meta.url);
 const OUTPUT = new URL('../runtime-artifacts/', import.meta.url);
 const PORT = 4181;
+const ORIGIN = `http://127.0.0.1:${PORT}`;
+const SAVE_KEY = 'brainmerge.save.v1';
 const mime = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.js', 'text/javascript; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'], ['.webp', 'image/webp'], ['.png', 'image/png'], ['.svg', 'image/svg+xml'],
@@ -34,31 +37,52 @@ const server = createServer(async (req, res) => {
   }
 });
 
-async function seedPersistentCampaignProgress(page) {
-  const result = await page.evaluate(() => {
-    const key = 'brainmerge.save.v1';
-    const raw = localStorage.getItem(key);
-    if (!raw) return { ok: false, reason: 'missing-save' };
-    const saved = JSON.parse(raw);
-    if (saved.version !== 6) return { ok: false, reason: `version-${saved.version}` };
-    const target = saved.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden'];
-    if (!target) return { ok: false, reason: 'missing-campaign-location' };
-    Object.assign(target, { stabilize: 1, deliver: 1, restore: 1, mastery: 1 });
-    localStorage.setItem(key, JSON.stringify(saved));
-    return { ok: true };
+function seededV6State() {
+  const state = createInitialState(Date.now());
+  const target = state.campaign.worlds['1']?.locations['w1-sneaker-garden'];
+  assert(target, 'seed state is missing World 1 / Sneaker Garden');
+  Object.assign(target, { stabilize: 1, deliver: 1, restore: 1, mastery: 1 });
+  return state;
+}
+
+async function bootSeededStorage(browser, viewport) {
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    hasTouch: viewport.touch
   });
-  assert(result.ok, `could not seed v6 campaign progress: ${result.reason ?? 'unknown'}`);
-  await page.reload({ waitUntil: 'networkidle' });
+  const seed = seededV6State();
+  await context.addInitScript(({ origin, key, value }) => {
+    if (location.origin === origin && localStorage.getItem(key) === null) {
+      localStorage.setItem(key, value);
+    }
+  }, { origin: ORIGIN, key: SAVE_KEY, value: JSON.stringify(seed) });
+
+  const page = await context.newPage();
+  await page.goto(`${ORIGIN}/?platform=local`, { waitUntil: 'networkidle' });
   await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
-  const persisted = await page.evaluate(() => {
-    const saved = JSON.parse(localStorage.getItem('brainmerge.save.v1') ?? 'null');
+  await page.waitForFunction((key) => {
+    const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
+    return saved?.version === 6 && saved?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden']?.mastery === 1;
+  }, SAVE_KEY);
+
+  const storageState = await context.storageState();
+  await context.close();
+  return storageState;
+}
+
+async function assertPersistedSave(page) {
+  const persisted = await page.evaluate((key) => {
+    const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
     return {
       version: saved?.version,
       location: saved?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden'] ?? null
     };
-  });
-  assert(persisted.version === 6, `reload did not preserve save v6, got ${persisted.version}`);
-  assert(persisted.location?.mastery === 1, 'campaign location progress did not survive reload');
+  }, SAVE_KEY);
+  assert(persisted.version === 6, `clean-context boot did not preserve save v6, got ${persisted.version}`);
+  assert(persisted.location?.stabilize === 1, 'stabilize progress did not survive persistence handoff');
+  assert(persisted.location?.deliver === 1, 'deliver progress did not survive persistence handoff');
+  assert(persisted.location?.restore === 1, 'landmark progress did not survive persistence handoff');
+  assert(persisted.location?.mastery === 1, 'mastery progress did not survive persistence handoff');
 }
 
 async function assertHealthy(page, label, expectedWorldProgress, expectedLandmarks) {
@@ -100,11 +124,13 @@ async function assertLocationOverview(page, label, expectedProgress) {
     phaseCount: document.querySelectorAll('.campaign-detail.is-open .campaign-phase').length,
     title: document.querySelector('.campaign-detail.is-open .campaign-detail__title')?.textContent?.trim() ?? '',
     progress: document.querySelector('.campaign-detail.is-open .campaign-detail__progress-value')?.textContent?.trim() ?? '',
+    completedPhases: document.querySelectorAll('.campaign-detail.is-open .campaign-phase[data-phase-status="complete"]').length,
     horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 1
   }));
   assert(detail.phaseCount === 4, `${label}: expected 4 persistent location phases, got ${detail.phaseCount}`);
   assert(detail.title.length > 0, `${label}: location title is empty`);
   assert(detail.progress === expectedProgress, `${label}: expected location progress ${expectedProgress}, got ${detail.progress}`);
+  if (expectedProgress === '100%') assert(detail.completedPhases === 4, `${label}: completed location should show four completed phases`);
   assert(!detail.horizontalOverflow, `${label}: location overview causes horizontal overflow`);
   await page.screenshot({ path: new URL(`campaign-location-${label}.png`, OUTPUT).pathname, fullPage: true });
   await page.locator('.campaign-detail__close').click();
@@ -120,17 +146,22 @@ try {
     { name: 'desktop', width: 1440, height: 900, touch: false },
     { name: 'mobile', width: 390, height: 844, touch: true }
   ]) {
-    const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, hasTouch: viewport.touch });
+    const storageState = await bootSeededStorage(browser, viewport);
+    const context = await browser.newContext({
+      viewport: { width: viewport.width, height: viewport.height },
+      hasTouch: viewport.touch,
+      storageState
+    });
     const page = await context.newPage();
     const pageErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
-    await page.goto(`http://127.0.0.1:${PORT}/?platform=local`, { waitUntil: 'networkidle' });
+    await page.goto(`${ORIGIN}/?platform=local`, { waitUntil: 'networkidle' });
     await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
-    await seedPersistentCampaignProgress(page);
+    await assertPersistedSave(page);
     await page.locator('.campaign-entry').waitFor({ state: 'visible' });
     await page.locator('.campaign-entry').click();
     await page.locator('.campaign-shell.is-open').waitFor({ state: 'visible' });
-    await page.waitForTimeout(120);
+    await page.waitForFunction(() => document.querySelector('.campaign-summary__progress strong')?.textContent?.trim() === '14%');
     assert(pageErrors.length === 0, `${viewport.name}: page errors: ${pageErrors.join(' | ')}`);
     await assertHealthy(page, `${viewport.name}-world1`, '14%', '1 / 7');
     assert(await page.locator('.campaign-node--location').first().locator('em').textContent() === '100%', `${viewport.name}: persisted location node did not render 100%`);
@@ -139,7 +170,7 @@ try {
 
     await page.locator('.campaign-world-tab[data-world="2"]').click();
     await page.waitForFunction(() => document.querySelector('.campaign-scene')?.dataset.world === '2');
-    await page.waitForTimeout(100);
+    await page.waitForFunction(() => document.querySelector('.campaign-summary__progress strong')?.textContent?.trim() === '0%');
     await assertHealthy(page, `${viewport.name}-world2`, '0%', '0 / 7');
     await page.screenshot({ path: new URL(`campaign-world2-${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
     await assertLocationOverview(page, `${viewport.name}-world2`, '0%');
@@ -153,7 +184,7 @@ try {
     assert(!(await page.locator('.campaign-shell').evaluate((node) => node.classList.contains('is-open'))), `${viewport.name}: Escape did not close Campaign`);
     await context.close();
   }
-  console.log('Campaign shell smoke passed.');
+  console.log('Campaign shell smoke passed with canonical v6 persistence.');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
