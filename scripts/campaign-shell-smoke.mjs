@@ -171,6 +171,7 @@ try {
     await page.locator('.campaign-world-tab[data-world="2"]').click();
     await page.waitForFunction(() => document.querySelector('.campaign-scene')?.dataset.world === '2');
     await page.waitForFunction(() => document.querySelector('.campaign-summary__progress strong')?.textContent?.trim() === '0%');
+    await page.waitForFunction(() => document.querySelector('.campaign-boss')?.getAttribute('src')?.startsWith('data:image/webp;base64,'));
     await assertHealthy(page, `${viewport.name}-world2`, '0%', '0 / 7');
     await page.screenshot({ path: new URL(`campaign-world2-${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
     await assertLocationOverview(page, `${viewport.name}-world2`, '0%');
