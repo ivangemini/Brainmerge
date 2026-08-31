@@ -63,6 +63,20 @@ function tierAtlasPosition(tier) {
   };
 }
 
+function handleBoardKeydown(event) {
+  if (!(event.target instanceof HTMLElement) || !event.target.matches('[data-run-cell]')) return;
+  const index = Number(event.target.dataset.runCell);
+  if (!Number.isInteger(index)) return;
+  let next = null;
+  if (event.key === 'ArrowLeft' && index % BOARD_COLUMNS > 0) next = index - 1;
+  if (event.key === 'ArrowRight' && index % BOARD_COLUMNS < BOARD_COLUMNS - 1) next = index + 1;
+  if (event.key === 'ArrowUp' && index >= BOARD_COLUMNS) next = index - BOARD_COLUMNS;
+  if (event.key === 'ArrowDown' && index + BOARD_COLUMNS < 30) next = index + BOARD_COLUMNS;
+  if (next === null) return;
+  event.preventDefault();
+  shell?.querySelector(`[data-run-cell="${next}"]`)?.focus();
+}
+
 function ensureShell() {
   if (shell || !copy) return shell;
   const section = document.createElement('section');
@@ -122,6 +136,7 @@ function ensureShell() {
     closeRun();
     dispatchCommand({ type: 'acknowledge' });
   });
+  section.addEventListener('keydown', handleBoardKeydown);
   document.body.append(section);
   shell = section;
   return section;
@@ -308,20 +323,6 @@ window.addEventListener('keydown', (event) => {
   event.stopImmediatePropagation();
   closeRun();
 }, true);
-
-shell?.addEventListener('keydown', (event) => {
-  if (!(event.target instanceof HTMLElement) || !event.target.matches('[data-run-cell]')) return;
-  const index = Number(event.target.dataset.runCell);
-  if (!Number.isInteger(index)) return;
-  let next = null;
-  if (event.key === 'ArrowLeft' && index % BOARD_COLUMNS > 0) next = index - 1;
-  if (event.key === 'ArrowRight' && index % BOARD_COLUMNS < BOARD_COLUMNS - 1) next = index + 1;
-  if (event.key === 'ArrowUp' && index >= BOARD_COLUMNS) next = index - BOARD_COLUMNS;
-  if (event.key === 'ArrowDown' && index + BOARD_COLUMNS < 30) next = index + BOARD_COLUMNS;
-  if (next === null) return;
-  event.preventDefault();
-  shell.querySelector(`[data-run-cell="${next}"]`)?.focus();
-});
 
 const langObserver = new MutationObserver(scheduleCopyRefresh);
 langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
