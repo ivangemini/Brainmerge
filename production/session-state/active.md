@@ -61,7 +61,7 @@ World Raids are persistent 3-phase bosses whose progress survives sessions.
 - browser smoke verifies Campaign progress survives a clean storage handoff.
 
 ## First playable CampaignRun vertical slice
-World 1 / Location 1 — **Sneaker Garden / Stabilize** is the current playable slice.
+World 1 / Location 1 — **Sneaker Garden / Stabilize** is playable and CI-green.
 
 Runtime contract:
 - separate 6x5 `CampaignRunState`; never aliases main-board cells;
@@ -76,7 +76,12 @@ Runtime contract:
 - completed temporary run state can be dismissed without erasing permanent Location progress;
 - Campaign merge rewards do not change main-board coins, XP, main merge count or main units.
 
-CI coverage now includes pure isolation/sanitization tests plus a packaged browser flow that starts Sneaker Garden, clears one Overgrowth cell, exits, resumes, reloads and verifies the same run state.
+Validation status:
+- 81/81 unit/integration tests pass;
+- packaged runtime smoke passes;
+- Campaign browser smoke starts the run, clears Overgrowth, exits, resumes and reloads the same active run;
+- packaged RC, motion, RU runtime and Yandex adapter smokes pass;
+- package/release audit passes.
 
 ## Approved Campaign Art Pack
 Repository-ready:
@@ -88,14 +93,13 @@ Repository-ready:
 - World 2 Surreal Brainrot City environment + boss.
 
 ## Next implementation sequence
-1. Finish CI/visual acceptance for Sneaker Garden Stabilize.
-2. Add Sneaker Garden Deliver Orders on the same isolated Campaign board.
-3. Add Sneaker Garden Restore Landmark batches and visual restoration state.
-4. Add Sneaker Garden Mastery rules for the final 10%.
-5. Generalize Overgrowth + order/landmark progression for the remaining six World 1 Locations.
-6. Build persistent 3-phase World 1 Raid.
-7. Collection Rewards + Prestige integration on the same v6 meta.
-8. World 2 Traffic Lock + seven Locations + Raid.
+1. Sneaker Garden Deliver Orders on the same isolated Campaign board.
+2. Sneaker Garden Restore Landmark batches and visual restoration state.
+3. Sneaker Garden Mastery rules for the final 10%.
+4. Generalize Overgrowth + order/landmark progression for the remaining six World 1 Locations.
+5. Build persistent 3-phase World 1 Raid.
+6. Collection Rewards + Prestige integration on the same v6 meta.
+7. World 2 Traffic Lock + seven Locations + Raid.
 
 ## Source of truth
 - `docs/ROADMAP.md`
