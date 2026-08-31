@@ -14,7 +14,15 @@ export const SNEAKER_GARDEN_LOCATION_ID = 'w1-sneaker-garden';
 export const SNEAKER_GARDEN_WORLD_ID = 1;
 export const SNEAKER_GARDEN_STABILIZE_OVERGROWTH = [2, 8, 14, 20, 26, 27] as const;
 export const SNEAKER_GARDEN_DELIVER_OVERGROWTH = [8, 20, 27] as const;
+export const SNEAKER_GARDEN_RESTORE_OVERGROWTH = [14, 27] as const;
+export const SNEAKER_GARDEN_MASTERY_OVERGROWTH = [2, 8, 14, 20, 27] as const;
 export const SNEAKER_GARDEN_DELIVERY_ORDER_COUNT = 4;
+export const SNEAKER_GARDEN_RESTORE_ORDER_COUNT = 6;
+export const SNEAKER_GARDEN_RESTORE_BATCH_SIZE = 2;
+export const SNEAKER_GARDEN_LANDMARK_LEVELS = 3;
+export const SNEAKER_GARDEN_MASTERY_ORDER_COUNT = 3;
+export const CAMPAIGN_SUPPLY_BASE_LUCKY_CHANCE = 0.25;
+export const CAMPAIGN_SUPPLY_LANDMARK_LUCKY_STEP = 0.05;
 const SNEAKER_GARDEN_STARTING_CELLS = [0, 1, 6, 7] as const;
 
 let campaignSequence = 0;
@@ -61,6 +69,9 @@ export interface CampaignRunPresentation {
   activeOrderTier: number | null;
   selectedUnitTier: number | null;
   canDeliverSelected: boolean;
+  restoreBatchIndex: number;
+  restoreBatchTotal: number;
+  restoreBatchOrderIndex: number;
   selectedIndex: number | null;
   completed: boolean;
 }
@@ -100,12 +111,28 @@ function sanitizeCampaignUnit(candidate: unknown, maxDiscoveredTier: number): Un
   return { id: raw.id.slice(0, 160), familyId: family.id, tier: family.tier };
 }
 
+function phaseOvergrowthIndexes(phase: CampaignRunPhase): readonly number[] {
+  if (phase === 'stabilize') return SNEAKER_GARDEN_STABILIZE_OVERGROWTH;
+  if (phase === 'deliver') return SNEAKER_GARDEN_DELIVER_OVERGROWTH;
+  if (phase === 'restore') return SNEAKER_GARDEN_RESTORE_OVERGROWTH;
+  return SNEAKER_GARDEN_MASTERY_OVERGROWTH;
+}
+
 function overgrowthFromIndexes(indexes: readonly number[]): boolean[] {
   const blocked = Array.from({ length: BOARD_SIZE }, () => false);
   for (const index of indexes) {
     if (index >= 0 && index < BOARD_SIZE) blocked[index] = true;
   }
   return blocked;
+}
+
+function sanitizeOvergrowth(candidate: unknown[], phase: CampaignRunPhase): boolean[] {
+  const allowed = new Set(phaseOvergrowthIndexes(phase));
+  return Array.from({ length: BOARD_SIZE }, (_, index) => {
+    if (!allowed.has(index)) return false;
+    if (phase === 'mastery') return true;
+    return candidate[index] === true;
+  });
 }
 
 function initialCampaignCells(): Cell[] {
@@ -118,32 +145,58 @@ function overgrowthRemaining(run: CampaignRunState): number {
   return run.overgrowth.reduce((total, blocked) => total + (blocked ? 1 : 0), 0);
 }
 
-export function sneakerGardenDeliveryOrderTiers(maxDiscoveredTier: number): number[] {
-  const maxTier = Math.max(1, Math.min(4, safeMaxDiscoveredTier(maxDiscoveredTier)));
-  const baseTier = Math.min(2, maxTier);
-  return [
-    baseTier,
-    baseTier,
-    Math.min(maxTier, baseTier + 1),
-    maxTier
-  ];
+function capLocationOrderTier(maxDiscoveredTier: number): number {
+  return Math.max(1, Math.min(4, safeMaxDiscoveredTier(maxDiscoveredTier)));
 }
 
-function sanitizeOrderTiers(candidate: unknown, maxDiscoveredTier: number): number[] {
+export function sneakerGardenDeliveryOrderTiers(maxDiscoveredTier: number): number[] {
+  const maxTier = capLocationOrderTier(maxDiscoveredTier);
+  const baseTier = Math.min(2, maxTier);
+  return [baseTier, baseTier, Math.min(maxTier, baseTier + 1), maxTier];
+}
+
+export function sneakerGardenRestoreOrderTiers(maxDiscoveredTier: number): number[] {
+  const maxTier = capLocationOrderTier(maxDiscoveredTier);
+  const baseTier = Math.min(2, maxTier);
+  const middleTier = Math.min(maxTier, baseTier + 1);
+  return [baseTier, baseTier, middleTier, middleTier, maxTier, maxTier];
+}
+
+export function sneakerGardenMasteryOrderTiers(maxDiscoveredTier: number): number[] {
+  const maxTier = capLocationOrderTier(maxDiscoveredTier);
+  const middleTier = Math.min(maxTier, 3);
+  return [middleTier, maxTier, maxTier];
+}
+
+function expectedOrderCount(phase: CampaignRunPhase): number {
+  if (phase === 'deliver') return SNEAKER_GARDEN_DELIVERY_ORDER_COUNT;
+  if (phase === 'restore') return SNEAKER_GARDEN_RESTORE_ORDER_COUNT;
+  if (phase === 'mastery') return SNEAKER_GARDEN_MASTERY_ORDER_COUNT;
+  return 0;
+}
+
+function defaultOrderTiers(phase: CampaignRunPhase, maxDiscoveredTier: number): number[] {
+  if (phase === 'deliver') return sneakerGardenDeliveryOrderTiers(maxDiscoveredTier);
+  if (phase === 'restore') return sneakerGardenRestoreOrderTiers(maxDiscoveredTier);
+  if (phase === 'mastery') return sneakerGardenMasteryOrderTiers(maxDiscoveredTier);
+  return [];
+}
+
+function sanitizeOrderTiers(candidate: unknown, phase: CampaignRunPhase, maxDiscoveredTier: number): number[] {
+  const expectedCount = expectedOrderCount(phase);
+  if (expectedCount === 0) return [];
   const maxTier = safeMaxDiscoveredTier(maxDiscoveredTier);
-  if (!Array.isArray(candidate) || candidate.length !== SNEAKER_GARDEN_DELIVERY_ORDER_COUNT) {
-    return sneakerGardenDeliveryOrderTiers(maxTier);
-  }
+  if (!Array.isArray(candidate) || candidate.length !== expectedCount) return defaultOrderTiers(phase, maxTier);
   const tiers = candidate.map((entry) => {
     if (typeof entry !== 'number' || !Number.isFinite(entry)) return 0;
     return Math.floor(entry);
   });
-  if (tiers.some((tier) => tier < 1 || tier > maxTier)) return sneakerGardenDeliveryOrderTiers(maxTier);
+  if (tiers.some((tier) => tier < 1 || tier > maxTier)) return defaultOrderTiers(phase, maxTier);
   return tiers;
 }
 
 function campaignRunProgress(run: CampaignRunState): number {
-  if (run.phase === 'deliver') {
+  if (run.phase !== 'stabilize') {
     if (run.orderTiers.length === 0) return run.completed ? 1 : 0;
     return Math.max(0, Math.min(1, run.orderIndex / run.orderTiers.length));
   }
@@ -159,44 +212,48 @@ function sneakerGardenCurrentPhase(campaign: CampaignProgress): CampaignRunPhase
   const locationProgress = progress?.locations[SNEAKER_GARDEN_LOCATION_ID];
   if (!locationProgress) return null;
   const phase = currentLocationPhase(locationProgress);
-  return phase === 'stabilize' || phase === 'deliver' ? phase : null;
+  return phase === 'stabilize' || phase === 'deliver' || phase === 'restore' || phase === 'mastery' ? phase : null;
+}
+
+function createSneakerGardenRun(phase: CampaignRunPhase, maxDiscoveredTier: number): CampaignRunState {
+  const indexes = phaseOvergrowthIndexes(phase);
+  return {
+    worldId: SNEAKER_GARDEN_WORLD_ID,
+    locationId: SNEAKER_GARDEN_LOCATION_ID,
+    phase,
+    cells: initialCampaignCells(),
+    overgrowth: overgrowthFromIndexes(indexes),
+    overgrowthTotal: indexes.length,
+    merges: 0,
+    spawns: 0,
+    orderTiers: defaultOrderTiers(phase, maxDiscoveredTier),
+    orderIndex: 0,
+    selectedIndex: null,
+    completed: false
+  };
 }
 
 export function createSneakerGardenStabilizeRun(maxDiscoveredTier: number): CampaignRunState {
-  void maxDiscoveredTier;
-  const overgrowth = overgrowthFromIndexes(SNEAKER_GARDEN_STABILIZE_OVERGROWTH);
-  return {
-    worldId: SNEAKER_GARDEN_WORLD_ID,
-    locationId: SNEAKER_GARDEN_LOCATION_ID,
-    phase: 'stabilize',
-    cells: initialCampaignCells(),
-    overgrowth,
-    overgrowthTotal: SNEAKER_GARDEN_STABILIZE_OVERGROWTH.length,
-    merges: 0,
-    spawns: 0,
-    orderTiers: [],
-    orderIndex: 0,
-    selectedIndex: null,
-    completed: false
-  };
+  return createSneakerGardenRun('stabilize', maxDiscoveredTier);
 }
 
 export function createSneakerGardenDeliverRun(maxDiscoveredTier: number): CampaignRunState {
-  const overgrowth = overgrowthFromIndexes(SNEAKER_GARDEN_DELIVER_OVERGROWTH);
-  return {
-    worldId: SNEAKER_GARDEN_WORLD_ID,
-    locationId: SNEAKER_GARDEN_LOCATION_ID,
-    phase: 'deliver',
-    cells: initialCampaignCells(),
-    overgrowth,
-    overgrowthTotal: SNEAKER_GARDEN_DELIVER_OVERGROWTH.length,
-    merges: 0,
-    spawns: 0,
-    orderTiers: sneakerGardenDeliveryOrderTiers(maxDiscoveredTier),
-    orderIndex: 0,
-    selectedIndex: null,
-    completed: false
-  };
+  return createSneakerGardenRun('deliver', maxDiscoveredTier);
+}
+
+export function createSneakerGardenRestoreRun(maxDiscoveredTier: number): CampaignRunState {
+  return createSneakerGardenRun('restore', maxDiscoveredTier);
+}
+
+export function createSneakerGardenMasteryRun(maxDiscoveredTier: number): CampaignRunState {
+  return createSneakerGardenRun('mastery', maxDiscoveredTier);
+}
+
+function phasePermanentProgress(campaign: CampaignProgress, phase: CampaignRunPhase): number | null {
+  const worldProgress = campaignWorldProgress(campaign, SNEAKER_GARDEN_WORLD_ID);
+  const locationProgress = worldProgress?.locations[SNEAKER_GARDEN_LOCATION_ID];
+  if (!locationProgress) return null;
+  return locationProgress[phase];
 }
 
 export function sanitizeCampaignRunState(
@@ -207,7 +264,9 @@ export function sanitizeCampaignRunState(
   if (candidate === null || candidate === undefined) return null;
   const raw = asRecord(candidate);
   if (!raw || raw.worldId !== SNEAKER_GARDEN_WORLD_ID || raw.locationId !== SNEAKER_GARDEN_LOCATION_ID) return null;
-  const phase = raw.phase === 'stabilize' || raw.phase === 'deliver' ? raw.phase : null;
+  const phase: CampaignRunPhase | null = raw.phase === 'stabilize' || raw.phase === 'deliver' || raw.phase === 'restore' || raw.phase === 'mastery'
+    ? raw.phase
+    : null;
   if (!phase || !Array.isArray(raw.cells) || raw.cells.length !== BOARD_SIZE || !Array.isArray(raw.overgrowth) || raw.overgrowth.length !== BOARD_SIZE) return null;
 
   const worldProgress = campaignWorldProgress(campaign, SNEAKER_GARDEN_WORLD_ID);
@@ -215,7 +274,7 @@ export function sanitizeCampaignRunState(
   if (!locationProgress) return null;
   const currentPhase = currentLocationPhase(locationProgress);
   const maxTier = safeMaxDiscoveredTier(maxDiscoveredTier);
-  const overgrowth = raw.overgrowth.map((entry) => entry === true);
+  const overgrowth = sanitizeOvergrowth(raw.overgrowth, phase);
   const cells: Cell[] = raw.cells.map((entry, index) => {
     if (overgrowth[index]) return null;
     if (entry === null) return null;
@@ -232,7 +291,7 @@ export function sanitizeCampaignRunState(
       phase,
       cells,
       overgrowth,
-      overgrowthTotal: SNEAKER_GARDEN_STABILIZE_OVERGROWTH.length,
+      overgrowthTotal: phaseOvergrowthIndexes(phase).length,
       merges: nonnegativeInt(raw.merges, 100_000),
       spawns: nonnegativeInt(raw.spawns, 100_000),
       orderTiers: [],
@@ -242,19 +301,19 @@ export function sanitizeCampaignRunState(
     };
   }
 
-  if (locationProgress.stabilize < 1) return null;
-  const orderTiers = sanitizeOrderTiers(raw.orderTiers, maxTier);
+  const orderTiers = sanitizeOrderTiers(raw.orderTiers, phase, maxTier);
   const orderIndex = nonnegativeInt(raw.orderIndex, orderTiers.length);
   const completed = orderTiers.length > 0 && orderIndex >= orderTiers.length;
-  if (!completed && currentPhase !== 'deliver') return null;
-  if (completed && currentPhase !== 'deliver' && locationProgress.deliver < 1) return null;
+  const permanentProgress = phasePermanentProgress(campaign, phase) ?? 0;
+  if (!completed && currentPhase !== phase) return null;
+  if (completed && currentPhase !== phase && permanentProgress < 1) return null;
   return {
     worldId: SNEAKER_GARDEN_WORLD_ID,
     locationId: SNEAKER_GARDEN_LOCATION_ID,
     phase,
     cells,
     overgrowth,
-    overgrowthTotal: SNEAKER_GARDEN_DELIVER_OVERGROWTH.length,
+    overgrowthTotal: phaseOvergrowthIndexes(phase).length,
     merges: nonnegativeInt(raw.merges, 100_000),
     spawns: nonnegativeInt(raw.spawns, 100_000),
     orderTiers,
@@ -274,9 +333,8 @@ export function startCampaignRun(
   if (current) return current;
   if (worldId !== SNEAKER_GARDEN_WORLD_ID || locationId !== SNEAKER_GARDEN_LOCATION_ID) return null;
   const phase = sneakerGardenCurrentPhase(campaign);
-  if (phase === 'stabilize') return createSneakerGardenStabilizeRun(maxDiscoveredTier);
-  if (phase === 'deliver') return createSneakerGardenDeliverRun(maxDiscoveredTier);
-  return null;
+  if (!phase) return null;
+  return createSneakerGardenRun(phase, maxDiscoveredTier);
 }
 
 export function selectCampaignRunCell(run: CampaignRunState, index: number | null): CampaignRunState {
@@ -285,10 +343,25 @@ export function selectCampaignRunCell(run: CampaignRunState, index: number | nul
   return { ...run, selectedIndex: run.selectedIndex === index ? null : index };
 }
 
+export function sneakerGardenLandmarkLevel(campaign: CampaignProgress): number {
+  const worldProgress = campaignWorldProgress(campaign, SNEAKER_GARDEN_WORLD_ID);
+  const restore = worldProgress?.locations[SNEAKER_GARDEN_LOCATION_ID]?.restore ?? 0;
+  if (restore >= 1) return 3;
+  if (restore >= 2 / 3) return 2;
+  if (restore >= 1 / 3) return 1;
+  return 0;
+}
+
+export function campaignSupplyLuckyChanceForLandmarkLevel(level: number): number {
+  const safeLevel = Math.max(0, Math.min(SNEAKER_GARDEN_LANDMARK_LEVELS, Math.floor(Number.isFinite(level) ? level : 0)));
+  return CAMPAIGN_SUPPLY_BASE_LUCKY_CHANCE + safeLevel * CAMPAIGN_SUPPLY_LANDMARK_LUCKY_STEP;
+}
+
 export function spawnCampaignSupply(
   run: CampaignRunState,
   maxDiscoveredTier: number,
-  random = Math.random
+  random = Math.random,
+  landmarkLevel = 0
 ): CampaignRunState {
   if (run.completed) return run;
   const target = run.cells.findIndex((cell, index) => cell === null && !run.overgrowth[index]);
@@ -296,7 +369,7 @@ export function spawnCampaignSupply(
 
   const maxTier = safeMaxDiscoveredTier(maxDiscoveredTier);
   const baseTier = Math.min(2, maxTier);
-  const luckyTier = random() < 0.25 ? baseTier + 1 : baseTier;
+  const luckyTier = random() < campaignSupplyLuckyChanceForLandmarkLevel(landmarkLevel) ? baseTier + 1 : baseTier;
   const tier = Math.max(1, Math.min(maxTier, luckyTier));
   const cells = run.cells.slice();
   cells[target] = createCampaignUnit(tier);
@@ -353,7 +426,9 @@ export function moveOrMergeCampaignRun(run: CampaignRunState, from: number, to: 
 
   cells[from] = null;
   cells[to] = createCampaignUnit(nextFamily.tier);
-  const cleared = clearNearestOvergrowth(run.overgrowth, to);
+  const cleared = run.phase === 'mastery'
+    ? { overgrowth: run.overgrowth, clearedIndex: null }
+    : clearNearestOvergrowth(run.overgrowth, to);
   const completed = run.phase === 'stabilize'
     ? cleared.overgrowth.every((entry) => !entry)
     : run.completed;
@@ -373,7 +448,7 @@ export function moveOrMergeCampaignRun(run: CampaignRunState, from: number, to: 
 }
 
 export function deliverCampaignRunUnit(run: CampaignRunState, index: number): CampaignRunDeliveryResult {
-  if (run.phase !== 'deliver' || run.completed || !Number.isInteger(index) || index < 0 || index >= BOARD_SIZE || run.overgrowth[index]) {
+  if (run.phase === 'stabilize' || run.completed || !Number.isInteger(index) || index < 0 || index >= BOARD_SIZE || run.overgrowth[index]) {
     return { run, changed: false, orderCompleted: false };
   }
   const targetTier = run.orderTiers[run.orderIndex];
@@ -410,12 +485,42 @@ function commitCampaignDeliverProgress(campaign: CampaignProgress, run: Campaign
   return advanceCampaignLocationPhase(campaign, SNEAKER_GARDEN_WORLD_ID, SNEAKER_GARDEN_LOCATION_ID, 'deliver', delta);
 }
 
+function commitCampaignRestoreProgress(campaign: CampaignProgress, run: CampaignRunState): CampaignProgress {
+  if (run.phase !== 'restore' || run.orderTiers.length === 0) return campaign;
+  const worldProgress = campaignWorldProgress(campaign, SNEAKER_GARDEN_WORLD_ID);
+  const locationProgress = worldProgress?.locations[SNEAKER_GARDEN_LOCATION_ID];
+  if (!locationProgress || locationProgress.deliver < 1) return campaign;
+  const completedBatches = Math.floor(run.orderIndex / SNEAKER_GARDEN_RESTORE_BATCH_SIZE);
+  const desired = Math.max(0, Math.min(1, completedBatches / SNEAKER_GARDEN_LANDMARK_LEVELS));
+  const delta = desired - locationProgress.restore;
+  if (delta <= 0) return campaign;
+  return advanceCampaignLocationPhase(campaign, SNEAKER_GARDEN_WORLD_ID, SNEAKER_GARDEN_LOCATION_ID, 'restore', delta);
+}
+
+function commitCampaignMasteryProgress(campaign: CampaignProgress, run: CampaignRunState): CampaignProgress {
+  if (run.phase !== 'mastery' || run.orderTiers.length === 0) return campaign;
+  const worldProgress = campaignWorldProgress(campaign, SNEAKER_GARDEN_WORLD_ID);
+  const locationProgress = worldProgress?.locations[SNEAKER_GARDEN_LOCATION_ID];
+  if (!locationProgress || locationProgress.restore < 1) return campaign;
+  const desired = Math.max(0, Math.min(1, run.orderIndex / run.orderTiers.length));
+  const delta = desired - locationProgress.mastery;
+  if (delta <= 0) return campaign;
+  return advanceCampaignLocationPhase(campaign, SNEAKER_GARDEN_WORLD_ID, SNEAKER_GARDEN_LOCATION_ID, 'mastery', delta);
+}
+
+function commitCampaignOrderProgress(campaign: CampaignProgress, run: CampaignRunState): CampaignProgress {
+  if (run.phase === 'deliver') return commitCampaignDeliverProgress(campaign, run);
+  if (run.phase === 'restore') return commitCampaignRestoreProgress(campaign, run);
+  if (run.phase === 'mastery') return commitCampaignMasteryProgress(campaign, run);
+  return campaign;
+}
+
 export function commitCampaignRunCompletion(campaign: CampaignProgress, run: CampaignRunState): CampaignProgress {
   if (!run.completed || run.worldId !== SNEAKER_GARDEN_WORLD_ID || run.locationId !== SNEAKER_GARDEN_LOCATION_ID) return campaign;
   const worldProgress = campaignWorldProgress(campaign, SNEAKER_GARDEN_WORLD_ID);
   const locationProgress = worldProgress?.locations[SNEAKER_GARDEN_LOCATION_ID];
   if (!locationProgress) return campaign;
-  if (run.phase === 'deliver') return commitCampaignDeliverProgress(campaign, run);
+  if (run.phase !== 'stabilize') return commitCampaignOrderProgress(campaign, run);
   if (locationProgress.stabilize >= 1) return campaign;
   return advanceCampaignLocationPhase(campaign, SNEAKER_GARDEN_WORLD_ID, SNEAKER_GARDEN_LOCATION_ID, 'stabilize', 1);
 }
@@ -430,7 +535,8 @@ export function beginCampaignRun(state: GameState, worldId: number, locationId: 
 /** Free Campaign-only supply; ordinary coins and paid-box inflation are untouched. */
 export function spawnCampaignRunSupply(state: GameState, random = Math.random): GameState {
   if (!state.campaignRun) return state;
-  const campaignRun = spawnCampaignSupply(state.campaignRun, state.maxDiscoveredTier, random);
+  const landmarkLevel = sneakerGardenLandmarkLevel(state.campaign);
+  const campaignRun = spawnCampaignSupply(state.campaignRun, state.maxDiscoveredTier, random, landmarkLevel);
   if (campaignRun === state.campaignRun) return state;
   return { ...state, campaignRun };
 }
@@ -457,7 +563,7 @@ export function moveOrMergeCampaignBoard(state: GameState, from: number, to: num
   };
 }
 
-/** Consumes only a matching Campaign-board unit and commits that order exactly once. */
+/** Consumes only a matching Campaign-board unit and commits that order/batch exactly once. */
 export function deliverCampaignBoardUnit(state: GameState, index: number): GameState {
   if (!state.campaignRun) return state;
   const result = deliverCampaignRunUnit(state.campaignRun, index);
@@ -465,7 +571,7 @@ export function deliverCampaignBoardUnit(state: GameState, index: number): GameS
     if (result.run === state.campaignRun) return state;
     return { ...state, campaignRun: result.run };
   }
-  const campaign = commitCampaignDeliverProgress(state.campaign, result.run);
+  const campaign = commitCampaignOrderProgress(state.campaign, result.run);
   return { ...state, campaignRun: result.run, campaign };
 }
 
@@ -478,10 +584,16 @@ export function acknowledgeCampaignRunCompletion(state: GameState): GameState {
 
 export function campaignRunPresentationSnapshot(run: CampaignRunState | null): CampaignRunPresentation | null {
   if (!run) return null;
-  const activeOrderTier = run.phase === 'deliver' && !run.completed
+  const activeOrderTier = run.phase !== 'stabilize' && !run.completed
     ? run.orderTiers[run.orderIndex] ?? null
     : null;
   const selectedUnitTier = run.selectedIndex === null ? null : run.cells[run.selectedIndex]?.tier ?? null;
+  const restoreBatchIndex = run.phase === 'restore'
+    ? Math.min(SNEAKER_GARDEN_LANDMARK_LEVELS, Math.floor(run.orderIndex / SNEAKER_GARDEN_RESTORE_BATCH_SIZE))
+    : 0;
+  const restoreBatchOrderIndex = run.phase === 'restore'
+    ? run.orderIndex % SNEAKER_GARDEN_RESTORE_BATCH_SIZE
+    : 0;
   return {
     worldId: run.worldId,
     locationId: run.locationId,
@@ -499,6 +611,9 @@ export function campaignRunPresentationSnapshot(run: CampaignRunState | null): C
     activeOrderTier,
     selectedUnitTier,
     canDeliverSelected: activeOrderTier !== null && selectedUnitTier === activeOrderTier,
+    restoreBatchIndex,
+    restoreBatchTotal: run.phase === 'restore' ? SNEAKER_GARDEN_LANDMARK_LEVELS : 0,
+    restoreBatchOrderIndex,
     selectedIndex: run.selectedIndex,
     completed: run.completed
   };
