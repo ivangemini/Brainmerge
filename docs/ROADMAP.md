@@ -12,7 +12,7 @@ The previous `8 short stages per world / 64 one-shot stages / 3 stars` Campaign 
 - [x] Brain Lab: Base Drop Tier, Lucky Drop, Brain Income, Offline Storage.
 - [x] Merge-first discovery and persistent Collection.
 - [x] First-cycle missions, offline reward, `Next move`, deadlock Rescue.
-- [x] Save migration through v5 and Yandex/local persistence hardening.
+- [x] Canonical save migration through **v6** and Yandex/local persistence hardening.
 - [x] EN/RU production locale parity and runtime locale QA.
 - [x] Unified physical 6x3 `character-atlas.webp` for T1-T18.
 - [x] Board-first mobile layout with Missions / Collection / Brain Lab modal sheets.
@@ -64,33 +64,31 @@ Detailed contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 - [x] Connected map route 1 -> 8 with desktop/mobile geometry.
 - [x] Map semantics changed from 8 short stages to **7 Locations + World Raid**.
 - [x] World summary surface: World Restored %, landmarks, Raid gate.
-- [x] Location nodes display persistent-progress affordance.
-- [x] Location overview shows the four-phase long loop and landmark identity.
+- [x] Location overview shows four persistent phases and landmark identity.
 - [x] Raid overview shows the three-phase persistent-boss loop.
 - [x] EN/RU Campaign copy for new model.
-- [x] Core Campaign domain foundation in `src/core/campaign.ts`.
-- [x] Core tests for phase weighting, world restoration and Raid unlock requirements.
-- [x] Chromium Campaign smoke validates 7 Locations, Raid, route and overview geometry.
+- [x] Core Campaign domain in `src/core/campaign.ts`.
+- [x] Canonical v6 Campaign state drives map percentages/status through a one-way presentation snapshot.
+- [x] Chromium Campaign smoke verifies progress survives save/reload.
 
 Current limitation:
-- map progress is still presentation-default `0%` until save v6/state wiring lands;
-- Locations do not yet start a real `CampaignRunState`.
+- Locations do not yet start a real isolated `CampaignRunState` board;
+- the v6 progress model is authoritative and persistent, but gameplay actions that earn this progress are the next layer.
 
-## P0 — Save v6 permanent-meta foundation
-Goal: land one coherent versioned schema for Campaign + Collection Rewards + Prestige.
-
-- [ ] Per-world unlock/clear state.
-- [ ] Per-Location Stabilize progress.
-- [ ] Per-Location Deliver/order progress.
-- [ ] Per-Location Landmark level/restoration.
-- [ ] Per-Location Mastery progress.
-- [ ] World Raid phase/progress/clear state.
-- [ ] Collection reward claim state.
-- [ ] Prestige count, Brain Cells and permanent upgrade levels.
-- [ ] Decide whether active CampaignRunState is resumable.
-- [ ] v1-v5 -> v6 migration without losing valid current state.
-- [ ] Clamp/sanitize corrupt Campaign/meta values.
-- [ ] Yandex/local persistence coverage.
+## P0 — Save v6 permanent-meta foundation — complete
+- [x] Per-world unlock/clear state derived from prior Raid clears.
+- [x] Per-Location Stabilize progress.
+- [x] Per-Location Deliver/order progress bucket.
+- [x] Per-Location Landmark restoration progress.
+- [x] Per-Location Mastery progress.
+- [x] World Raid progress/clear state.
+- [x] Collection reward claim state foundation.
+- [x] Prestige count, Brain Cells and permanent upgrade-level foundation.
+- [x] v1-v5 -> v6 migration without losing valid current run/discovery state.
+- [x] Clamp/sanitize corrupt Campaign/meta values.
+- [x] Campaign progress serialized through the existing local/Yandex `GameState` persistence boundary.
+- [x] Browser smoke mutates v6 Campaign progress, reloads and verifies restored UI state.
+- [ ] Active `CampaignRunState` resume policy — decide when the real Location board lands.
 
 ## P0 — Stateful Location engine
 Goal: make a Location a multi-session merge objective instead of a short level.
@@ -103,7 +101,7 @@ Goal: make a Location a multi-session merge objective instead of a short level.
 - [ ] Exact-once persistent order progress commit.
 - [ ] Landmark restoration/upgrade transition.
 - [ ] Mastery phase framework.
-- [ ] Location restoration % wired to map node and World Progress.
+- [x] Location restoration % wired to map node and World Progress.
 - [ ] Lifetime-discovery gating so Campaign does not bypass the main T1-T18 chain.
 
 ## P0 — World 1 vertical slice
@@ -116,7 +114,8 @@ Prove the whole new loop before authoring the rest of the world.
 - [ ] Giant Sneaker Flower Bed restoration progression.
 - [ ] Landmark gameplay perk.
 - [ ] Mastery rules.
-- [ ] Progress persists across reload/session and Prestige.
+- [x] Persistent Location progress storage/reload foundation.
+- [ ] Progress earned through gameplay survives Prestige.
 - [ ] Desktop/mobile/EN/RU runtime QA.
 
 Success criterion: Location 1 takes multiple meaningful sessions/cycles rather than minutes and creates a real `merge upward vs deliver now` decision.
@@ -131,37 +130,37 @@ After Location 1 proves the engine:
 - [ ] Mushroom Field.
 - [ ] Backyard Core.
 - [ ] Data-driven order pressure increases across Locations.
-- [ ] >=80% + 5-landmark Raid gate.
-- [ ] Visible Landmark/restoration state on map without generating seven entirely new backgrounds.
+- [x] >=80% + 5-landmark Raid gate implemented in core.
+- [ ] Visible Landmark/restoration evolution beyond numeric node state if playtest proves it necessary.
 
 ## P0 — World 1 persistent Raid
-- [ ] Three Raid phases.
-- [ ] Persistent boss HP/progress across sessions.
+- [ ] Three playable Raid phases.
+- [x] Persistent Raid progress/clear storage foundation.
 - [ ] Merge/order contributions to Raid progress.
 - [ ] Stronger Overgrowth pressure in later phases.
 - [ ] High-tier final deliveries.
-- [ ] World 2 unlock on exact-once Raid clear.
-- [ ] World 1 100% completion rule.
+- [x] World 2 unlock rule derived from World 1 Raid clear.
+- [x] World 1 100% completion rule in core.
 
 ## P0 — Collection Rewards
-Still approved and shares save v6 permanent meta.
+Still approved and now has v6 persistent claim storage.
 
 - [ ] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
 - [ ] `Rewards` section inside Collection; no new mobile dock item.
 - [ ] Permanent bounded reward data.
-- [ ] Persist claims through Prestige.
-- [ ] Prevent double claim.
+- [x] Claim-state persistence field exists in v6.
+- [ ] Prevent double claim in reward transaction.
 - [ ] Campaign-relevant rewards may exist, but must not trivialize Locations/Raids.
 
 ## P0 — Prestige / Brain Reset
-Still approved and now explicitly supports long Campaign progression.
+Still approved and now has v6 permanent-meta storage.
 
 - [ ] Unlock after first T18.
 - [ ] Confirmation clearly shows reset vs preserved state.
 - [ ] Reset run-level board/economy/Brain Lab only.
 - [ ] Preserve Collection + Locations + Landmarks + Raids.
-- [ ] Introduce Brain Cells as permanent-meta-only currency.
-- [ ] Data-driven permanent upgrade tree.
+- [x] Brain Cell / Prestige count / permanent-upgrade fields exist in v6.
+- [ ] Data-driven permanent upgrade tree and spend transactions.
 - [ ] First valid Prestige always awards at least one Brain Cell.
 - [ ] Deterministic reset/preserve/no-double-award tests.
 
@@ -174,7 +173,7 @@ Still approved and now explicitly supports long Campaign progression.
 - [ ] Sunglasses Strip.
 - [ ] Appliance District.
 - [ ] City Core.
-- [ ] Persistent three-phase World 2 Raid.
+- [ ] Persistent three-phase World 2 Raid gameplay.
 - [ ] Validate first T18 -> Prestige -> World 1 -> World 2 long loop.
 
 ## P2 — Worlds 3–8
@@ -214,12 +213,13 @@ Potential later art:
 - [x] Campaign shell desktop/mobile screenshot smoke.
 - [x] 7 Location + 1 Raid semantic shell smoke.
 - [x] Campaign core percentage/Raid-gate unit tests.
-- [ ] v5 -> v6 migration smoke.
-- [ ] Location progress serialization/sanitization.
+- [x] v1-v5 -> v6 migration coverage.
+- [x] Location/Raid progress sanitization tests.
+- [x] Browser save/reload Campaign persistence smoke.
 - [ ] Campaign/main-board isolation tests.
 - [ ] Delivery consumes Campaign unit only.
 - [ ] Exact-once order/Landmark progress tests.
-- [ ] Raid progress persistence and world-unlock tests.
+- [ ] Gameplay-earned Raid progress persistence/world-unlock tests.
 - [ ] Collection reward one-time claim tests.
 - [ ] Prestige reset/preserve tests.
 - [ ] Campaign progress survives Prestige.
