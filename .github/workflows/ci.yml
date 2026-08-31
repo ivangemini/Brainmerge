@@ -24,6 +24,8 @@ jobs:
         run: npm run smoke:campaign
       - name: Run Campaign Restore + Mastery smoke
         run: npm run smoke:campaign:final
+      - name: Run World 1 Location smoke
+        run: npm run smoke:campaign:world1
       - name: Run packaged RC smoke
         run: npm run smoke:rc
       - name: Run packaged motion smoke
