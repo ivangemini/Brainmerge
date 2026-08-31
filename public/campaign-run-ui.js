@@ -14,6 +14,7 @@ let selectedLocationId = null;
 let shell = null;
 let wantsOpen = false;
 let scheduledCopyRefresh = false;
+let scheduledLauncherRefresh = false;
 
 function currentLocale() {
   return document.documentElement.lang?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
@@ -165,6 +166,15 @@ function closeRun() {
   if (launcher instanceof HTMLElement && launcher.offsetParent) launcher.focus();
 }
 
+function openedDetailLocationId() {
+  if (!copy) return selectedLocationId;
+  const detail = document.querySelector('.campaign-detail.is-open');
+  if (!(detail instanceof HTMLElement)) return null;
+  const title = detail.querySelector('.campaign-detail__title')?.textContent?.trim() ?? '';
+  if (title === String(copy.w1Location1Name ?? '').trim()) return TARGET_LOCATION;
+  return selectedLocationId;
+}
+
 function renderLauncher() {
   if (!copy) return;
   const detail = document.querySelector('.campaign-detail.is-open');
@@ -174,7 +184,8 @@ function renderLauncher() {
   let launcher = card.querySelector('.campaign-detail__run-button');
   const progress = locationSnapshot();
   const run = activeRun();
-  const available = selectedLocationId === TARGET_LOCATION && (progress?.currentPhase === 'stabilize' || Boolean(run));
+  const openLocationId = openedDetailLocationId();
+  const available = openLocationId === TARGET_LOCATION && (progress?.currentPhase === 'stabilize' || Boolean(run));
   if (!available) {
     launcher?.remove();
     return;
@@ -193,6 +204,15 @@ function renderLauncher() {
     card.append(launcher);
   }
   launcher.textContent = run ? copy.runResume : copy.runStart;
+}
+
+function scheduleLauncherRefresh() {
+  if (scheduledLauncherRefresh) return;
+  scheduledLauncherRefresh = true;
+  queueMicrotask(() => {
+    scheduledLauncherRefresh = false;
+    renderLauncher();
+  });
 }
 
 function unitLabel(run, index) {
@@ -304,7 +324,7 @@ function scheduleCopyRefresh() {
 window.addEventListener('brainmerge:campaign-state', (event) => {
   if (!(event instanceof CustomEvent) || !event.detail || typeof event.detail !== 'object') return;
   campaignSnapshot = event.detail;
-  renderLauncher();
+  scheduleLauncherRefresh();
   renderRun();
   if (wantsOpen && activeRun()) openRun();
 });
@@ -313,7 +333,7 @@ document.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target.closest('.campaign-node--location') : null;
   if (target instanceof HTMLElement) {
     selectedLocationId = target.dataset.locationId ?? null;
-    queueMicrotask(renderLauncher);
+    scheduleLauncherRefresh();
   }
 }, true);
 
@@ -326,6 +346,9 @@ window.addEventListener('keydown', (event) => {
 
 const langObserver = new MutationObserver(scheduleCopyRefresh);
 langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+
+const detailObserver = new MutationObserver(scheduleLauncherRefresh);
+detailObserver.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
 
 void refreshCopy();
 window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
