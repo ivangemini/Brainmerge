@@ -6,14 +6,20 @@ import {
   CAMPAIGN_WORLDS,
   FULL_CAMPAIGN_WORLD_COUNT,
   LOCATIONS_PER_WORLD,
+  advanceCampaignLocationPhase,
+  advanceCampaignRaid,
   campaignLocationById,
+  campaignPresentationSnapshot,
+  createInitialCampaignProgress,
   createInitialLocationProgress,
   createInitialWorldProgress,
   currentLocationPhase,
+  isCampaignWorldUnlocked,
   isWorldFullyRestored,
   isWorldRaidUnlocked,
   locationProgressPercent,
   restoredLandmarkCount,
+  sanitizeCampaignProgress,
   worldProgressPercent
 } from '../build/core/campaign.js';
 
@@ -95,4 +101,81 @@ test('campaign locations have stable ids and increasing order-tier pressure', ()
       assert.ok(world.locations[index].orderTierMax >= world.locations[index - 1].orderTierMax);
     }
   }
+});
+
+test('persistent phase transactions enforce phase order and never regress', () => {
+  let campaign = createInitialCampaignProgress();
+  const locationId = CAMPAIGN_WORLDS[0].locations[0].id;
+
+  const blockedDeliver = advanceCampaignLocationPhase(campaign, 1, locationId, 'deliver', 0.5);
+  assert.deepEqual(blockedDeliver, campaign, 'deliver cannot advance before stabilize is complete');
+
+  campaign = advanceCampaignLocationPhase(campaign, 1, locationId, 'stabilize', 0.5);
+  assert.equal(campaign.worlds['1'].locations[locationId].stabilize, 0.5);
+  campaign = advanceCampaignLocationPhase(campaign, 1, locationId, 'stabilize', 0.75);
+  assert.equal(campaign.worlds['1'].locations[locationId].stabilize, 1, 'phase progress clamps to 100%');
+
+  campaign = advanceCampaignLocationPhase(campaign, 1, locationId, 'deliver', 1);
+  campaign = advanceCampaignLocationPhase(campaign, 1, locationId, 'restore', 1);
+  assert.equal(locationProgressPercent(campaign.worlds['1'].locations[locationId]), 90);
+});
+
+test('world 2 remains locked until world 1 raid is cleared', () => {
+  let campaign = createInitialCampaignProgress();
+  assert.equal(isCampaignWorldUnlocked(campaign, 1), true);
+  assert.equal(isCampaignWorldUnlocked(campaign, 2), false);
+
+  const world = CAMPAIGN_WORLDS[0];
+  for (const location of world.locations) {
+    for (const phase of CAMPAIGN_LOCATION_PHASES) {
+      campaign = advanceCampaignLocationPhase(campaign, 1, location.id, phase, 1);
+    }
+  }
+  assert.equal(isWorldRaidUnlocked(world, campaign.worlds['1']), true);
+  campaign = advanceCampaignRaid(campaign, 1, 0.4);
+  assert.equal(campaign.worlds['1'].raidCleared, false);
+  campaign = advanceCampaignRaid(campaign, 1, 0.7);
+  assert.equal(campaign.worlds['1'].raidProgress, 1);
+  assert.equal(campaign.worlds['1'].raidCleared, true);
+  assert.equal(isCampaignWorldUnlocked(campaign, 2), true);
+});
+
+test('campaign sanitization drops unknown fields and clamps persistent progress', () => {
+  const sanitized = sanitizeCampaignProgress({
+    worlds: {
+      '1': {
+        locations: {
+          'w1-sneaker-garden': { stabilize: 99, deliver: -2, restore: 0.4, mastery: 3 },
+          'unknown-location': { stabilize: 1, deliver: 1, restore: 1, mastery: 1 }
+        },
+        raidProgress: 4,
+        raidCleared: false
+      },
+      '99': { raidProgress: 1, raidCleared: true }
+    }
+  });
+
+  assert.deepEqual(sanitized.worlds['1'].locations['w1-sneaker-garden'], {
+    stabilize: 1,
+    deliver: 0,
+    restore: 0.4,
+    mastery: 1
+  });
+  assert.equal(sanitized.worlds['1'].raidProgress, 1);
+  assert.equal(sanitized.worlds['1'].raidCleared, true);
+  assert.equal(sanitized.worlds['1'].locations['unknown-location'], undefined);
+  assert.equal(sanitized.worlds['99'], undefined);
+});
+
+test('presentation snapshot exposes only derived campaign truth for UI', () => {
+  const campaign = createInitialCampaignProgress();
+  const snapshot = campaignPresentationSnapshot(campaign);
+  assert.equal(snapshot.worlds.length, 2);
+  assert.equal(snapshot.worlds[0].unlocked, true);
+  assert.equal(snapshot.worlds[0].percent, 0);
+  assert.equal(snapshot.worlds[0].restoredLandmarks, 0);
+  assert.equal(snapshot.worlds[0].raidUnlocked, false);
+  assert.equal(snapshot.worlds[0].locations.length, 7);
+  assert.equal(snapshot.worlds[0].locations[0].currentPhase, 'stabilize');
+  assert.equal(snapshot.worlds[1].unlocked, false);
 });
