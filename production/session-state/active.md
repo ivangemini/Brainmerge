@@ -1,56 +1,86 @@
 # Active Session — Brainmerge
 
 ## Current objective
-Brainmerge is in post-RC retention/meta development. The long-term product objective is the Brainverse Campaign supported by Collection Rewards and Prestige, while the validated T1-T18 merge-idle board remains the core gameplay loop.
+Brainmerge is in post-RC retention/meta development. The long-term product objective is now **Brainverse world restoration**, not a ladder of short Campaign stages.
+
+Each Campaign world contains:
+- 7 persistent Locations;
+- 1 persistent multi-phase World Raid;
+- a World Restored percentage;
+- Location landmarks;
+- four Location phases: Stabilize -> Deliver Orders -> Restore Landmark -> Mastery.
+
+The validated T1-T18 merge-idle board remains the primary account-growth loop.
 
 ## Current production baseline
 - browser-first TypeScript runtime;
-- 6x5 merge board;
+- 6x5 main merge board;
 - one sequential T1-T18 chain;
 - passive income, Brain Box economy, Brain Lab, missions, offline reward, Collection, Rescue and `Next move`;
 - save v5 with Yandex/local persistence;
 - board-first mobile UI with Missions / Collection / Brain Lab sheets;
 - unified T1-T18 character atlas;
 - EN/RU core runtime parity;
-- existing CI browser/motion/accessibility/Yandex gates.
+- browser/motion/accessibility/Yandex CI gates.
 
-## Campaign direction
-Target full campaign: 8 worlds × 8 stages = 64 stages including one boss per world.
+## New Campaign direction
+The obsolete `8 short stages per world / 64 one-shot stages / 3 stars` plan is retired.
 
-Campaign, Collection Rewards and Prestige are specified in `docs/CAMPAIGN_AND_META_PROGRESSION.md`. Stateful campaign/meta persistence will move the save contract to v6.
+Target full Campaign:
+- 8 worlds;
+- 7 persistent Locations per world;
+- 1 World Raid per world;
+- 56 Locations + 8 Raids;
+- Campaign progress survives Prestige.
+
+Initial Location phase weighting:
+- Stabilize 20%;
+- Deliver Orders 25%;
+- Restore Landmark 45%;
+- Mastery 10%.
+
+Initial World Raid gate:
+- >=80% World Restored;
+- >=5 restored landmarks.
+
+World Raids are persistent 3-phase bosses whose progress survives sessions.
+
+## Implemented in this pass
+- `src/core/campaign.ts` added as Campaign domain foundation;
+- first two production worlds each define seven stable Location ids;
+- pure Location/World progress calculations;
+- restored-landmark counting;
+- Raid unlock calculation;
+- Campaign core tests;
+- Campaign map reinterpreted as 7 Locations + World Raid;
+- World Restored / Landmarks / Raid-gate summary added;
+- every Location node exposes 0% persistent-progress affordance until save v6 wiring;
+- Location overview shows four long-loop phases and its landmark;
+- Raid overview shows three persistent phases;
+- EN/RU copy updated;
+- existing connected map route retained.
+
+The shell still intentionally does **not** mutate GameState or fake persistent completion. Current 0% values are presentation defaults until v6 state lands.
 
 ## Approved Campaign Art Pack
-Approved and repository-ready:
+Repository-ready:
 - Campaign icon;
 - Prestige icon;
 - Brain Cell icon;
-- Normal / Challenge / Elite / Boss / Locked stage nodes;
+- Normal / Challenge / Elite / Boss / Locked reusable Campaign UI assets;
 - World 1 Backyard Brainrot Zone environment + boss;
 - World 2 Surreal Brainrot City environment + boss.
 
-Campaign environment art is now locked to **toy-like Brainmerge rendering + environment-wide surreal viral brainrot logic**. Generic cute garden/city art with isolated meme decorations is not acceptable.
-
-## Campaign Map visual shell
-Implemented as a presentation-only layer before campaign save/state lands:
-- prominent Campaign entry near the header;
-- full-screen responsive map;
-- World 1/2 switcher;
-- code-positioned semantic stage nodes;
-- approved world and boss art;
-- separate EN/RU Campaign-shell locale resources;
-- safe-area/back/Escape behavior;
-- dedicated packaged Chromium screenshots on desktop and phone.
-
-The visual shell intentionally does **not** mutate GameState, save campaign completion, start campaign runs or fake Prestige functionality.
-
 ## Next implementation sequence
-1. Collection Rewards foundation.
-2. Prestige + Brain Cells + save v6.
-3. Stateful Campaign definitions / `CampaignRunState`.
-4. Connect map node states to persistent campaign progress.
-5. Implement World 1 stages + boss.
-6. Implement World 2 stages + boss.
-7. Playtest first T18 -> Prestige -> Campaign persistence loop.
+1. Save v6 permanent-meta foundation for Locations/Landmarks/Raids + Collection/Prestige fields.
+2. Isolated `CampaignRunState`.
+3. World 1 Location 1 — Sneaker Garden — playable Stabilize -> Deliver -> Restore -> Mastery vertical slice.
+4. World 1 Overgrowth board modifier.
+5. Generalize delivery/order and Landmark progression.
+6. Author remaining six World 1 Locations mainly through data.
+7. Persistent 3-phase World 1 Raid.
+8. Collection Rewards + Prestige integration on the same v6 meta.
+9. World 2 Traffic Lock + seven Locations + Raid.
 
 ## Source of truth
 - `docs/ROADMAP.md`
