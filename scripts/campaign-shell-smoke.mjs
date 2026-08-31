@@ -40,6 +40,8 @@ async function assertHealthy(page, label) {
     innerWidth: window.innerWidth,
     brokenImages: [...document.images].filter((image) => image.complete && image.naturalWidth === 0).map((image) => image.getAttribute('src')),
     nodeCount: document.querySelectorAll('.campaign-node').length,
+    routeSvgCount: document.querySelectorAll('.campaign-route__svg').length,
+    routeStrokeCount: document.querySelectorAll('.campaign-route__stroke').length,
     shellOpen: document.querySelector('.campaign-shell')?.classList.contains('is-open') ?? false,
     bossWidth: document.querySelector('.campaign-boss')?.naturalWidth ?? 0,
     background: getComputedStyle(document.querySelector('.campaign-scene')).backgroundImage
@@ -47,6 +49,8 @@ async function assertHealthy(page, label) {
   assert(result.scrollWidth <= result.innerWidth + 1, `${label}: horizontal overflow ${result.scrollWidth}px > ${result.innerWidth}px`);
   assert(result.brokenImages.length === 0, `${label}: broken images: ${result.brokenImages.join(', ')}`);
   assert(result.nodeCount === 8, `${label}: expected 8 campaign nodes, got ${result.nodeCount}`);
+  assert(result.routeSvgCount === 2, `${label}: expected desktop/mobile campaign routes, got ${result.routeSvgCount}`);
+  assert(result.routeStrokeCount === 6, `${label}: expected 3 route strokes per layout, got ${result.routeStrokeCount}`);
   assert(result.shellOpen, `${label}: campaign shell is not open`);
   assert(result.bossWidth > 0, `${label}: boss art failed to load`);
   assert(result.background.includes('campaign-world-'), `${label}: campaign background is missing`);
