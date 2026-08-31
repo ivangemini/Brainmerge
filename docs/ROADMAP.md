@@ -26,11 +26,11 @@ Target complete Campaign:
 - [ ] **7 persistent Locations per world**.
 - [ ] **1 persistent World Raid per world**.
 - [ ] 56 Locations + 8 World Raids total.
-- [ ] Every Location progresses through Stabilize -> Deliver Orders -> Restore Landmark -> Mastery.
-- [ ] World Progress is derived from Location restoration.
-- [ ] Initial Raid gate: >=80% World Restored + >=5 restored landmarks.
-- [ ] World Raids are persistent 3-phase bosses with progress surviving sessions.
-- [ ] Campaign progress survives Prestige.
+- [x] Every Location uses the proven Stabilize -> Deliver Orders -> Restore Landmark -> Mastery phase contract.
+- [x] World Progress is derived from Location restoration.
+- [x] Initial Raid gate: >=80% World Restored + >=5 restored landmarks.
+- [ ] World Raids are persistent 3-phase bosses with gameplay progress surviving sessions.
+- [ ] Campaign progress survives Prestige — persistence fields are ready; reset transaction still pending.
 - [ ] Each world has a meaningful board modifier, not only different art.
 
 Detailed contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
@@ -70,10 +70,7 @@ Detailed contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 - [x] Core Campaign domain in `src/core/campaign.ts`.
 - [x] Canonical v6 Campaign state drives map percentages/status through a one-way presentation snapshot.
 - [x] Chromium Campaign smoke verifies progress survives save/reload.
-
-Current limitation:
-- Locations do not yet start a real isolated `CampaignRunState` board;
-- the v6 progress model is authoritative and persistent, but gameplay actions that earn this progress are the next layer.
+- [x] First isolated `CampaignRunState` vertical slice is production-playable through all four Sneaker Garden phases.
 
 ## P0 — Save v6 permanent-meta foundation — complete
 - [x] Per-world unlock/clear state derived from prior Raid clears.
@@ -88,37 +85,45 @@ Current limitation:
 - [x] Clamp/sanitize corrupt Campaign/meta values.
 - [x] Campaign progress serialized through the existing local/Yandex `GameState` persistence boundary.
 - [x] Browser smoke mutates v6 Campaign progress, reloads and verifies restored UI state.
-- [ ] Active `CampaignRunState` resume policy — decide when the real Location board lands.
+- [x] Active `CampaignRunState` is persisted/resumed in canonical v6 save.
 
-## P0 — Stateful Location engine
+## P0 — Stateful Location engine — first implementation proven
 Goal: make a Location a multi-session merge objective instead of a short level.
 
-- [ ] Isolated `CampaignRunState` with its own 6x5 board/counters/orders/modifier state.
-- [ ] Start / resume / abandon / restart Location flow.
-- [ ] Main board remains untouched by Campaign actions.
-- [ ] Stabilize phase objective framework.
-- [ ] Deliver Orders framework: requested Campaign unit is consumed on delivery.
-- [ ] Exact-once persistent order progress commit.
-- [ ] Landmark restoration/upgrade transition.
-- [ ] Mastery phase framework.
+- [x] Isolated `CampaignRunState` with its own 6x5 board/counters/orders/modifier state.
+- [x] Start / resume / leave-and-resume Location flow.
+- [ ] Explicit abandon/restart UX with confirmation.
+- [x] Main board remains untouched by Campaign actions.
+- [x] Stabilize phase objective framework.
+- [x] Deliver Orders framework: requested Campaign unit is consumed on delivery.
+- [x] Exact-once persistent order progress commit.
+- [x] Landmark restoration/upgrade transition.
+- [x] Mastery phase framework.
 - [x] Location restoration % wired to map node and World Progress.
-- [ ] Lifetime-discovery gating so Campaign does not bypass the main T1-T18 chain.
+- [x] Lifetime-discovery gating so Campaign does not bypass the main T1-T18 chain.
+- [x] Permanent Landmark perk can modify bounded Campaign supply behavior without affecting main economy.
 
 ## P0 — World 1 vertical slice
 Prove the whole new loop before authoring the rest of the world.
 
-### Location 1 — Sneaker Garden
-- [ ] World 1 Overgrowth board modifier.
-- [ ] Stabilize objectives playable.
-- [ ] Multi-order delivery sequence playable.
-- [ ] Giant Sneaker Flower Bed restoration progression.
-- [ ] Landmark gameplay perk.
-- [ ] Mastery rules.
-- [x] Persistent Location progress storage/reload foundation.
-- [ ] Progress earned through gameplay survives Prestige.
-- [ ] Desktop/mobile/EN/RU runtime QA.
+### Location 1 — Sneaker Garden — playable end-to-end
+- [x] World 1 Overgrowth board modifier.
+- [x] Stabilize objectives playable.
+- [x] Multi-order delivery sequence playable.
+- [x] Giant Sneaker Flower Bed restoration progression: 3 levels / 6 orders / atomic two-order batches.
+- [x] Landmark gameplay perk: stronger Campaign Supply chance rises from 25% to 40% by Landmark Lv3.
+- [x] Mastery rules: three final orders with stronger non-clearing Overgrowth.
+- [x] Persistent Location/active-run storage and reload.
+- [ ] Progress earned through gameplay survives Prestige — requires Prestige transaction implementation.
+- [x] Shared desktop/mobile layout, EN/RU copy parity and Chromium gameplay QA.
 
-Success criterion: Location 1 takes multiple meaningful sessions/cycles rather than minutes and creates a real `merge upward vs deliver now` decision.
+Current phase weights are proven in code for Location 1:
+- Stabilize -> 20%;
+- Deliver -> 45% cumulative;
+- Landmark Restore -> 90% cumulative;
+- Mastery -> 100%.
+
+Next product task is no longer to invent another one-off mini-game. Generalize this proven phase engine into data-driven World 1 Location configs and tune duration/decision quality during authoring.
 
 ## P0 — World 1 full restoration loop
 After Location 1 proves the engine:
@@ -129,6 +134,7 @@ After Location 1 proves the engine:
 - [ ] Gnome Yard.
 - [ ] Mushroom Field.
 - [ ] Backyard Core.
+- [ ] Data-driven Location definitions for phase goals, order queues, Overgrowth layouts and Landmark perks.
 - [ ] Data-driven order pressure increases across Locations.
 - [x] >=80% + 5-landmark Raid gate implemented in core.
 - [ ] Visible Landmark/restoration evolution beyond numeric node state if playtest proves it necessary.
@@ -216,14 +222,17 @@ Potential later art:
 - [x] v1-v5 -> v6 migration coverage.
 - [x] Location/Raid progress sanitization tests.
 - [x] Browser save/reload Campaign persistence smoke.
-- [ ] Campaign/main-board isolation tests.
-- [ ] Delivery consumes Campaign unit only.
-- [ ] Exact-once order/Landmark progress tests.
+- [x] Campaign/main-board isolation tests.
+- [x] Delivery consumes Campaign unit only.
+- [x] Exact-once Deliver and Landmark batch progress tests.
+- [x] Active Stabilize/Deliver run browser resume tests.
+- [x] Restore Landmark browser persistence smoke.
+- [x] Mastery browser completion smoke through 100% Sneaker Garden.
 - [ ] Gameplay-earned Raid progress persistence/world-unlock tests.
 - [ ] Collection reward one-time claim tests.
 - [ ] Prestige reset/preserve tests.
 - [ ] Campaign progress survives Prestige.
-- [ ] Stateful Campaign EN/RU runtime smoke.
+- [ ] Dedicated RU CampaignRun interaction smoke; locale resource parity and global RU runtime smoke are already green.
 
 ## External acceptance gates
 - [ ] Approved Figma acceptance for core UI plus Campaign/Prestige surfaces.
@@ -237,7 +246,7 @@ Potential later art:
 - Coins remain ordinary run currency; Brain Cells remain permanent-meta-only.
 - CampaignRunState remains isolated from the main board.
 - Delivery consumes only Campaign-board units.
-- Persistent Campaign/Collection/meta progress survives Prestige.
+- Persistent Campaign/Collection/meta progress survives Prestige by contract; reset implementation must preserve it.
 - No mandatory ads, energy gates or arbitrary real-time waits.
 - World/landmark/raid state is code-owned; generated art does not bake progression UI.
 - Mobile default gameplay remains board-first.

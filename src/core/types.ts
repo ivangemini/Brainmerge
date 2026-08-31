@@ -64,11 +64,13 @@ export interface PrestigeUpgradeLevels {
   campaignPower: number;
 }
 
-export type CampaignRunPhase = 'stabilize' | 'deliver';
+export type CampaignRunPhase = 'stabilize' | 'deliver' | 'restore' | 'mastery';
 
 /**
  * Temporary/resumable Campaign-board state. It is intentionally isolated from
  * the main idle board: units, selection, orders and World modifier state live here.
+ * Restore and Mastery intentionally reuse the v6 order cursor instead of adding a
+ * new save version: permanent Landmark/Mastery truth continues to live in CampaignProgress.
  */
 export interface CampaignRunState {
   worldId: number;
@@ -80,7 +82,7 @@ export interface CampaignRunState {
   overgrowthTotal: number;
   merges: number;
   spawns: number;
-  /** Persistent deterministic order targets for Deliver. Empty during Stabilize. */
+  /** Persistent deterministic order targets for Deliver/Restore/Mastery. Empty during Stabilize. */
   orderTiers: number[];
   /** Number of order targets already consumed from the Campaign board. */
   orderIndex: number;

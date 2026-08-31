@@ -19,10 +19,11 @@ The validated T1-T18 merge-idle board remains the primary account-growth loop.
 - passive income, Brain Box economy, Brain Lab, missions, offline reward, Collection, Rescue and `Next move`;
 - canonical save v6 with Yandex/local persistence and v1-v5 migration;
 - permanent Campaign Location / Landmark / Raid progress in save v6;
+- resumable isolated `CampaignRunState` in the same canonical save;
 - permanent Collection/Prestige metadata slots in save v6;
 - board-first mobile UI with Missions / Collection / Brain Lab sheets;
 - unified T1-T18 character atlas;
-- EN/RU core runtime parity;
+- EN/RU runtime parity;
 - browser/motion/accessibility/Yandex CI gates.
 
 ## Campaign direction
@@ -60,26 +61,48 @@ World Raids are persistent 3-phase bosses whose progress survives sessions.
 - EN/RU Campaign copy;
 - browser smoke verifies Campaign progress survives a clean storage handoff.
 
-## First playable CampaignRun vertical slice
-World 1 / Location 1 — **Sneaker Garden / Stabilize** is playable and CI-green.
+## First complete Campaign Location vertical slice
+World 1 / Location 1 — **Sneaker Garden** now has all four playable phases on one isolated 6x5 Campaign board.
 
-Runtime contract:
-- separate 6x5 `CampaignRunState`; never aliases main-board cells;
+### Stabilize — 20%
 - six Overgrowth cells start blocked;
 - four T1 Campaign units create an immediate merge decision;
-- Campaign supply drops are free and never spend main-board coins or increment paid Brain Box cost;
+- free Campaign Supply never spends main-board coins or paid Brain Box inflation;
 - supply tiers are capped by lifetime `maxDiscoveredTier`;
-- a successful Campaign merge clears exactly one nearest Overgrowth blocker;
-- six clearing pulses complete Stabilize;
-- completion commits `stabilize = 1` exactly once, making Sneaker Garden 20% restored;
-- partial runs are persisted in save v6 and resume after leaving Campaign/reloading;
-- completed temporary run state can be dismissed without erasing permanent Location progress;
-- Campaign merge rewards do not change main-board coins, XP, main merge count or main units.
+- each successful merge clears exactly one nearest Overgrowth blocker;
+- six clearing pulses commit `stabilize = 1` exactly once.
+
+### Deliver Orders — +25%
+- deterministic four-order queue `[T2, T2, T3, T4]`, capped by lifetime discovery;
+- delivery consumes only the matching Campaign-board unit;
+- each order commits one quarter of Deliver exactly once;
+- partial order cursor survives exit/reload;
+- completing all four raises Sneaker Garden from 20% to 45%.
+
+### Restore Landmark — +45%
+- six restoration orders are grouped into three two-order batches;
+- only a completed two-order batch commits permanent Landmark progress;
+- batches map to Giant Sneaker Flower Bed levels 1, 2 and 3;
+- Landmark level permanently increases stronger Campaign Supply chance from 25% baseline up to 40% at level 3;
+- completing all three levels raises Sneaker Garden from 45% to 90%.
+
+### Mastery — +10%
+- three final high-pressure orders;
+- stronger five-cell Overgrowth remains locked during the phase and cannot be cleared by merge pulses;
+- Landmark Supply bonus remains active;
+- completing all Mastery orders commits the final 10%, taking Sneaker Garden to 100%.
+
+### Isolation / persistence contract
+- Campaign board never aliases or consumes main-board cells;
+- Campaign actions do not change main-board coins, XP, main merge count or paid Brain Box inflation;
+- active Stabilize/Deliver/Restore/Mastery runs are persisted in save v6 and resume after reload;
+- completed temporary run state can be dismissed without erasing permanent Location progress.
 
 Validation status:
-- 81/81 unit/integration tests pass;
+- unit/integration suite covers Stabilize, Deliver, Restore batch atomicity, Landmark perk and Mastery completion;
 - packaged runtime smoke passes;
-- Campaign browser smoke starts the run, clears Overgrowth, exits, resumes and reloads the same active run;
+- Campaign shell smoke covers save/reload + Stabilize/Deliver resume;
+- dedicated Restore + Mastery Chromium smoke verifies Landmark Lv1 persistence and final 100% completion;
 - packaged RC, motion, RU runtime and Yandex adapter smokes pass;
 - package/release audit passes.
 
@@ -93,13 +116,12 @@ Repository-ready:
 - World 2 Surreal Brainrot City environment + boss.
 
 ## Next implementation sequence
-1. Sneaker Garden Deliver Orders on the same isolated Campaign board.
-2. Sneaker Garden Restore Landmark batches and visual restoration state.
-3. Sneaker Garden Mastery rules for the final 10%.
-4. Generalize Overgrowth + order/landmark progression for the remaining six World 1 Locations.
-5. Build persistent 3-phase World 1 Raid.
-6. Collection Rewards + Prestige integration on the same v6 meta.
-7. World 2 Traffic Lock + seven Locations + Raid.
+1. Generalize the proven Sneaker Garden phase engine into data-driven World 1 Location configs.
+2. Make Toilet Pond playable using the same phase framework with Location-specific goals/landmark identity.
+3. Implement Watermelon Grill, Hose Tunnels, Gnome Yard, Mushroom Field and Backyard Core.
+4. Build persistent 3-phase World 1 Raid using the same isolated Campaign board/state boundary.
+5. Collection Rewards + Prestige integration on the same v6 meta.
+6. World 2 Traffic Lock + seven Locations + Raid.
 
 ## Source of truth
 - `docs/ROADMAP.md`

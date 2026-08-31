@@ -22,6 +22,8 @@ jobs:
         run: npm run smoke:runtime
       - name: Run Campaign shell smoke
         run: npm run smoke:campaign
+      - name: Run Campaign Restore + Mastery smoke
+        run: npm run smoke:campaign:final
       - name: Run packaged RC smoke
         run: npm run smoke:rc
       - name: Run packaged motion smoke
