@@ -133,7 +133,6 @@ async function setBossSource(image, source) {
     image.src = source;
     return;
   }
-  image.removeAttribute('src');
   const response = await fetch(source);
   if (!response.ok) return;
   const encoded = (await response.text()).trim();
