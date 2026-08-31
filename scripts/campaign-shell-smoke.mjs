@@ -34,7 +34,34 @@ const server = createServer(async (req, res) => {
   }
 });
 
-async function assertHealthy(page, label) {
+async function seedPersistentCampaignProgress(page) {
+  const result = await page.evaluate(() => {
+    const key = 'brainmerge.save.v1';
+    const raw = localStorage.getItem(key);
+    if (!raw) return { ok: false, reason: 'missing-save' };
+    const saved = JSON.parse(raw);
+    if (saved.version !== 6) return { ok: false, reason: `version-${saved.version}` };
+    const target = saved.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden'];
+    if (!target) return { ok: false, reason: 'missing-campaign-location' };
+    Object.assign(target, { stabilize: 1, deliver: 1, restore: 1, mastery: 1 });
+    localStorage.setItem(key, JSON.stringify(saved));
+    return { ok: true };
+  });
+  assert(result.ok, `could not seed v6 campaign progress: ${result.reason ?? 'unknown'}`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+  const persisted = await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('brainmerge.save.v1') ?? 'null');
+    return {
+      version: saved?.version,
+      location: saved?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden'] ?? null
+    };
+  });
+  assert(persisted.version === 6, `reload did not preserve save v6, got ${persisted.version}`);
+  assert(persisted.location?.mastery === 1, 'campaign location progress did not survive reload');
+}
+
+async function assertHealthy(page, label, expectedWorldProgress, expectedLandmarks) {
   const result = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
     innerWidth: window.innerWidth,
@@ -45,6 +72,8 @@ async function assertHealthy(page, label) {
     routeSvgCount: document.querySelectorAll('.campaign-route__svg').length,
     routeStrokeCount: document.querySelectorAll('.campaign-route__stroke').length,
     summaryCount: document.querySelectorAll('.campaign-world-summary > div').length,
+    worldProgress: document.querySelector('.campaign-summary__progress strong')?.textContent?.trim() ?? '',
+    landmarks: document.querySelector('.campaign-summary__landmarks strong')?.textContent?.trim() ?? '',
     shellOpen: document.querySelector('.campaign-shell')?.classList.contains('is-open') ?? false,
     bossWidth: document.querySelector('.campaign-boss')?.naturalWidth ?? 0,
     background: getComputedStyle(document.querySelector('.campaign-scene')).backgroundImage
@@ -57,12 +86,14 @@ async function assertHealthy(page, label) {
   assert(result.routeSvgCount === 2, `${label}: expected desktop/mobile campaign routes, got ${result.routeSvgCount}`);
   assert(result.routeStrokeCount === 6, `${label}: expected 3 route strokes per layout, got ${result.routeStrokeCount}`);
   assert(result.summaryCount === 3, `${label}: world restoration summary is incomplete`);
+  assert(result.worldProgress === expectedWorldProgress, `${label}: expected world progress ${expectedWorldProgress}, got ${result.worldProgress}`);
+  assert(result.landmarks === expectedLandmarks, `${label}: expected landmarks ${expectedLandmarks}, got ${result.landmarks}`);
   assert(result.shellOpen, `${label}: campaign shell is not open`);
   assert(result.bossWidth > 0, `${label}: boss art failed to load`);
   assert(result.background.includes('campaign-world-'), `${label}: campaign background is missing`);
 }
 
-async function assertLocationOverview(page, label) {
+async function assertLocationOverview(page, label, expectedProgress) {
   await page.locator('.campaign-node--location').first().click();
   await page.locator('.campaign-detail.is-open').waitFor({ state: 'visible' });
   const detail = await page.evaluate(() => ({
@@ -73,7 +104,7 @@ async function assertLocationOverview(page, label) {
   }));
   assert(detail.phaseCount === 4, `${label}: expected 4 persistent location phases, got ${detail.phaseCount}`);
   assert(detail.title.length > 0, `${label}: location title is empty`);
-  assert(detail.progress === '0%', `${label}: default location progress should be 0%`);
+  assert(detail.progress === expectedProgress, `${label}: expected location progress ${expectedProgress}, got ${detail.progress}`);
   assert(!detail.horizontalOverflow, `${label}: location overview causes horizontal overflow`);
   await page.screenshot({ path: new URL(`campaign-location-${label}.png`, OUTPUT).pathname, fullPage: true });
   await page.locator('.campaign-detail__close').click();
@@ -95,21 +126,23 @@ try {
     page.on('pageerror', (error) => pageErrors.push(error.message));
     await page.goto(`http://127.0.0.1:${PORT}/?platform=local`, { waitUntil: 'networkidle' });
     await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+    await seedPersistentCampaignProgress(page);
     await page.locator('.campaign-entry').waitFor({ state: 'visible' });
     await page.locator('.campaign-entry').click();
     await page.locator('.campaign-shell.is-open').waitFor({ state: 'visible' });
     await page.waitForTimeout(120);
     assert(pageErrors.length === 0, `${viewport.name}: page errors: ${pageErrors.join(' | ')}`);
-    await assertHealthy(page, `${viewport.name}-world1`);
+    await assertHealthy(page, `${viewport.name}-world1`, '14%', '1 / 7');
+    assert(await page.locator('.campaign-node--location').first().locator('em').textContent() === '100%', `${viewport.name}: persisted location node did not render 100%`);
     await page.screenshot({ path: new URL(`campaign-world1-${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
-    await assertLocationOverview(page, `${viewport.name}-world1`);
+    await assertLocationOverview(page, `${viewport.name}-world1`, '100%');
 
     await page.locator('.campaign-world-tab[data-world="2"]').click();
     await page.waitForFunction(() => document.querySelector('.campaign-scene')?.dataset.world === '2');
     await page.waitForTimeout(100);
-    await assertHealthy(page, `${viewport.name}-world2`);
+    await assertHealthy(page, `${viewport.name}-world2`, '0%', '0 / 7');
     await page.screenshot({ path: new URL(`campaign-world2-${viewport.name}.png`, OUTPUT).pathname, fullPage: true });
-    await assertLocationOverview(page, `${viewport.name}-world2`);
+    await assertLocationOverview(page, `${viewport.name}-world2`, '0%');
 
     await page.locator('.campaign-node--boss').click();
     await page.locator('.campaign-detail.is-open').waitFor({ state: 'visible' });
