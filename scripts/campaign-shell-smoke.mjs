@@ -137,6 +137,73 @@ async function assertLocationOverview(page, label, expectedProgress) {
   await page.waitForFunction(() => !document.querySelector('.campaign-detail')?.classList.contains('is-open'));
 }
 
+async function openSneakerGarden(page) {
+  await page.locator('.campaign-entry').waitFor({ state: 'visible' });
+  await page.locator('.campaign-entry').click();
+  await page.locator('.campaign-shell.is-open').waitFor({ state: 'visible' });
+  await page.locator('.campaign-node--location[data-location-id="w1-sneaker-garden"]').click();
+  await page.locator('.campaign-detail.is-open').waitFor({ state: 'visible' });
+  await page.locator('.campaign-detail__run-button').waitFor({ state: 'visible' });
+}
+
+async function assertPlayableRunPersistence(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.goto(`${ORIGIN}/?platform=local`, { waitUntil: 'networkidle' });
+  await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+  const mainOccupiedBefore = await page.locator('.board-tray .cell.is-occupied').count();
+
+  await openSneakerGarden(page);
+  await page.locator('.campaign-detail__run-button').click();
+  await page.locator('.campaign-run-shell.is-open').waitFor({ state: 'visible' });
+  assert(await page.locator('.campaign-run-cell').count() === 30, 'playable run must render a separate 6x5 Campaign board');
+  assert(await page.locator('.campaign-run-cell.is-overgrown').count() === 6, 'Sneaker Garden must start with six Overgrowth blockers');
+  assert(await page.locator('.campaign-run-cell.is-occupied').count() === 4, 'Sneaker Garden must start with four Campaign units');
+  assert(await page.locator('.board-tray .cell.is-occupied').count() === mainOccupiedBefore, 'starting Campaign must not consume main-board units');
+
+  await page.locator('.campaign-run-cell[data-run-cell="0"]').click();
+  await page.locator('.campaign-run-cell[data-run-cell="1"]').click();
+  await page.waitForFunction(() => document.querySelectorAll('.campaign-run-cell.is-overgrown').length === 5);
+  assert(await page.locator('.campaign-run-progress strong').textContent() === '17%', 'one of six clearing pulses should render 17% Stabilize progress');
+  assert(await page.locator('.board-tray .cell.is-occupied').count() === mainOccupiedBefore, 'Campaign merge must not mutate main-board occupancy');
+
+  const persisted = await page.evaluate((key) => {
+    const save = JSON.parse(localStorage.getItem(key) ?? 'null');
+    return {
+      version: save?.version,
+      blockers: save?.campaignRun?.overgrowth?.filter(Boolean)?.length,
+      runMerges: save?.campaignRun?.merges,
+      permanentStabilize: save?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden']?.stabilize
+    };
+  }, SAVE_KEY);
+  assert(persisted.version === 6, `playable run persisted wrong save version ${persisted.version}`);
+  assert(persisted.blockers === 5 && persisted.runMerges === 1, `playable run did not persist merge/Overgrowth state: ${JSON.stringify(persisted)}`);
+  assert(persisted.permanentStabilize === 0, 'partial Stabilize must not prematurely commit permanent location progress');
+
+  await page.locator('.campaign-run-back').click();
+  await page.waitForFunction(() => !document.querySelector('.campaign-run-shell')?.classList.contains('is-open'));
+  await page.locator('.campaign-node--location[data-location-id="w1-sneaker-garden"]').click();
+  await page.locator('.campaign-detail__run-button').waitFor({ state: 'visible' });
+  assert((await page.locator('.campaign-detail__run-button').textContent())?.toLowerCase().includes('resume'), 'partial run should expose Resume on the map');
+
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
+  await openSneakerGarden(page);
+  await page.locator('.campaign-detail__run-button').click();
+  await page.locator('.campaign-run-shell.is-open').waitFor({ state: 'visible' });
+  assert(await page.locator('.campaign-run-cell.is-overgrown').count() === 5, 'reload must resume the same five remaining Overgrowth blockers');
+  assert(await page.locator('.campaign-run-progress strong').textContent() === '17%', 'reload must restore Stabilize progress');
+  assert(await page.locator('.board-tray .cell.is-occupied').count() === mainOccupiedBefore, 'resumed Campaign must remain isolated from main board');
+
+  const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+  assert(geometry.width <= geometry.viewport + 1, `playable run has horizontal overflow ${geometry.width}px > ${geometry.viewport}px`);
+  assert(pageErrors.length === 0, `playable run page errors: ${pageErrors.join(' | ')}`);
+  await page.screenshot({ path: new URL('campaign-sneaker-garden-stabilize-mobile.png', OUTPUT).pathname, fullPage: true });
+  await context.close();
+}
+
 await mkdir(OUTPUT, { recursive: true });
 await new Promise((resolve) => server.listen(PORT, '127.0.0.1', resolve));
 const browser = await chromium.launch({ headless: true });
@@ -185,7 +252,9 @@ try {
     assert(!(await page.locator('.campaign-shell').evaluate((node) => node.classList.contains('is-open'))), `${viewport.name}: Escape did not close Campaign`);
     await context.close();
   }
-  console.log('Campaign shell smoke passed with canonical v6 persistence.');
+
+  await assertPlayableRunPersistence(browser);
+  console.log('Campaign shell smoke passed with canonical v6 persistence + playable Sneaker Garden resume.');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
