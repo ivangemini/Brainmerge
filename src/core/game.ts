@@ -18,6 +18,7 @@ import {
   offlineHoursForLevel,
   upgradeCost
 } from './catalog.js';
+import { createInitialCampaignProgress, sanitizeCampaignProgress } from './campaign.js';
 import type {
   Cell,
   FamilyId,
@@ -26,6 +27,7 @@ import type {
   MissionDefinition,
   NextActionHint,
   OnboardingPhase,
+  PrestigeUpgradeLevels,
   Unit,
   UpgradeId,
   UpgradeLevels
@@ -38,6 +40,14 @@ const DEFAULT_UPGRADES: UpgradeLevels = {
   luckyDrop: 0,
   income: 0,
   offline: 0
+};
+
+const DEFAULT_PRESTIGE_UPGRADES: PrestigeUpgradeLevels = {
+  income: 0,
+  boxDiscount: 0,
+  startingCoins: 0,
+  offline: 0,
+  campaignPower: 0
 };
 
 function createUnit(familyId: FamilyId): Unit {
@@ -72,11 +82,33 @@ function sanitizeUpgrades(candidate: unknown): UpgradeLevels {
   };
 }
 
+function sanitizeNonnegativeInt(candidate: unknown, cap = Number.MAX_SAFE_INTEGER): number {
+  if (typeof candidate !== 'number' || !Number.isFinite(candidate)) return 0;
+  return Math.max(0, Math.min(cap, Math.floor(candidate)));
+}
+
+function sanitizeCollectionRewardClaims(candidate: unknown): string[] {
+  if (!Array.isArray(candidate)) return [];
+  return [...new Set(candidate.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0 && entry.length <= 80))].slice(0, 64);
+}
+
+function sanitizePrestigeUpgrades(candidate: unknown): PrestigeUpgradeLevels {
+  if (!candidate || typeof candidate !== 'object') return { ...DEFAULT_PRESTIGE_UPGRADES };
+  const raw = candidate as Partial<Record<keyof PrestigeUpgradeLevels, unknown>>;
+  return {
+    income: sanitizeNonnegativeInt(raw.income, 20),
+    boxDiscount: sanitizeNonnegativeInt(raw.boxDiscount, 20),
+    startingCoins: sanitizeNonnegativeInt(raw.startingCoins, 20),
+    offline: sanitizeNonnegativeInt(raw.offline, 20),
+    campaignPower: sanitizeNonnegativeInt(raw.campaignPower, 20)
+  };
+}
+
 export function createInitialState(now = Date.now()): GameState {
   const cells: Cell[] = Array.from({ length: BOARD_SIZE }, () => null);
   for (let index = 0; index < 4; index += 1) cells[index] = createUnit('toilet-buddy');
   return {
-    version: 5,
+    version: 6,
     cells,
     coins: 100,
     xp: 0,
@@ -89,6 +121,11 @@ export function createInitialState(now = Date.now()): GameState {
     incomeRemainder: 0,
     lastAccrualAt: Math.max(0, Math.floor(now)),
     pendingOfflineCoins: 0,
+    collectionRewardClaims: [],
+    prestigeCount: 0,
+    brainCells: 0,
+    prestigeUpgrades: { ...DEFAULT_PRESTIGE_UPGRADES },
+    campaign: createInitialCampaignProgress(),
     selectedIndex: null,
     messageKey: 'message.welcome'
   };
@@ -97,7 +134,8 @@ export function createInitialState(now = Date.now()): GameState {
 export function sanitizeState(candidate: unknown, now = Date.now()): GameState | null {
   if (!candidate || typeof candidate !== 'object') return null;
   const state = candidate as Record<string, unknown>;
-  if ((state.version !== 1 && state.version !== 2 && state.version !== 3 && state.version !== 4 && state.version !== 5)
+  const version = typeof state.version === 'number' ? state.version : 0;
+  if (![1, 2, 3, 4, 5, 6].includes(version)
     || !Array.isArray(state.cells)
     || state.cells.length !== BOARD_SIZE) return null;
   if (typeof state.coins !== 'number' || typeof state.xp !== 'number' || typeof state.merges !== 'number') return null;
@@ -114,48 +152,53 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
   }
 
   const discoveredFromBoard = cells.reduce((highest, cell) => Math.max(highest, cell?.tier ?? 1), 1);
-  const savedDiscovered = (state.version === 3 || state.version === 4 || state.version === 5) && typeof state.maxDiscoveredTier === 'number'
+  const savedDiscovered = version >= 3 && typeof state.maxDiscoveredTier === 'number'
     ? Math.max(1, Math.min(MAX_RUNTIME_TIER, Math.floor(state.maxDiscoveredTier)))
     : discoveredFromBoard;
-  const spawns = (state.version === 2 || state.version === 3 || state.version === 4 || state.version === 5) && typeof state.spawns === 'number'
+  const spawns = version >= 2 && typeof state.spawns === 'number'
     ? Math.max(0, Math.floor(state.spawns))
     : 0;
 
   let missionIndex = 0;
-  if ((state.version === 4 || state.version === 5) && typeof state.missionIndex === 'number') {
+  if (version >= 4 && typeof state.missionIndex === 'number') {
     missionIndex = Math.max(0, Math.min(MISSION_TRACK.length, Math.floor(state.missionIndex)));
-  } else if ((state.version === 2 || state.version === 3) && state.missionClaimed === true) {
+  } else if ((version === 2 || version === 3) && state.missionClaimed === true) {
     missionIndex = 1;
   }
 
   const safeNow = Math.max(0, Math.floor(now));
-  const rawLastAccrual = state.version === 5 && typeof state.lastAccrualAt === 'number' && Number.isFinite(state.lastAccrualAt)
+  const rawLastAccrual = version >= 5 && typeof state.lastAccrualAt === 'number' && Number.isFinite(state.lastAccrualAt)
     ? Math.max(0, Math.floor(state.lastAccrualAt))
     : safeNow;
   const lastAccrualAt = rawLastAccrual > safeNow ? safeNow : rawLastAccrual;
-  const incomeRemainder = state.version === 5 && typeof state.incomeRemainder === 'number' && Number.isFinite(state.incomeRemainder)
+  const incomeRemainder = version >= 5 && typeof state.incomeRemainder === 'number' && Number.isFinite(state.incomeRemainder)
     ? Math.max(0, Math.min(0.999999, state.incomeRemainder))
     : 0;
-  const pendingOfflineCoins = state.version === 5 && typeof state.pendingOfflineCoins === 'number' && Number.isFinite(state.pendingOfflineCoins)
+  const pendingOfflineCoins = version >= 5 && typeof state.pendingOfflineCoins === 'number' && Number.isFinite(state.pendingOfflineCoins)
     ? Math.max(0, Math.floor(state.pendingOfflineCoins))
     : 0;
 
   return {
-    version: 5,
+    version: 6,
     cells,
     coins: Math.max(0, Math.floor(state.coins)),
     xp: Math.max(0, Math.floor(state.xp)),
     merges: Math.max(0, Math.floor(state.merges)),
     spawns,
-    paidBoxes: state.version === 5 && typeof state.paidBoxes === 'number' && Number.isFinite(state.paidBoxes)
+    paidBoxes: version >= 5 && typeof state.paidBoxes === 'number' && Number.isFinite(state.paidBoxes)
       ? Math.max(0, Math.floor(state.paidBoxes))
       : 0,
     maxDiscoveredTier: Math.max(discoveredFromBoard, savedDiscovered),
     missionIndex,
-    upgrades: state.version === 5 ? sanitizeUpgrades(state.upgrades) : { ...DEFAULT_UPGRADES },
+    upgrades: version >= 5 ? sanitizeUpgrades(state.upgrades) : { ...DEFAULT_UPGRADES },
     incomeRemainder,
     lastAccrualAt,
     pendingOfflineCoins,
+    collectionRewardClaims: version >= 6 ? sanitizeCollectionRewardClaims(state.collectionRewardClaims) : [],
+    prestigeCount: version >= 6 ? sanitizeNonnegativeInt(state.prestigeCount, 1_000_000) : 0,
+    brainCells: version >= 6 ? sanitizeNonnegativeInt(state.brainCells, 1_000_000_000) : 0,
+    prestigeUpgrades: version >= 6 ? sanitizePrestigeUpgrades(state.prestigeUpgrades) : { ...DEFAULT_PRESTIGE_UPGRADES },
+    campaign: version >= 6 ? sanitizeCampaignProgress(state.campaign) : createInitialCampaignProgress(),
     selectedIndex: null,
     messageKey: null
   };
