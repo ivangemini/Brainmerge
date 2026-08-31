@@ -11,6 +11,7 @@
     "package": "npm run build && PLATFORM=local node scripts/package-portal.mjs && node scripts/check-package.mjs local && npm run audit:release",
     "package:yandex": "npm run build && PLATFORM=yandex node scripts/package-portal.mjs && node scripts/check-package.mjs yandex && npm run audit:release",
     "smoke:runtime": "node scripts/runtime-smoke.mjs",
+    "smoke:campaign": "node scripts/campaign-shell-smoke.mjs",
     "smoke:rc": "node scripts/rc-smoke.mjs",
     "smoke:motion": "node scripts/motion-smoke.mjs",
     "smoke:locale": "node scripts/locale-runtime-smoke.mjs",

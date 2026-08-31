@@ -1,88 +1,120 @@
 # Brainmerge — Production Roadmap
 
 ## Product goal
-Ship Brainmerge as a production-ready browser/mobile merge-idle game with a **clear long-term purpose**: complete the Brainverse Campaign, strengthen a permanent meta through Collection Rewards and Prestige, and keep the existing T1-T18 merge board as the core moment-to-moment loop.
+Brainmerge is a browser/mobile merge-idle game with one T1 -> T18 chain, a board-first mobile runtime and a long-term reason to continue playing: **complete the Brainverse Campaign while building permanent meta progression through Collection Rewards and Prestige**.
 
-The release-candidate foundation is already built. The next roadmap is not another polish-only pass; it is the post-RC retention/meta expansion.
+The original release-candidate foundation is complete. Current development is the post-RC retention/meta expansion.
 
 ## Current production baseline — complete
 - [x] 6x5 touch/mouse/keyboard merge board.
-- [x] One canonical T1 -> T18 character chain; T18 terminal for the current run.
-- [x] Passive production, escalating paid Brain Box, optional rewarded Brain Box.
+- [x] One canonical T1 -> T18 character chain; T18 is terminal for the current run.
+- [x] Passive production, escalating paid Brain Box and optional rewarded Brain Box.
 - [x] Brain Lab: Base Drop Tier, Lucky Drop, Brain Income, Offline Storage.
 - [x] Merge-first discovery and persistent Collection.
 - [x] First-cycle missions, offline reward, `Next move`, deadlock Rescue.
 - [x] Save migration through v5 and Yandex/local persistence hardening.
-- [x] EN/RU parity and runtime locale QA.
-- [x] Unified physical 6x3 `character-atlas.webp` for T1-T18 on board and Collection.
-- [x] Board-first mobile composition with Missions / Collection / Brain Lab in modal sheets.
-- [x] Production Missions / Collection / Rewards / Brain Lab icon set integrated.
+- [x] EN/RU production locale parity and runtime locale QA.
+- [x] Unified physical 6x3 `character-atlas.webp` for T1-T18.
+- [x] Board-first mobile layout with Missions / Collection / Brain Lab modal sheets.
+- [x] Missions / Collection / Rewards / Brain Lab production icon set.
 - [x] Desktop/compact/mobile Chromium runtime QA, motion QA, accessibility QA and Yandex adapter smoke.
-- [x] Yandex package/raster integrity/release audit in CI.
 
-## New product north star — Brainverse Campaign
-- [ ] Campaign becomes the main long-term objective rather than T18 being the final reason to play.
-- [ ] Target complete structure: **8 worlds × 8 stages = 64 stages**, including 8 boss stages.
-- [ ] Stage framework is data-driven and reuses the real merge board.
+## Brainverse Campaign target
+- [ ] Complete campaign target: **8 worlds × 8 stages = 64 stages**, including 8 boss stages.
 - [ ] Campaign progress survives Prestige.
-- [ ] Worlds unlock sequentially; later worlds may require Prestige milestones.
-- [ ] Stage stars/mastery create replayability without requiring more character tiers.
+- [ ] Stage framework is data-driven and reuses real merge primitives.
+- [ ] Worlds unlock sequentially; later worlds may use Prestige gates.
+- [ ] Up to 3 stars/mastery per stage for replay value.
 - [ ] Bosses use merge objectives/progress, not a separate combat engine.
 
-Detailed source of truth: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
+Detailed system contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
+
+## Approved Campaign Art Pack — complete
+The first production art pack is approved and integrated into the repository.
+
+### Meta / navigation UI
+- [x] Campaign / World Map icon.
+- [x] Prestige / Brain Reset icon.
+- [x] Brain Cell currency icon.
+
+### Campaign node family
+- [x] Normal stage node.
+- [x] Challenge stage node.
+- [x] Elite/mastery stage node.
+- [x] Boss stage node.
+- [x] Locked stage node.
+
+### World 1 — Backyard Brainrot Zone
+- [x] Surreal brainrot world environment, text-free and without baked stage circles.
+- [x] World 1 boss — flamingo/lawn-machine/garden/sneaker surreal hybrid.
+
+### World 2 — Surreal Brainrot City
+- [x] Surreal city world environment, text-free and without baked stage circles.
+- [x] World 2 boss — pigeon/vending-machine/city-sign/sneaker surreal hybrid.
+
+Runtime optimized files are documented in `docs/ASSET_MANIFEST.md`.
+
+## Campaign Map visual shell — complete
+This is a presentation milestone, not yet the authoritative campaign state system.
+
+- [x] Prominent Campaign entry near the main header instead of a fourth mobile dock button.
+- [x] Full-screen responsive Campaign map shell.
+- [x] World 1 / World 2 switcher.
+- [x] Approved world backgrounds integrated.
+- [x] Eight code-positioned stage nodes per world using the approved semantic node family.
+- [x] Approved boss art integrated into each map.
+- [x] EN/RU Campaign-shell copy resources.
+- [x] Escape/back close behavior and mobile safe-area handling.
+- [x] Dedicated packaged Chromium Campaign screenshot smoke on desktop and phone.
+- [ ] Stage nodes do not yet own persistent completion/unlock state.
+- [ ] Stage start/play flow is not yet implemented.
 
 ## P0 — Collection Rewards
-Goal: turn Collection from an informational gallery into permanent progression.
+Goal: make Collection permanent progression rather than only a gallery.
 
-- [ ] Add claim-once milestones for 5/18, 10/18, 15/18 and 18/18 discovered.
-- [ ] Add a Collection `Rewards` section/tab; do not add another mobile dock button.
-- [ ] Reward types may include permanent income, Box discount, offline-cap bonus, Brain Cells and cosmetics.
-- [ ] Model exact reward values before locking balance.
-- [ ] Persist claimed milestones through Prestige.
-- [ ] Guard against duplicate claims and corrupted claim state.
-- [ ] Localize all new strings in EN/RU.
-- [ ] Add Collection Rewards runtime/geometry screenshots on desktop and phone.
+- [ ] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
+- [ ] Add `Rewards` section/tab inside Collection; no new mobile dock item.
+- [ ] Model exact permanent reward values before locking balance.
+- [ ] Persist milestone claim state through Prestige.
+- [ ] Prevent duplicate claims and sanitize invalid claim state.
+- [ ] EN/RU strings and desktop/mobile geometry QA.
 
 ## P0 — Prestige / Brain Reset
-Goal: make first T18 completion the beginning of the meta loop rather than the endpoint.
+Goal: make first T18 completion the beginning of the long-term loop.
 
 - [ ] Prestige unlocks after reaching T18.
-- [ ] Add explicit confirmation UI showing what resets and what is preserved.
-- [ ] Reset run-level board/economy state only.
-- [ ] Preserve lifetime Collection, Collection Rewards, Campaign progress and permanent meta.
-- [ ] Introduce Brain Cells as a dedicated permanent meta currency.
-- [ ] Coins remain the only ordinary merge-economy spend currency.
+- [ ] Confirmation screen explicitly shows reset vs preserved state.
+- [ ] Reset run-level board/economy/Brain Lab state only.
+- [ ] Preserve lifetime Collection, Collection Rewards, Campaign and permanent meta.
+- [ ] Introduce Brain Cells as permanent-meta-only currency.
 - [ ] Add a small data-driven permanent upgrade tree.
-- [ ] First eligible Prestige always awards at least one Brain Cell.
-- [ ] Prestige never bypasses first-account merge-first discovery.
-- [ ] Add deterministic reset/preserve invariants and no-double-award tests.
+- [ ] First valid Prestige awards at least one Brain Cell.
+- [ ] Deterministic exact reset/preserve/no-double-award tests.
 
-## P0 — Save v6 migration
-Collection Rewards + Prestige + Campaign require one coherent schema migration.
+## P0 — Save v6
+Collection Rewards + Prestige + Campaign persistence land as one coherent schema migration.
 
-- [ ] Add save v6 fields for collection reward claims.
-- [ ] Add Prestige count, Brain Cells and permanent upgrade levels.
-- [ ] Add campaign stage/star/world completion state.
-- [ ] Decide whether active campaign runs are resumable; if yes, version their snapshot explicitly.
-- [ ] Migrate v1-v5 -> v6 without losing current board/economy/discovery data.
-- [ ] Sanitize negative/corrupt meta values and invalid campaign indices.
-- [ ] Extend Yandex/local persistence tests to the new schema.
+- [ ] Collection reward claim state.
+- [ ] Prestige count, Brain Cells and permanent upgrade levels.
+- [ ] Campaign world/stage/star completion state.
+- [ ] Decide whether active campaign runs are resumable.
+- [ ] v1-v5 -> v6 migration without losing valid current state.
+- [ ] Corrupt/negative meta-state sanitization.
+- [ ] Yandex/local persistence coverage for v6.
 
-## P1 — Campaign framework
-Goal: build the reusable system before authoring the full campaign.
+## P1 — Stateful Campaign framework
+The current map shell becomes a real progression surface only after this layer lands.
 
-- [ ] Add data definitions for worlds, stages, objectives, mastery conditions and rewards.
-- [ ] Add isolated `CampaignRunState` so campaign stages cannot destroy the main idle board.
-- [ ] Add campaign navigation/map destination.
-- [ ] Keep mobile board-first; Campaign gets a prominent goal/map CTA rather than a fourth cramped dock item by default.
-- [ ] Implement stage start / restart / abandon / complete flows.
-- [ ] Implement up-to-3-star mastery results.
-- [ ] Implement stage reward commit exactly once.
-- [ ] Implement world unlock progression.
-- [ ] Add touch/mouse/keyboard and reduced-motion coverage.
-- [ ] Localize all campaign UI and keep generated environment art text-free.
+- [ ] Data definitions for worlds, stages, objectives, mastery conditions and rewards.
+- [ ] Isolated `CampaignRunState` so campaign stages cannot destroy the main idle board.
+- [ ] Stage start / restart / abandon / complete flows.
+- [ ] Persistent stage completion and stars.
+- [ ] Exact-once stage reward commit.
+- [ ] World unlock progression.
+- [ ] Map node state driven from campaign save data rather than static presentation.
+- [ ] Touch/mouse/keyboard and reduced-motion coverage.
 
-## P1 — Campaign stage primitives
+## P1 — Stage objective primitives
 - [ ] Reach target tier.
 - [ ] Complete N merges.
 - [ ] Earn N stage coins.
@@ -91,89 +123,54 @@ Goal: build the reusable system before authoring the full campaign.
 - [ ] Target-order challenge.
 - [ ] Crowded-board deterministic puzzle.
 - [ ] No-Box deterministic puzzle.
-- [ ] Timed challenge only after untimed objectives are stable.
-
-Stage creation must remain configuration-first; avoid world-specific gameplay conditionals.
+- [ ] Timed challenge after untimed primitives are stable.
 
 ## P1 — Boss framework
-- [ ] Boss progress/HP is code-owned and localized.
+- [ ] Code-owned boss progress/HP.
 - [ ] Ordinary merges contribute baseline progress.
-- [ ] Rotating target orders create larger progress hits.
-- [ ] Boss render never covers board hit targets.
-- [ ] Boss defeat grants a world-completion reward and unlocks the next map segment.
-- [ ] Boss presentation remains playful/toy-like; no gore or separate combat simulation.
-- [ ] Add deterministic boss completion/world unlock tests.
+- [ ] Target orders create larger progress hits.
+- [ ] Boss art never covers board hit targets.
+- [ ] Boss clear unlocks the next map segment/world.
+- [ ] Deterministic boss-completion/world-unlock tests.
 
-## P1 — Campaign content milestone 1
-**World 1 + World 2 are the proof of the complete retention loop.**
+## P1 — Campaign content milestone
+- [ ] World 1: 7 stages + boss playable end-to-end.
+- [ ] World 2: 7 stages + boss playable end-to-end.
+- [ ] Fresh account -> World 1/2 -> T18 -> Prestige -> Campaign persistence playtest.
+- [ ] Adding a stage is primarily a data/config change.
 
-- [ ] World 1: 7 normal/challenge stages + boss.
-- [ ] World 2: 7 normal/challenge stages + boss.
-- [ ] Production world art for both worlds.
-- [ ] Production boss art for both worlds.
-- [ ] Production stage-node/map icon kit.
-- [ ] Campaign rewards tied into coins/Collection/Brain Cells without runaway inflation.
-- [ ] Playtest fresh account -> campaign -> T18 -> Prestige -> campaign persistence.
-- [ ] Validate that adding a new stage is primarily a data change.
-
-## P2 — Campaign expansion
-After Worlds 1-2 prove the framework and pacing:
-
-- [ ] World 3 — Meme Factory.
-- [ ] World 4 — Italian Chaos.
-- [ ] World 5 — Sky Kingdom.
-- [ ] World 6 — Neon Brain Lab.
-- [ ] World 7 — Space Brainrot.
+## P2 — Full campaign expansion
+After Worlds 1-2 prove pacing and architecture:
+- [ ] World 3 — surreal Meme Factory.
+- [ ] World 4 — surreal Mediterranean/Italian-chaos world.
+- [ ] World 5 — surreal Sky world.
+- [ ] World 6 — surreal Brain Lab world.
+- [ ] World 7 — surreal Space Brainrot world.
 - [ ] World 8 — Brainverse Core / final boss.
-- [ ] Author remaining stages to reach 64 total.
-- [ ] Tune Prestige gates so they create goals without hard walls.
-- [ ] Add world-level star rewards/cosmetics where useful.
+- [ ] Remaining content to 64 stages total.
 
-Working theme names remain provisional until art/content approval.
+Every future environment must follow the locked Brainmerge rule: **toy-like rendering + environment-wide viral surreal brainrot logic**, not a generic casual-game location with a few meme props pasted onto it.
 
-## P2 — Rare / Shiny compatibility
-Rare/Shiny remains a later retention layer already compatible with the architecture.
-
-- [ ] Rarity is orthogonal to T1-T18 tier.
-- [ ] Reuse current character atlas plus reusable rarity frames/FX; do not create 18 duplicate character renders.
+## P2 — Rare / Shiny
+- [ ] Rarity remains orthogonal to T1-T18 tier.
+- [ ] Reuse the character atlas plus reusable frames/FX rather than 18 duplicate renders.
 - [ ] Track normal/rare Collection separately if shipped.
-- [ ] Preserve rarity through Prestige and campaign save state.
-- [ ] Add only after Campaign + Prestige has a stable economy.
+- [ ] Preserve rarity through Prestige/Campaign state.
 
-## P2 — Live-ops hooks
-Daily systems and limited events remain optional follow-up retention, not a substitute for the campaign.
+## P2 — Live ops
+- [ ] Re-evaluate Daily Missions / streaks after Campaign + Prestige are playable.
+- [ ] Events reuse merge/campaign primitives and localization.
+- [ ] Avoid a bespoke art pipeline per event.
 
-- [ ] Re-evaluate Daily Missions/7-day streak after the main meta loop is playable.
-- [ ] Event content should reuse campaign/merge primitives and localization.
-- [ ] Avoid a bespoke art pipeline for every event.
+## Current missing art
+No additional art is required to build the first **stateful** World 1 / World 2 campaign framework.
 
-## Asset dependencies
-### Required before Campaign milestone 1 can look production-ready
-- [ ] Campaign / World Map icon — transparent 512×512 source.
-- [ ] Prestige / Brain Reset icon — transparent 512×512 source.
-- [ ] Brain Cell currency icon — transparent 512×512 source.
-- [ ] Stage-node icon family — Normal, Challenge, Elite, Boss, Locked/Completed; transparent 512×512 sources or one approved sprite sheet.
-- [ ] World 1 environment/banner — 1536×864, text-free, center-safe for responsive crop.
-- [ ] World 2 environment/banner — 1536×864, text-free, center-safe for responsive crop.
-- [ ] World 1 boss — transparent 1024×1024.
-- [ ] World 2 boss — transparent 1024×1024.
-- [ ] Optional World 1/2 emblems — transparent 512×512 if the map needs compact world identity.
+Defer new generation until runtime proves a concrete need. Possible later requirements:
+- World Complete / mastery reward treatment if existing Rewards art is insufficient;
+- Prestige confirmation illustration only if code-owned icon/layout treatment is not enough;
+- Worlds 3–8 environments and bosses after the first two worlds validate the framework.
 
-### Already available; do not regenerate
-- [x] Missions icon.
-- [x] Collection icon.
-- [x] Rewards icon.
-- [x] Brain Lab icon.
-- [x] Brain Box / upgrade atlas art.
-- [x] T1-T18 canonical character visuals.
-- [x] Generic reward/gift art.
-
-### Later full-campaign art
-- [ ] 6 additional world environment/banner assets.
-- [ ] 6 additional boss renders.
-- [ ] Up to 6 additional world emblems if the map uses them.
-
-## Automated quality gates for the new systems
+## Automated quality gates for new meta systems
 - [ ] v5 -> v6 migration smoke.
 - [ ] Collection reward one-time claim tests.
 - [ ] Prestige reset/preserve tests.
@@ -182,26 +179,21 @@ Daily systems and limited events remain optional follow-up retention, not a subs
 - [ ] Deterministic stage objective/reward tests.
 - [ ] Boss/world unlock tests.
 - [ ] Campaign progress survives Prestige.
-- [ ] EN/RU locale parity remains 100%.
-- [ ] Desktop 1440×900 / compact 1024×576 / phone 390×844 campaign screenshots.
-- [ ] No horizontal overflow/broken image/page errors.
-- [ ] Touch/mouse/keyboard campaign flow.
-- [ ] Reduced-motion campaign/boss behavior.
-- [ ] Yandex package integrity includes all new raster assets.
+- [x] Campaign shell desktop/mobile screenshot smoke.
+- [ ] Stateful Campaign EN/RU runtime smoke after v6 integration.
 
 ## External acceptance gates
-- [ ] **Approved Figma acceptance:** compare current HUD/board/Missions/Collection/Brain Lab/Brain Box/mobile dock plus new Campaign/Prestige surfaces against approved targets. Current file key: `lIFT4QEPhnsFfSrRD8WFad`.
-- [ ] **Real Yandex Games Portal acceptance:** run the final package inside the actual portal/debug panel and confirm Game Ready/Gameplay indicators, rewarded callbacks, visibility lifecycle and cloud storage.
-- [ ] **Human pacing/retention sign-off:** play fresh account, World 1-2, first T18, first Prestige and a return session. Simulation is necessary but not a substitute for this.
+- [ ] Approved Figma acceptance for current core UI plus Campaign/Prestige surfaces.
+- [ ] Real Yandex Games Portal/debug-panel run.
+- [ ] Human pacing/retention sign-off including first Prestige and Worlds 1-2.
 
 ## Guardrails
-- Core first-account discovery remains merge-first.
-- T1-T18 remains one readable sequential chain.
-- Coins remain the only ordinary merge-economy currency; Brain Cells are permanent-meta-only.
-- Campaign stages reuse core merge primitives rather than becoming a second unrelated game.
-- Campaign progress and permanent rewards survive Prestige.
-- No mandatory rewarded ads, energy systems or arbitrary real-time waits for campaign progression.
-- Generated world/boss art contains no baked player-facing text.
-- Raster art decorates code-owned state/hit areas; progression, prices, stars, objectives and localization remain runtime data.
-- Mobile default remains board-first; do not return to a long vertical pile of full production panels.
-- Prefer data tables/configuration over bespoke stage/world conditionals.
+- First lifetime discovery stays merge-first.
+- T1-T18 stays one readable sequential chain.
+- Coins remain ordinary merge-economy currency; Brain Cells are permanent-meta-only.
+- Campaign reuses core merge primitives rather than becoming an unrelated second game.
+- Permanent Campaign/Collection/meta progress survives Prestige.
+- No mandatory rewarded ads, energy systems or arbitrary real-time waits for progression.
+- Generated world/boss art contains no baked player-facing text or stage state.
+- Map nodes, objectives, stars, locks, prices and progression remain code-owned.
+- Mobile default gameplay remains board-first.

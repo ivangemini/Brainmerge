@@ -1,0 +1,14 @@
+{
+  "entry": "Кампания",
+  "title": "Кампания Brainverse",
+  "subtitle": "Проходи сюрреалистичные миры и добирайся до каждого босса.",
+  "back": "Назад",
+  "worldSwitchLabel": "Выбор мира",
+  "world1Kicker": "МИР 1",
+  "world1Name": "Зона дворового брейнрота",
+  "world2Kicker": "МИР 2",
+  "world2Name": "Сюрреалистичный Брейнрот-Сити",
+  "stageLabel": "Уровень {stage}",
+  "bossStageLabel": "Уровень с боссом {stage}",
+  "mapLabel": "Карта мира кампании"
+}

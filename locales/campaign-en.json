@@ -1,0 +1,14 @@
+{
+  "entry": "Campaign",
+  "title": "Brainverse Campaign",
+  "subtitle": "Travel through surreal worlds and reach every boss.",
+  "back": "Back",
+  "worldSwitchLabel": "World selection",
+  "world1Kicker": "WORLD 1",
+  "world1Name": "Backyard Brainrot Zone",
+  "world2Kicker": "WORLD 2",
+  "world2Name": "Surreal Brainrot City",
+  "stageLabel": "Stage {stage}",
+  "bossStageLabel": "Boss stage {stage}",
+  "mapLabel": "Campaign world map"
+}

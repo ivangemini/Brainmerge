@@ -20,6 +20,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run packaged runtime smoke
         run: npm run smoke:runtime
+      - name: Run Campaign shell smoke
+        run: npm run smoke:campaign
       - name: Run packaged RC smoke
         run: npm run smoke:rc
       - name: Run packaged motion smoke
