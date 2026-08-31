@@ -1,3 +1,5 @@
+import type { CampaignProgress } from './campaign.js';
+
 export type FamilyId =
   | 'toilet-buddy'
   | 'camera-dude'
@@ -54,6 +56,14 @@ export interface UpgradeDefinition {
   costs: readonly number[];
 }
 
+export interface PrestigeUpgradeLevels {
+  income: number;
+  boxDiscount: number;
+  startingCoins: number;
+  offline: number;
+  campaignPower: number;
+}
+
 export type NextActionKind = 'offline' | 'mission' | 'rescue' | 'merge' | 'upgrade' | 'box' | 'wait' | 'complete';
 
 export interface NextActionHint {
@@ -66,7 +76,7 @@ export interface NextActionHint {
 }
 
 export interface GameState {
-  version: 5;
+  version: 6;
   cells: Cell[];
   coins: number;
   xp: number;
@@ -86,6 +96,15 @@ export interface GameState {
   lastAccrualAt: number;
   /** Offline production waiting for an explicit player collect action. */
   pendingOfflineCoins: number;
+  /** Permanent Collection milestone ids already claimed. */
+  collectionRewardClaims: string[];
+  /** Number of completed Brain Reset cycles. */
+  prestigeCount: number;
+  /** Permanent meta currency. Never spent by the ordinary Brain Box/Brain Lab economy. */
+  brainCells: number;
+  prestigeUpgrades: PrestigeUpgradeLevels;
+  /** Permanent Brainverse location / landmark / raid progress. */
+  campaign: CampaignProgress;
   selectedIndex: number | null;
   messageKey: string | null;
 }
