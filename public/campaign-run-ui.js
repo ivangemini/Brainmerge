@@ -44,7 +44,7 @@ function locationSnapshot() {
 
 function activeRun() {
   const run = campaignSnapshot?.activeRun;
-  return run?.worldId === TARGET_WORLD && run?.locationId === TARGET_LOCATION && run?.phase === 'stabilize'
+  return run?.worldId === TARGET_WORLD && run?.locationId === TARGET_LOCATION && (run?.phase === 'stabilize' || run?.phase === 'deliver')
     ? run
     : null;
 }
@@ -118,6 +118,7 @@ function ensureShell() {
         <footer class="campaign-run-footer">
           <div class="campaign-run-supply-copy"><strong></strong><small></small></div>
           <button class="campaign-run-supply" type="button"></button>
+          <button class="campaign-run-deliver" type="button" hidden></button>
         </footer>
       </div>
       <div class="campaign-run-complete" aria-hidden="true">
@@ -132,6 +133,11 @@ function ensureShell() {
 
   section.querySelector('.campaign-run-back')?.addEventListener('click', closeRun);
   section.querySelector('.campaign-run-supply')?.addEventListener('click', () => dispatchCommand({ type: 'spawn' }));
+  section.querySelector('.campaign-run-deliver')?.addEventListener('click', () => {
+    const run = activeRun();
+    if (run?.phase !== 'deliver' || run.selectedIndex === null || !run.canDeliverSelected) return;
+    dispatchCommand({ type: 'deliver', index: run.selectedIndex });
+  });
   section.querySelector('.campaign-run-complete button')?.addEventListener('click', () => {
     wantsOpen = false;
     closeRun();
@@ -175,6 +181,12 @@ function openedDetailLocationId() {
   return selectedLocationId;
 }
 
+function launcherLabel(run, progress) {
+  const phase = run?.phase ?? progress?.currentPhase;
+  if (phase === 'deliver') return run ? copy.runDeliverResume : copy.runDeliverStart;
+  return run ? copy.runResume : copy.runStart;
+}
+
 function renderLauncher() {
   if (!copy) return;
   const detail = document.querySelector('.campaign-detail.is-open');
@@ -185,7 +197,8 @@ function renderLauncher() {
   const progress = locationSnapshot();
   const run = activeRun();
   const openLocationId = openedDetailLocationId();
-  const available = openLocationId === TARGET_LOCATION && (progress?.currentPhase === 'stabilize' || Boolean(run));
+  const phase = run?.phase ?? progress?.currentPhase;
+  const available = openLocationId === TARGET_LOCATION && (phase === 'stabilize' || phase === 'deliver');
   if (!available) {
     launcher?.remove();
     return;
@@ -203,8 +216,8 @@ function renderLauncher() {
     });
     card.append(launcher);
   }
-  const launcherLabel = run ? copy.runResume : copy.runStart;
-  if (launcher.textContent !== launcherLabel) launcher.textContent = launcherLabel;
+  const label = launcherLabel(run, progress);
+  if (launcher.textContent !== label) launcher.textContent = label;
 }
 
 function scheduleLauncherRefresh() {
@@ -229,12 +242,14 @@ function cellHtml(run, index) {
   const selected = run.selectedIndex === index;
   const selectedUnit = run.selectedIndex === null ? null : run.cells[run.selectedIndex];
   const mergeable = Boolean(selectedUnit && unit && selectedUnit.familyId === unit.familyId && run.selectedIndex !== index);
+  const orderMatch = run.phase === 'deliver' && unit && unit.tier === run.activeOrderTier;
   const classes = [
     'campaign-run-cell',
     blocked ? 'is-overgrown' : '',
     unit ? 'is-occupied' : 'is-empty',
     selected ? 'is-selected' : '',
-    mergeable ? 'is-mergeable' : ''
+    mergeable ? 'is-mergeable' : '',
+    orderMatch ? 'is-order-match' : ''
   ].filter(Boolean).join(' ');
   let inner = '<span class="campaign-run-cell__floor" aria-hidden="true"></span>';
   if (blocked) {
@@ -274,20 +289,33 @@ function renderRun() {
   }
   const currentShell = ensureShell();
   if (!currentShell) return;
+  const isDeliver = run.phase === 'deliver';
+  const kicker = isDeliver ? copy.runDeliverKicker : copy.runStabilizeKicker;
 
-  currentShell.setAttribute('aria-label', copy.runStabilizeKicker);
+  currentShell.dataset.phase = run.phase;
+  currentShell.setAttribute('aria-label', kicker);
   currentShell.querySelector('.campaign-run-back').textContent = `← ${copy.runBack}`;
   currentShell.querySelector('.campaign-run-heading small').textContent = copy.world1Kicker;
   currentShell.querySelector('.campaign-run-heading strong').textContent = copy.w1Location1Name;
-  currentShell.querySelector('.campaign-run-progress small').textContent = copy.runProgress;
+  currentShell.querySelector('.campaign-run-progress small').textContent = isDeliver ? copy.runDeliverProgress : copy.runProgress;
   currentShell.querySelector('.campaign-run-progress strong').textContent = `${run.progressPercent}%`;
   const progressBar = currentShell.querySelector('.campaign-run-progress i');
   if (progressBar instanceof HTMLElement) progressBar.style.width = `${run.progressPercent}%`;
-  currentShell.querySelector('.campaign-run-objective__copy small').textContent = copy.runStabilizeKicker;
-  currentShell.querySelector('.campaign-run-objective__copy strong').textContent = copy.phaseStabilize;
-  currentShell.querySelector('.campaign-run-objective__copy p').textContent = copy.runStabilizeGoal;
-  currentShell.querySelector('.campaign-run-objective__counter small').textContent = copy.runOvergrowthLabel;
-  currentShell.querySelector('.campaign-run-objective__counter strong').textContent = interpolate(copy.runRemaining, { remaining: run.overgrowthRemaining });
+
+  currentShell.querySelector('.campaign-run-objective__copy small').textContent = kicker;
+  currentShell.querySelector('.campaign-run-objective__copy strong').textContent = isDeliver ? copy.phaseDeliver : copy.phaseStabilize;
+  currentShell.querySelector('.campaign-run-objective__copy p').textContent = isDeliver ? copy.runDeliverGoal : copy.runStabilizeGoal;
+  if (isDeliver) {
+    const currentOrder = Math.min(run.orderTotal, run.orderIndex + (run.completed ? 0 : 1));
+    currentShell.querySelector('.campaign-run-objective__counter small').textContent = `${copy.runOrderLabel} ${interpolate(copy.runOrderProgress, { current: currentOrder, total: run.orderTotal })}`;
+    currentShell.querySelector('.campaign-run-objective__counter strong').textContent = run.activeOrderTier === null
+      ? '✓'
+      : interpolate(copy.runOrderTarget, { tier: run.activeOrderTier });
+  } else {
+    currentShell.querySelector('.campaign-run-objective__counter small').textContent = copy.runOvergrowthLabel;
+    currentShell.querySelector('.campaign-run-objective__counter strong').textContent = interpolate(copy.runRemaining, { remaining: run.overgrowthRemaining });
+  }
+
   currentShell.querySelector('.campaign-run-supply-copy strong').textContent = copy.runSupply;
   currentShell.querySelector('.campaign-run-supply-copy small').textContent = copy.runSupplyHint;
   const supply = currentShell.querySelector('.campaign-run-supply');
@@ -295,14 +323,26 @@ function renderRun() {
     supply.textContent = `+ ${copy.runSupply}`;
     supply.disabled = run.completed || !run.cells.some((cell, index) => !cell && !run.overgrowth[index]);
   }
+
+  const deliver = currentShell.querySelector('.campaign-run-deliver');
+  if (deliver instanceof HTMLButtonElement) {
+    deliver.hidden = !isDeliver;
+    deliver.disabled = !isDeliver || run.completed || !run.canDeliverSelected;
+    if (isDeliver) {
+      deliver.textContent = run.canDeliverSelected && run.selectedUnitTier !== null
+        ? interpolate(copy.runDeliverSelected, { tier: run.selectedUnitTier })
+        : interpolate(copy.runSelectForOrder, { tier: run.activeOrderTier ?? 1 });
+    }
+  }
+
   renderBoard(run);
 
   const complete = currentShell.querySelector('.campaign-run-complete');
   if (complete instanceof HTMLElement) {
     complete.classList.toggle('is-open', run.completed);
     complete.setAttribute('aria-hidden', run.completed ? 'false' : 'true');
-    complete.querySelector('strong').textContent = copy.runCompleteTitle;
-    complete.querySelector('p').textContent = copy.runCompleteBody;
+    complete.querySelector('strong').textContent = isDeliver ? copy.runDeliverCompleteTitle : copy.runCompleteTitle;
+    complete.querySelector('p').textContent = isDeliver ? copy.runDeliverCompleteBody : copy.runCompleteBody;
     complete.querySelector('button').textContent = copy.runReturn;
   }
 }
