@@ -1,4 +1,5 @@
 import { BOARD_COLUMNS } from './core/catalog.js';
+import { campaignPresentationSnapshot } from './core/campaign.js';
 import {
   accrueOfflineIncome,
   accrueOnlineIncome,
@@ -271,6 +272,12 @@ const view = new GameView(root, {
   }
 });
 
+function publishCampaignSnapshot(): void {
+  window.dispatchEvent(new CustomEvent('brainmerge:campaign-state', {
+    detail: campaignPresentationSnapshot(state.campaign)
+  }));
+}
+
 function render(): void {
   const t = (key: string, params?: Record<string, string | number>) => translate(locale, key, params);
   view.render(state, locale, t, {
@@ -278,6 +285,7 @@ function render(): void {
     adBusy
   });
   feedback.setLabels(t('audio.mute'), t('audio.unmute'));
+  publishCampaignSnapshot();
 }
 
 function update(next: GameState, persist = true): void {
@@ -351,6 +359,8 @@ window.setInterval(() => {
   settleOnline();
   void platform.saveState(state);
 }, AUTOSAVE_MS);
+
+window.addEventListener('brainmerge:campaign-state-request', publishCampaignSnapshot);
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
