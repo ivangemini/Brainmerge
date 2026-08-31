@@ -126,6 +126,13 @@ body.campaign-open { overflow: hidden; }
   isolation: isolate;
 }
 .campaign-scene__veil { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(37,30,42,.04)); pointer-events: none; }
+.campaign-route { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.campaign-route__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.campaign-route__svg--mobile { display: none; }
+.campaign-route__stroke { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.campaign-route__stroke--shadow { stroke: rgba(74, 50, 98, .50); stroke-width: 15px; }
+.campaign-route__stroke--road { stroke: rgba(255, 241, 202, .96); stroke-width: 10px; }
+.campaign-route__stroke--center { stroke: rgba(247, 163, 63, .86); stroke-width: 2.5px; stroke-dasharray: 3 8; }
 .campaign-nodes { position: absolute; inset: 0; z-index: 5; }
 .campaign-node {
   position: absolute;
@@ -189,11 +196,16 @@ body.campaign-open { overflow: hidden; }
   .campaign-world__title small { font-size: 9px; }
   .campaign-world__title strong { font-size: 15px; }
   .campaign-scene { height: max(560px, calc(100dvh - 190px)); min-height: 560px; aspect-ratio: auto; border-width: 5px; border-radius: 22px; background-size: cover; background-position: 50% center; }
+  .campaign-route__svg--desktop { display: none; }
+  .campaign-route__svg--mobile { display: block; }
+  .campaign-route__stroke--shadow { stroke-width: 13px; }
+  .campaign-route__stroke--road { stroke-width: 8px; }
+  .campaign-route__stroke--center { stroke-width: 2.2px; stroke-dasharray: 3 7; }
   .campaign-node { left: var(--mx); top: var(--my); width: 62px; }
   .campaign-node--boss { width: 72px; }
   .campaign-node b { min-width: 23px; height: 23px; font-size: 11px; }
-  .campaign-boss { right: -4%; top: 3%; width: 45%; max-height: 32%; }
-  .campaign-scene[data-world="2"] .campaign-boss { right: -5%; top: 3%; width: 44%; max-height: 31%; }
+  .campaign-boss { right: 0; top: 3%; width: 38%; max-height: 29%; }
+  .campaign-scene[data-world="2"] .campaign-boss { right: 0; top: 3%; width: 38%; max-height: 29%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
