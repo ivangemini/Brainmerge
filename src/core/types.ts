@@ -64,11 +64,11 @@ export interface PrestigeUpgradeLevels {
   campaignPower: number;
 }
 
-export type CampaignRunPhase = 'stabilize';
+export type CampaignRunPhase = 'stabilize' | 'deliver';
 
 /**
  * Temporary/resumable Campaign-board state. It is intentionally isolated from
- * the main idle board: units, selection and World modifier state live here.
+ * the main idle board: units, selection, orders and World modifier state live here.
  */
 export interface CampaignRunState {
   worldId: number;
@@ -80,6 +80,10 @@ export interface CampaignRunState {
   overgrowthTotal: number;
   merges: number;
   spawns: number;
+  /** Persistent deterministic order targets for Deliver. Empty during Stabilize. */
+  orderTiers: number[];
+  /** Number of order targets already consumed from the Campaign board. */
+  orderIndex: number;
   selectedIndex: number | null;
   completed: boolean;
 }
