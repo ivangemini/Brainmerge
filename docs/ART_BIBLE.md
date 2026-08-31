@@ -1,7 +1,6 @@
 # Brainmerge — Art Bible
 
 ## Locked visual direction
-
 **Core style:** toy-like stylized 3D casual-game art.
 
 ### Rendering
@@ -27,15 +26,13 @@ Approved source renders do not need identical source framing. Runtime owns perce
 
 - Shark Sneakers remains the perceived-mass baseline.
 - Each character has presentation data for board scale, vertical correction, contact-shadow scale and Collection-thumbnail scale.
-- Normalize **perceived mass**, not raw PNG/WebP bounds.
+- Normalize perceived mass, not raw PNG/WebP bounds.
 - Default target is roughly 72–82% useful occupancy without clipping, with exceptions for wide/horizontal silhouettes.
 - Per-character transforms are presentation data only and never change hit boxes or merge rules.
 - Missing/corrupt art must fail gracefully rather than exposing browser broken-image chrome.
 
-Re-tune normalization from real runtime captures, not isolated asset previews.
-
 ## Canonical T1-T18 progression lock
-The main game uses **one sequential chain**, not parallel Tier-1 families:
+The main game uses one sequential chain:
 
 1. T1 — Toilet Buddy
 2. T2 — Camera Dude
@@ -58,136 +55,190 @@ The main game uses **one sequential chain**, not parallel Tier-1 families:
 
 Two identical non-terminal characters merge into the next identity. T18 has no ordinary T19 successor.
 
-Brain Box may rebuild already-discovered tiers according to the live upgrade rules, but **first lifetime discovery of every tier above T1 remains merge-only**. Art must not imply that an unseen high tier is directly purchasable/spawnable.
+Brain Box may rebuild already-discovered tiers according to live upgrade rules, but first lifetime discovery above T1 remains merge-only.
 
 ## Current character runtime art
-All T1-T18 production identities are packed into one physical **6x3 `character-atlas.webp`** and selected by runtime tier/family data on both board and Collection.
+All T1-T18 production identities are packed into one physical **6x3 `character-atlas.webp`** and selected by runtime tier/family data on board and Collection.
 
-Standalone approved WebPs may remain as source/reference material, but the production presentation path is the shared atlas. Future rarity/prestige visual treatments should prefer reusable frames/auras/FX over 18 duplicate renders.
+Future rarity/prestige visual treatments should prefer reusable frames/auras/FX over duplicate renders.
 
 ## UI visual language
 Current production UI uses cream + cyan/teal + purple + orange/yellow with rounded toy-like construction, soft bevels and clear state hierarchy.
 
-Production icon family already includes:
-- Missions — chunky checklist/clipboard;
-- Collection — collectible album/book;
-- Rewards — overflowing reward chest;
-- Brain Lab — brain laboratory/upgrader.
-
-These four icons are current style anchors for future top-level/meta icons.
+Production icon anchors:
+- Missions;
+- Collection;
+- Rewards;
+- Brain Lab;
+- Campaign;
+- Prestige;
+- Brain Cell.
 
 ### Small-icon rules
 - source generation: 512×512, transparent background;
 - one dominant object/silhouette;
 - no baked text;
-- readable at 20–32 px in dock/header use and 48–64 px in larger UI;
-- avoid tiny secondary details that disappear at runtime;
-- consistent visual weight, lighting and material language across the icon family.
+- readable at 20–32 px and 48–64 px;
+- avoid tiny secondary detail;
+- consistent visual weight, lighting and material language.
 
-## Campaign visual direction
-Campaign is the new long-term presentation layer but must still look like Brainmerge, not a separate game.
+# Campaign visual direction
+Campaign must look like Brainmerge, not a separate fantasy/RPG game.
 
-### World environment/banner art
-World art should establish theme and progression while leaving UI/state code-readable.
+## World environment art
+World art establishes theme and restoration space while code owns live progression.
 
 Generation/source target:
 - 1536×864;
 - no text, numbers, logos or UI buttons;
-- center-safe focal composition so `object-fit: cover` can crop for desktop/mobile cards;
+- center-safe composition for desktop/mobile crop;
 - broad readable shapes rather than dense scenery;
-- same toy-like 3D material/lighting language as the game;
-- enough calmer negative space for code-owned stage nodes and labels;
-- no fake baked map nodes, stars, locks or progress counters unless an asset is explicitly a decorative background only.
+- same toy-like 3D material/lighting language;
+- natural negative space for code-owned **Location nodes** and route;
+- no baked node circles, progress %, locks, Raid HP or Landmark levels.
 
-Working world themes are provisional:
-1. Backyard / Meme Yard
-2. Brainrot City
+Working world themes:
+1. Backyard Brainrot Zone
+2. Surreal Brainrot City
 3. Meme Factory
-4. Italian Chaos
-5. Sky Kingdom
-6. Neon Brain Lab
+4. Italian / Mediterranean Chaos
+5. Sky Brainrot
+6. Surreal Brain Lab
 7. Space Brainrot
 8. Brainverse Core
 
-World names must remain localized runtime text, not painted into art.
+World names stay localized runtime text.
 
-### World emblems
-If compact world identity is needed, use a separate 512×512 transparent emblem per world rather than cropping the full environment art into a tiny unreadable thumbnail.
+## Environment-wide brainrot rule
+Future worlds must use:
 
-## Boss art direction
-Bosses are large playful campaign presentation pieces, not realistic combat characters.
+**theme + environment-wide surreal infection**.
+
+The brainrot comes from impossible object/animal/fashion/food/architecture fusion, weird scale and absurd physical logic. A normal casual-game location with a few meme props pasted on top is not acceptable.
+
+Keep the result:
+- colorful;
+- polished;
+- readable;
+- kid-friendly;
+- coherent enough for a premium mobile game.
+
+## Persistent Location map treatment
+Campaign nodes 1–7 now represent **Locations**, not short stages.
+
+Current reusable marker family:
+- `stage-normal.webp` — primary Location marker / Stabilize icon;
+- `stage-challenge.webp` — Deliver Orders treatment;
+- `stage-elite.webp` — Landmark/Mastery treatment;
+- `stage-locked.webp` — locked phase treatment;
+- `stage-boss.webp` — World Raid marker / Raid phase treatment.
+
+The legacy filenames remain for compatibility only. Do not visually imply a separate `Normal / Challenge / Elite stage` campaign structure.
+
+Code owns:
+- Location number/name;
+- restoration %;
+- phase state;
+- Landmark level;
+- World Restored %;
+- lock/unlock state;
+- Raid progress.
+
+Map marker art should remain compact and subordinate to world art. Progress labels must remain legible at mobile size.
+
+## Landmark visual direction
+Every Location has one signature surreal Landmark.
+
+Landmarks should feel like integrated parts of the world, not detached upgrade-menu props.
+
+Initial implementation should reuse approved world backgrounds and code-owned treatments. Do not generate dozens of Landmark variants before the playable vertical slice proves a need.
+
+If dedicated Landmark states are later required:
+- use transparent overlay/state assets where practical;
+- preserve the same camera/perspective as the world art;
+- no baked progress numbers/text;
+- upgrades should produce a clearly visible but controlled restoration change;
+- avoid turning Landmark progression into fantasy castle-building aesthetics.
+
+## Boss / World Raid art direction
+Bosses are large playful surreal brainrot creatures used as persistent World Raid destinations.
 
 Source target:
 - transparent 1024×1024;
-- one whole boss, centered, complete silhouette;
-- readable at roughly 160–320 px in the campaign stage header;
-- stronger scale/presence than ordinary board units without horror/gore;
-- no background, text, health bars or UI baked into the image;
-- no weapon detail that overwhelms the brainrot/toy tone;
-- boss state/progress remains code-owned.
+- one whole boss, complete silhouette;
+- stronger presence than ordinary board units;
+- viral-surreal fused anatomy/object logic;
+- playful rather than horror;
+- no background, text, HP bars or UI baked into image.
 
-Bosses can be original Brainverse characters or clearly separated boss variants, but they must not make the ordinary T1-T18 merge identities ambiguous on the board.
+Boss state, Raid phase and progress are code-owned.
 
-## Campaign stage-node icon family
-Campaign map nodes should use a cohesive icon family, generated as transparent 512×512 sources and downsampled/optimized for runtime.
+Approved World 1 boss direction: flamingo + lawn machine + garden/gnome + sneaker fusion.
 
-Required semantic states:
-- Normal stage;
-- Challenge stage;
-- Elite/mastery stage;
-- Boss stage;
-- Locked/completed treatment.
+Approved World 2 boss direction: pigeon + vending-machine/city-sign + sneaker fusion.
 
-Prefer one base construction with controlled semantic changes rather than five unrelated illustration styles. Completion stars/checkmarks/locks can remain code overlays where practical.
+Future bosses should continue broad TikTok/internet surrealism; they do not need to be limited to Italian Brainrot archetypes.
+
+## World modifier visual language
+Each world may add one readable board modifier.
+
+Visual rules:
+- modifier state must be obvious without long text;
+- do not hide character identity;
+- do not reduce touch target clarity;
+- use world-specific shape/material cues;
+- avoid excessive particles/noise;
+- modifier art/state remains code-controlled.
+
+Initial targets:
+- World 1 Overgrowth;
+- World 2 Traffic Lock.
 
 ## Prestige visual direction
-Prestige should communicate a powerful permanent reset without looking destructive/scary.
+Prestige communicates permanent rebirth/reset without feeling destructive.
 
-Required visual concepts:
-- **Prestige / Brain Reset icon:** transformed/reborn brain, reset loop, ascending energy or crown-like upgrade cue;
-- **Brain Cell currency:** one simple premium brain-cell/token object, distinct from ordinary coins and gems;
-- optional permanent-upgrade node frame can be code-drawn around the Brain Cell/meta icon language.
-
-Prestige confirmation UI must communicate reset/preserve through live text/icons. Do not flatten the confirmation into a generated screenshot.
+- Prestige / Brain Reset icon uses brain + reset/up language;
+- Brain Cell is visually distinct from ordinary coins;
+- confirmation screen uses live text/icons for reset vs preserved state;
+- do not flatten confirmation into generated art.
 
 ## Collection Rewards visual direction
-Collection Rewards reuse the existing Collection and Rewards icon family. Do **not** generate a redundant fifth generic reward icon unless a later mechanic needs a distinct semantic.
+Collection Rewards reuse existing Collection/Rewards visual language.
 
-Milestone states should be code-driven:
+Milestone states remain code-driven:
 - locked;
-- eligible/claimable;
+- claimable;
 - claimed.
 
-Art decorates the state; thresholds and reward numbers remain live/localized UI.
-
 ## Rare / Shiny compatibility
-If rarity is implemented later:
-- preserve the base T1-T18 identity;
-- use reusable premium rim, sparkle/particle, aura and restrained tint treatment;
-- do not require 18 separately generated rare characters;
-- rarity must read at board size without obscuring tier/income badges.
+If rarity ships later:
+- preserve base T1-T18 identity;
+- use reusable premium rim/sparkle/aura/tint treatment;
+- do not require 18 separate rare renders;
+- rarity must remain readable with tier/income badges.
 
 ## Style-anchor workflow
 For generated additions:
-1. attach the most relevant approved identity/reference when identity must be preserved;
+1. attach relevant approved identity/reference when identity matters;
 2. attach 2–3 approved Brainmerge assets as style anchors;
 3. request controlled adaptation, not generic redesign;
-4. match material language, lighting, saturation and visual weight;
-5. validate against the actual intended runtime size;
-6. export source with transparent background where specified, then optimize to runtime WebP/atlas through the technical-art pipeline.
+4. match materials, lighting, saturation and visual weight;
+5. validate at actual runtime size;
+6. export transparent source where specified and optimize through technical-art pipeline.
 
 ## Avoid
 - Photorealism.
-- Flat developer-dashboard placeholders presented as final UI.
+- Fantasy/RPG drift.
+- Flat developer placeholders presented as final UI.
 - Generic AI mascot redesign that loses identity.
 - Style drift between asset categories.
-- Baked player-facing text in generated UI/world/boss art.
+- Baked player-facing text or progress state.
 - Random ornaments without semantic purpose.
-- Dense world backgrounds that fight stage nodes/text.
-- Boss images containing health bars/progress UI.
-- Parallel Tier-1 families in the main chain.
-- Reusing one ordinary character identity across several core merge tiers.
-- New currencies that visually resemble coins closely enough to confuse spend context.
+- Dense world backgrounds that fight Location nodes.
+- Boss images containing HP/progress UI.
+- Parallel Tier-1 families.
+- New currencies visually confused with coins.
+- Reintroducing short-stage icon semantics after the persistent-Location redesign.
 
 ## Current style anchors
 Character anchors:
@@ -199,11 +250,18 @@ Character anchors:
 - Crocodile Bomber
 - Coffee Ballerina
 - Tung Wood
-- approved T9-T18 production renders/atlas cells
+- approved T9-T18 atlas cells
 
 UI anchors:
 - Missions icon
 - Collection icon
 - Rewards icon
 - Brain Lab icon
+- Campaign icon
 - current Brain Box / Brain Lab / Mission / Collection production surfaces
+
+Campaign anchors:
+- approved World 1 Backyard Brainrot Zone
+- approved World 2 Surreal Brainrot City
+- approved World 1 boss
+- approved World 2 boss
