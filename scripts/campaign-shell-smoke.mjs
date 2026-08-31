@@ -271,6 +271,9 @@ async function assertDeliverOrderPersistence(browser) {
 
   await page.locator('.campaign-run-back').click();
   await page.waitForFunction(() => !document.querySelector('.campaign-run-shell')?.classList.contains('is-open'));
+  await page.locator('.campaign-node--location[data-location-id="w1-sneaker-garden"]').click();
+  await page.locator('.campaign-detail.is-open').waitFor({ state: 'visible' });
+  await page.locator('.campaign-detail__run-button').waitFor({ state: 'visible' });
   const resumeText = (await page.locator('.campaign-detail__run-button').textContent())?.toLowerCase() ?? '';
   assert(resumeText.includes('resume') && resumeText.includes('orders'), `partial Deliver should expose Resume Orders, got ${resumeText}`);
 
