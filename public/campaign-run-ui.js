@@ -203,7 +203,8 @@ function renderLauncher() {
     });
     card.append(launcher);
   }
-  launcher.textContent = run ? copy.runResume : copy.runStart;
+  const launcherLabel = run ? copy.runResume : copy.runStart;
+  if (launcher.textContent !== launcherLabel) launcher.textContent = launcherLabel;
 }
 
 function scheduleLauncherRefresh() {
