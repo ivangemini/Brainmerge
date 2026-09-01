@@ -1,5 +1,5 @@
 import { localeFromLanguage } from '../i18n/i18n.js';
-const SAVE_KEY = 'brainmerge.save.v2';
+import { SAFE_SAVE_KEY } from './storage-keys.js';
 const CLOUD_FIELD = 'brainmerge';
 const CLOUD_SAVE_DELAY_MS = 1200;
 const AD_WATCHDOG_MS = 30_000;
@@ -74,7 +74,7 @@ export class YandexPlatformAdapter {
             }
         }
         try {
-            const raw = this.storage?.getItem(SAVE_KEY);
+            const raw = this.storage?.getItem(SAFE_SAVE_KEY);
             return raw ? JSON.parse(raw) : null;
         }
         catch {
@@ -83,7 +83,7 @@ export class YandexPlatformAdapter {
     }
     async saveState(state, flush = false) {
         try {
-            this.storage?.setItem(SAVE_KEY, JSON.stringify(state));
+            this.storage?.setItem(SAFE_SAVE_KEY, JSON.stringify(state));
         }
         catch {
             // Safe/local persistence is best-effort; cloud save may still succeed.
