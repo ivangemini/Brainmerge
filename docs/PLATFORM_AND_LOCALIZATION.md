@@ -1,7 +1,9 @@
 # Brainmerge Platform, Persistence and Localization
 
 ## Status
-Published `main` has a working local/Yandex adapter boundary and green Yandex package/browser smoke, but the repository audit found persistence and ad-lifecycle gaps that should be fixed during reconciliation.
+Published `main` has a working local/Yandex adapter boundary and green Yandex package/browser smoke, but `main` is not the latest owner-approved product state.
+
+GitHub-side recovery hardening is isolated on draft PR #6 / `hardening/repository-recovery-2026-09-01`. Do not merge that branch into stale `main` until the current local product UI is recovered and reconciled.
 
 ## Platform abstraction
 Gameplay/core code must not call portal SDKs directly.
@@ -37,25 +39,23 @@ Published schema is v6. All loaded external data must pass through `sanitizeStat
 
 No feature should create an unversioned parallel local-storage save for authoritative gameplay/meta state.
 
-## P0 persistence issue — storage-key split
-Published adapters currently use different safe local keys:
+## Safe-storage key — recovery hardening
+Published `main` had a split:
 - Local adapter: `brainmerge.save.v1`;
 - Yandex safe storage: `brainmerge.save.v2`.
 
-That is dangerous when Yandex SDK initialization fails and boot falls back to the Local adapter: the player can read/write a different slot from the normal Yandex local-safe copy.
+PR #6 removes that independent-key ownership:
+- canonical safe key: `brainmerge.save.v2`;
+- key constants live in `src/platform/storage-keys.ts`;
+- Local reads canonical v2 first and falls back to legacy v1;
+- Local dual-writes v2 + v1 during the recovery migration window so older browser fixtures/builds remain rollback-safe;
+- Yandex uses the same canonical v2 constant;
+- dedicated unit coverage verifies v2 preference, v1 fallback and synchronized migration writes.
 
-### Target
-Use one canonical safe-local namespace and migrate legacy keys explicitly.
+The legacy dual-write is transitional, not the final storage architecture. Remove it only after the recovered current product and portal migration path have been verified.
 
-Suggested approach:
-- define the safe key in one persistence module;
-- read newest valid candidate from known legacy/current keys;
-- sanitize;
-- persist into the canonical key;
-- retire legacy key only after successful migration if desired.
-
-## P0 persistence issue — cloud/local freshness
-Published Yandex load prefers any cloud object over local safe storage. This can roll back a newer local snapshot if a cloud write was delayed/failed.
+## Remaining P0/P1 persistence issue — cloud/local freshness
+Yandex load still prefers any cloud object over local safe storage. This can roll back a newer local snapshot if a cloud write was delayed/failed.
 
 ### Target save metadata
 Add explicit freshness metadata, for example:
@@ -70,6 +70,8 @@ On load:
 5. reconcile/persist the winner to both stores when safe.
 
 Do not compare unsanitized timestamps from arbitrary input as the only trust signal.
+
+This change should be designed against the recovered current save schema rather than bolted onto stale `main` blindly.
 
 ## Autosave/lifecycle
 Current periodic save plus pagehide/visibility flush strategy is valid in principle.
@@ -87,24 +89,27 @@ Close/error without rewarded callback must produce no gameplay reward.
 
 Gameplay API should pause while the ad is open and resume idempotently only when the page is visible.
 
-### P0 ad issue — no watchdog
-Published adapter promises depend entirely on SDK callbacks. A missing callback can leave the caller awaiting forever and `adBusy` stuck.
+### Watchdog — implemented on PR #6
+Published `main` depended entirely on SDK callbacks and could leave the caller awaiting forever.
 
-Add a watchdog timeout:
-- bounded duration appropriate to portal behavior;
-- resolve `false` on timeout;
-- clear internal ad state;
-- restore gameplay only if page is visible and lifecycle state permits;
-- never synthesize a reward.
+PR #6 adds a 30-second watchdog for rewarded and fullscreen ads:
+- no reward event + no close/error callback → resolves safely as unavailable/no reward;
+- a confirmed `onRewarded` event remains valid if only the later close callback is lost;
+- watchdog is cleared on normal close/error;
+- gameplay resumes only when the page is visible;
+- unit coverage exercises normal callbacks, lost callbacks and timeout behavior.
 
-Add unit/browser coverage for “SDK never calls any callback”.
+### GameplayAPI asynchronous rejection — implemented on PR #6
+Published `main` only recovered from synchronous `start()/stop()` throws. A returned rejected promise could leave cached lifecycle state incorrect and produce an unhandled rejection.
+
+PR #6 catches asynchronous GameplayAPI rejection and resets the cached lifecycle state so a later signal can retry. Dedicated unit coverage verifies retryability.
 
 ## Rewarded feature policy
 Rewarded Brain Box and timed rewarded boosts are separate transactions.
 
 Published `main` supports rewarded Brain Box only.
 
-The owner-described timed boost system is not present in published `main`; recover local work before rebuilding it.
+The owner-described timed boost system is not present in any GitHub branch inspected; recover local work before rebuilding it.
 
 Timed boosts must:
 - persist absolute expiry in canonical save;
@@ -124,6 +129,17 @@ Use a deliberate fixture/dev presentation path, such as query/config test mode, 
 - remain impossible to confuse with production capability;
 - avoid writing fake production reward state unless the fixture explicitly tests that transaction.
 
+## Build/source parity
+`src/` is authoritative and `build/` is generated. Because generated JS is currently committed, PR #6 adds a CI gate after TypeScript compilation:
+
+```bash
+git diff --exit-code -- build/
+```
+
+A source change that is not reflected in committed generated output now fails CI instead of leaving two contradictory code versions in the repository.
+
+Longer-term preference: stop committing `build/` if publication requirements allow it.
+
 ## Yandex package
 Yandex package must:
 - set platform hint to `yandex`;
@@ -132,6 +148,8 @@ Yandex package must:
 - pass asset/import integrity checks;
 - remain below portal size limits;
 - signal LoadingAPI/Game Ready at the correct time.
+
+Packaged release audit on PR #6 also scans CSS, not only HTML/JS/JSON, for debug/placeholder/secret markers.
 
 ## Localization
 Production locales:
@@ -154,6 +172,8 @@ Stable gameplay/domain identity must never depend on translated display text.
 
 Campaign/UI elements should carry explicit stable ids such as `data-location-id` and communicate through typed IDs/snapshots. Localized text is presentation only.
 
+Published Campaign run presentation still contains a localized-title comparison as part of Location selection/launcher discovery; remove this during Campaign reconciliation.
+
 ## Error/fallback policy
 When portal services are unavailable:
 - gameplay remains playable where possible;
@@ -162,14 +182,26 @@ When portal services are unavailable:
 - failure must not silently switch to an unrelated save slot;
 - no platform error may corrupt canonical in-memory state.
 
-## Required tests after recovery
+## Current recovery regressions
+PR #6 adds/extends coverage for:
+1. canonical local v2 preference and legacy v1 fallback;
+2. synchronized local migration writes;
+3. rewarded success → one reward;
+4. close/error without reward → zero reward;
+5. no ad callbacks → watchdog resolves safely;
+6. `onRewarded` followed by lost close → confirmed reward preserved and gameplay released;
+7. hidden-page ad close → gameplay remains stopped until visible;
+8. asynchronous GameplayAPI rejection → later lifecycle signal retries;
+9. real Mission Claim browser transaction;
+10. valid T8→T9 pointer merge with no false max-tier reject FX;
+11. generated build/source parity.
+
+## Required tests after local-product recovery
 1. Yandex cloud newer than local → cloud wins.
 2. Local newer than cloud → local wins and reconciles.
 3. Corrupt cloud + valid local → local wins.
 4. Yandex init failure → fallback still sees canonical safe-local progress.
-5. Rewarded success → one reward.
-6. Close/error without reward → zero reward.
-7. No callbacks → watchdog resolves safely and clears busy state.
-8. Hidden-page ad close → gameplay remains stopped until visible.
-9. Timed boost activation/reload/expiry uses absolute time.
-10. EN/RU main + Campaign parity in one gate.
+5. Timed boost activation/reload/expiry uses absolute time.
+6. Timed boost success/error/watchdog behavior on the recovered current UI.
+7. EN/RU main + Campaign parity in one gate.
+8. Recovered top-level Collection/Brain Lab layout on desktop and mobile.
