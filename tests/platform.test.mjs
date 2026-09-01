@@ -136,6 +136,7 @@ test('rewarded ad grants reward only after onRewarded and resumes once on close'
     harness.rewardedCallbacks().onRewarded?.();
     harness.rewardedCallbacks().onClose?.(true);
     assert.equal(await rewardPromise, true);
+    assert.equal(harness.timerCount(), 0, 'normal rewarded close must clear the watchdog');
     assert.deepEqual(harness.gameplay, ['start', 'stop', 'start']);
   });
 });
@@ -149,6 +150,7 @@ test('rewarded close without reward and ad error never grant a free reward', asy
     const rewardPromise = adapter.showRewarded('brain-box');
     closeHarness.rewardedCallbacks().onClose?.(true);
     assert.equal(await rewardPromise, false);
+    assert.equal(closeHarness.timerCount(), 0);
     assert.deepEqual(closeHarness.gameplay, ['start', 'stop', 'start']);
   });
 
@@ -160,7 +162,46 @@ test('rewarded close without reward and ad error never grant a free reward', asy
     const rewardPromise = adapter.showRewarded('brain-box');
     errorHarness.rewardedCallbacks().onError?.(new Error('ad failed'));
     assert.equal(await rewardPromise, false);
+    assert.equal(errorHarness.timerCount(), 0);
     assert.deepEqual(errorHarness.gameplay, ['start', 'stop', 'start']);
+  });
+});
+
+test('ad watchdog releases gameplay when the SDK never closes or errors', async () => {
+  const rewardedHarness = createHarness();
+  await withWindow(rewardedHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const rewardPromise = adapter.showRewarded('brain-box');
+    assert.equal(rewardedHarness.timerCount(), 1, 'rewarded ad must arm one watchdog');
+    rewardedHarness.runTimers();
+    assert.equal(await rewardPromise, false, 'stalled rewarded ad without onRewarded must not grant a reward');
+    assert.deepEqual(rewardedHarness.gameplay, ['start', 'stop', 'start']);
+  });
+
+  const earnedHarness = createHarness();
+  await withWindow(earnedHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const rewardPromise = adapter.showRewarded('brain-box');
+    earnedHarness.rewardedCallbacks().onRewarded?.();
+    earnedHarness.runTimers();
+    assert.equal(await rewardPromise, true, 'a confirmed reward event remains valid if only the close callback is lost');
+    assert.deepEqual(earnedHarness.gameplay, ['start', 'stop', 'start']);
+  });
+
+  const fullscreenHarness = createHarness();
+  await withWindow(fullscreenHarness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    await adapter.gameReady();
+    const shownPromise = adapter.showInterstitial('break');
+    assert.equal(fullscreenHarness.timerCount(), 1, 'fullscreen ad must arm one watchdog');
+    fullscreenHarness.runTimers();
+    assert.equal(await shownPromise, false, 'stalled fullscreen ad cannot report a successful impression');
+    assert.deepEqual(fullscreenHarness.gameplay, ['start', 'stop', 'start']);
   });
 });
 
@@ -191,6 +232,7 @@ test('fullscreen ads report shown state and recover safely from error', async ()
     const shownPromise = adapter.showInterstitial('break');
     shownHarness.fullscreenCallbacks().onClose?.(true);
     assert.equal(await shownPromise, true);
+    assert.equal(shownHarness.timerCount(), 0);
     assert.deepEqual(shownHarness.gameplay, ['start', 'stop', 'start']);
   });
 
@@ -202,6 +244,7 @@ test('fullscreen ads report shown state and recover safely from error', async ()
     const shownPromise = adapter.showInterstitial('break');
     errorHarness.fullscreenCallbacks().onError?.(new Error('ad failed'));
     assert.equal(await shownPromise, false);
+    assert.equal(errorHarness.timerCount(), 0);
     assert.deepEqual(errorHarness.gameplay, ['start', 'stop', 'start']);
   });
 });
