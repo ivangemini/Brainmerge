@@ -169,7 +169,11 @@ export class YandexPlatformAdapter {
             if (!api)
                 return;
             this.gameplayActive = active;
-            void Promise.resolve(active ? api.start() : api.stop());
+            void Promise.resolve(active ? api.start() : api.stop()).catch(() => {
+                // Async SDK rejections must not lock the adapter into a false active state.
+                if (this.gameplayActive === active)
+                    this.gameplayActive = null;
+            });
         }
         catch {
             // Let a later lifecycle event retry if the SDK call itself throws synchronously.
