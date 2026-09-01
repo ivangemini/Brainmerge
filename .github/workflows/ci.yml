@@ -15,6 +15,8 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm test
+      - name: Verify committed build matches TypeScript source
+        run: git diff --exit-code -- build/
       - run: npm run package:yandex
       - name: Install Chromium for packaged runtime smoke
         run: npx playwright install --with-deps chromium
@@ -28,6 +30,8 @@ jobs:
         run: npm run smoke:rc
       - name: Run packaged motion smoke
         run: npm run smoke:motion
+      - name: Run recovery regression smoke
+        run: npm run smoke:regression
       - name: Run packaged RU runtime smoke
         run: npm run smoke:locale
       - name: Run packaged Yandex adapter smoke
