@@ -5,6 +5,7 @@ import type { PlatformAdapter } from './adapter.js';
 const SAVE_KEY = 'brainmerge.save.v2';
 const CLOUD_FIELD = 'brainmerge';
 const CLOUD_SAVE_DELAY_MS = 1200;
+const AD_WATCHDOG_MS = 30_000;
 
 type AnyRecord = Record<string, unknown>;
 
@@ -156,12 +157,18 @@ export class YandexPlatformAdapter implements PlatformAdapter {
     this.setGameplayActive(false);
     return new Promise<boolean>((resolve) => {
       let settled = false;
+      let watchdog: number | null = null;
       const finish = (shown: boolean): void => {
         if (settled) return;
         settled = true;
+        if (watchdog !== null) {
+          window.clearTimeout(watchdog);
+          watchdog = null;
+        }
         if (pageIsVisible()) this.setGameplayActive(true);
         resolve(shown);
       };
+      watchdog = window.setTimeout(() => finish(false), AD_WATCHDOG_MS);
       try {
         this.sdk?.adv.showFullscreenAdv({ callbacks: { onClose: (wasShown) => finish(Boolean(wasShown)), onError: () => finish(false) } });
       } catch {
@@ -176,12 +183,18 @@ export class YandexPlatformAdapter implements PlatformAdapter {
     return new Promise<boolean>((resolve) => {
       let rewarded = false;
       let settled = false;
+      let watchdog: number | null = null;
       const finish = (): void => {
         if (settled) return;
         settled = true;
+        if (watchdog !== null) {
+          window.clearTimeout(watchdog);
+          watchdog = null;
+        }
         if (pageIsVisible()) this.setGameplayActive(true);
         resolve(rewarded);
       };
+      watchdog = window.setTimeout(() => finish(), AD_WATCHDOG_MS);
       try {
         this.sdk?.adv.showRewardedVideo({ callbacks: { onRewarded: () => { rewarded = true; }, onClose: () => finish(), onError: () => finish() } });
       } catch {
