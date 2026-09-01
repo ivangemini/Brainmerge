@@ -16,8 +16,7 @@ The validated T1→T18 merge-idle board remains the primary account-growth loop.
 Published game-build baseline before the documentation sync:
 `d5a2b291b59a781c28bff4fb642ab89488693348` — `chore: publish current game build`.
 
-Documentation sync commit:
-`c065523d614147ad3ac4ebd6a872a5261ebc0ac7` — `docs: sync documentation with current v6 campaign runtime`.
+Documentation was synchronized on top of that published baseline on 2026-09-01. Use current `main` as the active documentation/runtime reference.
 
 The publication commit added the generated `build/`, `package-lock.json`, `.gitignore`, and rebuild-before-serve behavior. It did not change `src/` gameplay relative to `429b2b1`.
 
