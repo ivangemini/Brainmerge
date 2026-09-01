@@ -2,6 +2,42 @@
 
 This file records high-signal repository-state changes. Product contracts live in the dedicated docs.
 
+## 2026-09-01 — Recovery hardening branch / PR #6
+Safe fixes that do not depend on the missing newer local UI were isolated on:
+
+`hardening/repository-recovery-2026-09-01`
+
+Draft PR #6 exists only for preservation and CI validation; it must not be merged into stale `main` before product-state reconciliation.
+
+### Hardening completed
+- terminal merge-reject FX now derives from `MAX_RUNTIME_TIER` instead of the historical T8 cap;
+- packaged regression smoke now executes a real T8→T9 pointer merge and rejects any false max-tier FX;
+- packaged regression smoke now clicks Mission Claim and verifies exact reward, mission advance and no duplicate reward;
+- Yandex rewarded/interstitial flows now have bounded watchdog recovery when SDK close/error callbacks are lost;
+- a confirmed reward event is preserved if only the later close callback is lost;
+- asynchronous GameplayAPI rejection clears cached lifecycle state so a later lifecycle signal can retry;
+- Local and Yandex now share canonical safe key `brainmerge.save.v2`; Local still reads and dual-writes legacy `brainmerge.save.v1` during recovery migration;
+- local save-key migration has dedicated unit coverage;
+- committed generated `build/` is now checked against a fresh TypeScript compile in CI;
+- packaged release audit now scans CSS in addition to HTML/JS/JSON;
+- `smoke:regression` is wired into CI.
+
+### Runtime architecture measurements
+The exact packaged PR artifact contains 76 files. Static inspection measured:
+- 636 CSS `!important` declarations;
+- 7 MutationObserver references;
+- 11 direct `.innerHTML =` assignments;
+- `.cell` owned by 11 CSS files / 144 selector occurrences;
+- Missions structural selectors spread across 9 CSS files;
+- Collection across 8;
+- Brain Lab across 6;
+- right rail across 4.
+
+Largest runtime modules are already large enough to justify ownership-based splitting: CampaignRun ~569 compiled lines, game core ~530, Campaign map ~474, app main ~462, Campaign run UI ~447, GameView ~321, FX ~314.
+
+### Verification
+The first PR #6 workflow passed TypeScript/tests, generated-build parity, Yandex packaging, runtime/Campaign/RC/motion/regression/RU/Yandex Chromium smokes and artifact publication. Later commits on the same PR require their own fresh green run before being considered verified.
+
 ## 2026-09-01 — Repository audit / recovery mode
 A full repository audit found that the published GitHub `main` is **not the latest owner-approved product state**.
 
