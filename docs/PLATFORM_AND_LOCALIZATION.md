@@ -1,101 +1,175 @@
-# Brainmerge — Platform & Localization Contract
+# Brainmerge Platform, Persistence and Localization
 
-## Distribution
-Brainmerge is browser-first and portal-agnostic. Yandex Games is the first implemented production adapter, not a gameplay dependency.
+## Status
+Published `main` has a working local/Yandex adapter boundary and green Yandex package/browser smoke, but the repository audit found persistence and ad-lifecycle gaps that should be fixed during reconciliation.
 
-Current adapters:
-- `local` — localStorage development/runtime fallback, no monetization capabilities;
-- `yandex` — Yandex SDK integration with safe/local storage fallback, player cloud save, rewarded/fullscreen ads, locale signal and loading/gameplay lifecycle.
+## Platform abstraction
+Gameplay/core code must not call portal SDKs directly.
 
-Platform-specific behavior stays behind `src/platform/` adapters and capability checks. Core gameplay/Campaign/meta code must not call Yandex APIs directly.
+`PlatformAdapter` owns:
+- platform initialization;
+- Game Ready / gameplay lifecycle;
+- preferred locale;
+- state load/save;
+- rewarded/interstitial ads;
+- future payments/leaderboards.
 
-## Canonical persistence
-Current runtime schema is **save v6**.
+Current production adapters:
+- local browser;
+- Yandex Games.
 
-The same versioned `GameState` travels through `PlatformAdapter.saveState(state, flush?)` for local and Yandex persistence.
+## Boot contract
+Boot order:
+1. select platform adapter;
+2. initialize SDK/persistence;
+3. resolve locale;
+4. load locale resources;
+5. load and sanitize save;
+6. account for elapsed time;
+7. render interactive game;
+8. emit platform Game Ready;
+9. persist canonical state.
 
-Save v6 currently includes:
-- main run/economy/discovery/mission/passive state;
-- Collection Reward claim ids;
-- Prestige count;
-- Brain Cells;
-- permanent Prestige upgrade-level fields;
-- permanent Campaign world/Location/Landmark/Raid progress;
-- optional resumable `CampaignRunState`.
+Game Ready must not fire before the first complete interactive render.
 
-Valid v1-v5 data migrates into v6 through core sanitization. Do not create portal-specific or unversioned localStorage side state for Campaign, Prestige or Collection.
+## Canonical save
+Published schema is v6. All loaded external data must pass through `sanitizeState()` before use.
 
-## Campaign platform neutrality
-Campaign is an isolated core system:
-- Campaign board state is separate from the main board;
-- delivery consumes Campaign units only;
-- Campaign Supply does not spend ordinary coins or alter paid Brain Box inflation;
-- persistent Campaign progress is stored in the same canonical save;
-- Campaign progress must remain valid regardless of whether the save came from local or Yandex storage.
+No feature should create an unversioned parallel local-storage save for authoritative gameplay/meta state.
 
-The first complete playable Location is World 1 / Sneaker Garden through Stabilize, Deliver, Restore and Mastery.
+## P0 persistence issue — storage-key split
+Published adapters currently use different safe local keys:
+- Local adapter: `brainmerge.save.v1`;
+- Yandex safe storage: `brainmerge.save.v2`.
 
-## Build / published repository contract
-Authoritative source is TypeScript under `src/`.
+That is dangerous when Yandex SDK initialization fails and boot falls back to the Local adapter: the player can read/write a different slot from the normal Yandex local-safe copy.
 
-`npm run build` compiles to `build/` and validates locale parity. The current repository also commits the generated `build/` output so the published GitHub state contains a current runnable snapshot.
+### Target
+Use one canonical safe-local namespace and migrate legacy keys explicitly.
 
-`npm run serve` rebuilds before starting the local HTTP server. Generated output must never be hand-edited as the source of product behavior.
+Suggested approach:
+- define the safe key in one persistence module;
+- read newest valid candidate from known legacy/current keys;
+- sanitize;
+- persist into the canonical key;
+- retire legacy key only after successful migration if desired.
 
-Packaging commands:
-- `npm run package` — local portal package + structural checks + release audit;
-- `npm run package:yandex` — Yandex package + structural checks + release audit.
+## P0 persistence issue — cloud/local freshness
+Published Yandex load prefers any cloud object over local safe storage. This can roll back a newer local snapshot if a cloud write was delayed/failed.
 
-`node_modules/`, `dist/`, `runtime-artifacts/` and `.DS_Store` are ignored.
+### Target save metadata
+Add explicit freshness metadata, for example:
+- monotonic `revision` incremented on authoritative transactions/persistence snapshots;
+- `updatedAt` for diagnostics/tie-breaking.
+
+On load:
+1. read cloud candidate;
+2. read local candidate;
+3. sanitize both;
+4. select the newest valid canonical snapshot;
+5. reconcile/persist the winner to both stores when safe.
+
+Do not compare unsanitized timestamps from arbitrary input as the only trust signal.
+
+## Autosave/lifecycle
+Current periodic save plus pagehide/visibility flush strategy is valid in principle.
+
+Requirements:
+- passive accounting cursor advances exactly once;
+- hide/resume cannot double-credit offline/online time;
+- lifecycle flush requests latest canonical state;
+- cloud debounce never causes an older queued snapshot to overwrite a newer one.
+
+## Rewarded ads
+Reward is granted only after the platform rewarded callback.
+
+Close/error without rewarded callback must produce no gameplay reward.
+
+Gameplay API should pause while the ad is open and resume idempotently only when the page is visible.
+
+### P0 ad issue — no watchdog
+Published adapter promises depend entirely on SDK callbacks. A missing callback can leave the caller awaiting forever and `adBusy` stuck.
+
+Add a watchdog timeout:
+- bounded duration appropriate to portal behavior;
+- resolve `false` on timeout;
+- clear internal ad state;
+- restore gameplay only if page is visible and lifecycle state permits;
+- never synthesize a reward.
+
+Add unit/browser coverage for “SDK never calls any callback”.
+
+## Rewarded feature policy
+Rewarded Brain Box and timed rewarded boosts are separate transactions.
+
+Published `main` supports rewarded Brain Box only.
+
+The owner-described timed boost system is not present in published `main`; recover local work before rebuilding it.
+
+Timed boosts must:
+- persist absolute expiry in canonical save;
+- derive remaining time from `now`, not decrement a mutable counter as authority;
+- survive reload/background transitions;
+- never extend/duplicate from repeated render ticks unless the explicit transaction says so;
+- expose available/loading/active/unavailable presentation states.
+
+## Local development / visual fixtures
+Production Local adapter should not fake portal rewards.
+
+However, hiding all rewarded UI when `rewardedAds=false` makes local visual QA impossible.
+
+Use a deliberate fixture/dev presentation path, such as query/config test mode, that can:
+- render rewarded controls/cards;
+- simulate success/failure in browser tests;
+- remain impossible to confuse with production capability;
+- avoid writing fake production reward state unless the fixture explicitly tests that transaction.
+
+## Yandex package
+Yandex package must:
+- set platform hint to `yandex`;
+- include `/sdk.js` loader;
+- retain only relative packaged references except the SDK loader;
+- pass asset/import integrity checks;
+- remain below portal size limits;
+- signal LoadingAPI/Game Ready at the correct time.
 
 ## Localization
-English (`en`) and Russian (`ru`) are mandatory production locales with 100% key parity.
+Production locales:
+- English;
+- Russian.
 
-Player-facing runtime copy must use localization resources rather than hardcoded gameplay/UI sentences.
+Main runtime uses `locales/en.json` / `locales/ru.json`.
+Campaign runtime currently also has `campaign-en.json` / `campaign-ru.json` resources.
 
-Campaign/meta localization covers:
-- world and Location names;
-- phase/objective labels;
-- Landmark state;
-- World Restored / Raid gate / Raid status;
-- Campaign Supply and run-state actions;
-- reward/claim states;
-- Collection Rewards;
-- Prestige eligibility/confirmation/result copy;
-- Brain Cell/permanent-upgrade names and effects;
-- reset/preserve explanations and lock reasons.
+### Parity
+The main locale checker validates EN/RU main keys. Campaign parity is currently validated by Campaign tests.
 
-Generated world environments, bosses, icons and emblems must contain no baked player-facing text. World names, numbers, progress and rewards remain live localized UI.
+Preferred consolidation:
+- one locale validation script that checks all production locale domains;
+- fail on missing keys in either language;
+- optionally detect obviously unused/unknown keys in code-owned domains.
 
-Platform locale signals normalize into supported locales and fall back to English.
+## Identity rule
+Stable gameplay/domain identity must never depend on translated display text.
 
-## Input baseline
-Touch + mouse are first-class. Keyboard is additive desktop UX. Gamepad remains optional unless a future portal requires it.
+Campaign/UI elements should carry explicit stable ids such as `data-location-id` and communicate through typed IDs/snapshots. Localized text is presentation only.
 
-Campaign requirements:
-- map/Location selection is touch-friendly;
-- Campaign board uses the same pointer/touch/keyboard interaction principles as the main board;
-- modal/sheet flows preserve visible keyboard focus and usable back/Escape behavior;
-- coarse-pointer production controls stay at least 44×44 CSS px where practical;
-- future Prestige confirmation cannot be accidentally triggered by an unrelated global shortcut.
+## Error/fallback policy
+When portal services are unavailable:
+- gameplay remains playable where possible;
+- rewarded controls report unavailable without granting reward;
+- safe local persistence remains coherent with the same canonical key/schema;
+- failure must not silently switch to an unrelated save slot;
+- no platform error may corrupt canonical in-memory state.
 
-## Ads / progression safety
-Rewarded ads remain optional acceleration.
-
-Campaign phase completion, World Raid unlocks, Collection Rewards and Prestige must never require an ad callback to make earned progress valid.
-
-If future Campaign rewards use optional rewarded multipliers:
-- base earned progress/reward must commit without the ad;
-- ad close/error/reload must not double-claim;
-- ad state must not become a second gameplay save system.
-
-## Validation expectations
-Any platform/localization change should preserve:
-- EN/RU key parity;
-- save-v6 compatibility;
-- local/Yandex adapter boundaries;
-- touch/mouse behavior;
-- package integrity;
-- browser runtime smoke where relevant.
-
-Documentation does not substitute for running those checks.
+## Required tests after recovery
+1. Yandex cloud newer than local → cloud wins.
+2. Local newer than cloud → local wins and reconciles.
+3. Corrupt cloud + valid local → local wins.
+4. Yandex init failure → fallback still sees canonical safe-local progress.
+5. Rewarded success → one reward.
+6. Close/error without reward → zero reward.
+7. No callbacks → watchdog resolves safely and clears busy state.
+8. Hidden-page ad close → gameplay remains stopped until visible.
+9. Timed boost activation/reload/expiry uses absolute time.
+10. EN/RU main + Campaign parity in one gate.
