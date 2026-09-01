@@ -1,4 +1,4 @@
-const SAVE_KEY = 'brainmerge.save.v1';
+import { LEGACY_LOCAL_SAVE_KEY, SAFE_SAVE_KEY } from './storage-keys.js';
 export class LocalPlatformAdapter {
     id = 'local';
     capabilities = {
@@ -15,8 +15,11 @@ export class LocalPlatformAdapter {
     }
     async loadState() {
         try {
-            const raw = localStorage.getItem(SAVE_KEY);
-            return raw ? JSON.parse(raw) : null;
+            const canonical = localStorage.getItem(SAFE_SAVE_KEY);
+            if (canonical)
+                return JSON.parse(canonical);
+            const legacy = localStorage.getItem(LEGACY_LOCAL_SAVE_KEY);
+            return legacy ? JSON.parse(legacy) : null;
         }
         catch {
             return null;
@@ -24,7 +27,11 @@ export class LocalPlatformAdapter {
     }
     async saveState(state) {
         try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+            const serialized = JSON.stringify(state);
+            localStorage.setItem(SAFE_SAVE_KEY, serialized);
+            // Keep the legacy local slot synchronized during the recovery window so old
+            // browser fixtures/builds can roll forward without losing the latest state.
+            localStorage.setItem(LEGACY_LOCAL_SAVE_KEY, serialized);
         }
         catch {
             // Local persistence is best-effort in private/restricted browser contexts.
