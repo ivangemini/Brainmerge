@@ -7,121 +7,110 @@ Each Campaign world contains:
 - 7 persistent Locations;
 - 1 persistent multi-phase World Raid;
 - a World Restored percentage;
-- Location landmarks;
-- four Location phases: Stabilize -> Deliver Orders -> Restore Landmark -> Mastery.
+- Location Landmarks;
+- four Location phases: Stabilize → Deliver Orders → Restore Landmark → Mastery.
 
-The validated T1-T18 merge-idle board remains the primary account-growth loop.
+The validated T1→T18 merge-idle board remains the primary account-growth loop.
+
+## Current repository baseline
+Published game-build baseline before the documentation sync:
+`d5a2b291b59a781c28bff4fb642ab89488693348` — `chore: publish current game build`.
+
+Documentation sync commit:
+`c065523d614147ad3ac4ebd6a872a5261ebc0ac7` — `docs: sync documentation with current v6 campaign runtime`.
+
+The publication commit added the generated `build/`, `package-lock.json`, `.gitignore`, and rebuild-before-serve behavior. It did not change `src/` gameplay relative to `429b2b1`.
+
+Authoritative behavior remains in TypeScript `src/`; `build/` is generated ES-module output.
 
 ## Current production baseline
 - browser-first TypeScript runtime;
-- 6x5 main merge board;
-- one sequential T1-T18 chain;
+- 6×5 main merge board;
+- one sequential T1→T18 chain;
 - passive income, Brain Box economy, Brain Lab, missions, offline reward, Collection, Rescue and `Next move`;
-- canonical save v6 with Yandex/local persistence and v1-v5 migration;
-- permanent Campaign Location / Landmark / Raid progress in save v6;
+- canonical save v6 with local/Yandex persistence and v1-v5 migration;
+- permanent Campaign Location/Landmark/Raid progress in save v6;
 - resumable isolated `CampaignRunState` in the same canonical save;
 - permanent Collection/Prestige metadata slots in save v6;
 - board-first mobile UI with Missions / Collection / Brain Lab sheets;
 - unified T1-T18 character atlas;
-- EN/RU runtime parity;
-- browser/motion/accessibility/Yandex CI gates.
-
-## Campaign direction
-The obsolete `8 short stages per world / 64 one-shot stages / 3 stars` plan is retired.
-
-Target full Campaign:
-- 8 worlds;
-- 7 persistent Locations per world;
-- 1 World Raid per world;
-- 56 Locations + 8 Raids;
-- Campaign progress survives Prestige.
-
-Initial Location phase weighting:
-- Stabilize 20%;
-- Deliver Orders 25%;
-- Restore Landmark 45%;
-- Mastery 10%.
-
-Initial World Raid gate:
-- >=80% World Restored;
-- >=5 restored landmarks.
-
-World Raids are persistent 3-phase bosses whose progress survives sessions.
+- EN/RU runtime architecture/parity tooling;
+- browser/motion/accessibility/package/Yandex QA infrastructure.
 
 ## Implemented Campaign foundation
-- `src/core/campaign.ts` owns persistent Campaign domain state;
-- first two production worlds each define seven stable Location ids;
-- pure Location/World progress calculations;
-- restored-landmark counting;
-- Raid unlock calculation;
+- `src/core/campaign.ts` owns persistent Campaign domain semantics;
+- first two production worlds define seven stable Location ids each;
+- pure Location/World restoration calculations;
+- restored-Landmark counting;
+- Raid gate and next-world unlock derivation;
 - Campaign map reads canonical save-v6 presentation snapshots;
 - World Restored / Landmarks / Raid-gate summary;
-- Location overview with four persistent phases and landmark;
-- Raid overview with three persistent phases;
-- EN/RU Campaign copy;
-- browser smoke verifies Campaign progress survives a clean storage handoff.
+- Location overview with four persistent phases and Landmark;
+- Raid overview shell with three persistent phases;
+- EN/RU Campaign resources;
+- active CampaignRunState persists/resumes through canonical save v6.
 
-## First complete Campaign Location vertical slice
-World 1 / Location 1 — **Sneaker Garden** now has all four playable phases on one isolated 6x5 Campaign board.
+## First complete Campaign Location — Sneaker Garden
+World 1 / Location 1 is playable end-to-end on one isolated 6×5 Campaign board.
 
 ### Stabilize — 20%
 - six Overgrowth cells start blocked;
-- four T1 Campaign units create an immediate merge decision;
+- four T1 Campaign units provide the initial merge state;
 - free Campaign Supply never spends main-board coins or paid Brain Box inflation;
-- supply tiers are capped by lifetime `maxDiscoveredTier`;
+- supply tiers are capped by lifetime discovery;
 - each successful merge clears exactly one nearest Overgrowth blocker;
-- six clearing pulses commit `stabilize = 1` exactly once.
+- six clearing pulses commit Stabilize exactly once.
 
 ### Deliver Orders — +25%
-- deterministic four-order queue `[T2, T2, T3, T4]`, capped by lifetime discovery;
+- deterministic four-order queue, reference max-T4: `T2, T2, T3, T4`;
 - delivery consumes only the matching Campaign-board unit;
 - each order commits one quarter of Deliver exactly once;
 - partial order cursor survives exit/reload;
-- completing all four raises Sneaker Garden from 20% to 45%.
+- completing all four raises Sneaker Garden to 45%.
 
 ### Restore Landmark — +45%
-- six restoration orders are grouped into three two-order batches;
-- only a completed two-order batch commits permanent Landmark progress;
-- batches map to Giant Sneaker Flower Bed levels 1, 2 and 3;
-- Landmark level permanently increases stronger Campaign Supply chance from 25% baseline up to 40% at level 3;
-- completing all three levels raises Sneaker Garden from 45% to 90%.
+- six restoration orders in three atomic two-order batches;
+- reference max-T4: `T2, T2, T3, T3, T4, T4`;
+- batches map to Giant Sneaker Flower Bed Lv1, Lv2 and Lv3;
+- stronger Campaign Supply chance is 25% base + 5 percentage points per level, reaching 40% at Lv3;
+- completing all three levels raises Sneaker Garden to 90%.
 
 ### Mastery — +10%
-- three final high-pressure orders;
-- stronger five-cell Overgrowth remains locked during the phase and cannot be cleared by merge pulses;
+- reference max-T4 queue: `T3, T4, T4`;
+- five Overgrowth cells remain blocked and merge pulses do not clear them;
 - Landmark Supply bonus remains active;
-- completing all Mastery orders commits the final 10%, taking Sneaker Garden to 100%.
+- completion commits the final 10% and reaches 100%.
 
 ### Isolation / persistence contract
 - Campaign board never aliases or consumes main-board cells;
 - Campaign actions do not change main-board coins, XP, main merge count or paid Brain Box inflation;
-- active Stabilize/Deliver/Restore/Mastery runs are persisted in save v6 and resume after reload;
-- completed temporary run state can be dismissed without erasing permanent Location progress.
+- active Stabilize/Deliver/Restore/Mastery runs persist in save v6 and resume after reload;
+- completed temporary run state can be acknowledged without erasing permanent Location progress.
 
-Validation status:
-- unit/integration suite covers Stabilize, Deliver, Restore batch atomicity, Landmark perk and Mastery completion;
-- packaged runtime smoke passes;
-- Campaign shell smoke covers save/reload + Stabilize/Deliver resume;
-- dedicated Restore + Mastery Chromium smoke verifies Landmark Lv1 persistence and final 100% completion;
-- packaged RC, motion, RU runtime and Yandex adapter smokes pass;
-- package/release audit passes.
+## Meta implementation status
+Storage/foundation exists:
+- Collection Reward claim ids;
+- Prestige count;
+- Brain Cells;
+- permanent Prestige upgrade levels;
+- Campaign progress and active Campaign run.
 
-## Approved Campaign Art Pack
-Repository-ready:
-- Campaign icon;
-- Prestige icon;
-- Brain Cell icon;
-- Normal / Challenge / Elite / Boss / Locked reusable Campaign UI assets;
-- World 1 Backyard Brainrot Zone environment + boss;
-- World 2 Surreal Brainrot City environment + boss.
+Still pending:
+- actual Collection Reward claim transaction/UI;
+- Prestige unlock/reset/reward transaction;
+- Brain Cell spend tree;
+- gameplay proof that Campaign progress survives the implemented Prestige transaction.
 
 ## Next implementation sequence
-1. Generalize the proven Sneaker Garden phase engine into data-driven World 1 Location configs.
-2. Make Toilet Pond playable using the same phase framework with Location-specific goals/landmark identity.
+1. Generalize Sneaker Garden into data-driven World 1 Location configs.
+2. Implement Toilet Pond on the shared engine.
 3. Implement Watermelon Grill, Hose Tunnels, Gnome Yard, Mushroom Field and Backyard Core.
-4. Build persistent 3-phase World 1 Raid using the same isolated Campaign board/state boundary.
-5. Collection Rewards + Prestige integration on the same v6 meta.
-6. World 2 Traffic Lock + seven Locations + Raid.
+4. Build persistent three-phase World 1 Raid on the same isolated Campaign state boundary.
+5. Implement Collection Rewards + Prestige transactions using the existing save-v6 meta fields.
+6. Implement World 2 Traffic Lock + seven Locations + Raid.
+
+## Documentation status
+Documentation was synchronized with the current code/runtime state on 2026-09-01. `docs/CHANGELOG.md` records the exact `429b2b1 → d5a2b2` repository delta and explains that the publication commit contains infrastructure/generated-build changes rather than new gameplay source changes.
 
 ## Source of truth
 - `docs/ROADMAP.md`
@@ -130,3 +119,5 @@ Repository-ready:
 - `docs/ARCHITECTURE.md`
 - `docs/ART_BIBLE.md`
 - `docs/ASSET_MANIFEST.md`
+- `docs/PLATFORM_AND_LOCALIZATION.md`
+- `docs/CHANGELOG.md`
