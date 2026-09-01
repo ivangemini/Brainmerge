@@ -1,190 +1,281 @@
-# Brainmerge Architecture — Current Browser Runtime
+# Brainmerge Architecture — Recovery and Target Structure
 
-## Decision
-Brainmerge is a dependency-light browser TypeScript game with DOM/CSS presentation. Deterministic gameplay, economy, save and meta rules remain separate from rendering and portal SDKs.
+## Status
+This document distinguishes **published GitHub architecture** from the **target architecture required after recovering the actual current local product state**.
 
-Current product layers:
-1. main T1→T18 merge-idle run;
-2. permanent Collection / Prestige metadata;
-3. isolated persistent Brainverse Campaign built from Locations, Landmarks and World Raids.
+Published `main` is internally consistent but stale relative to the owner-approved UI. In particular, its permanent Collection/Brain Lab right rail is obsolete. See `REPOSITORY_AUDIT_2026-09-01.md`.
 
-The obsolete architecture based on dozens of one-shot Campaign stages is retired.
+## Architectural principles
+1. Deterministic gameplay is independent from DOM, CSS and portal SDKs.
+2. `src/` is authoritative; generated `build/` is never edited directly.
+3. Canonical save state is versioned and sanitized through one migration boundary.
+4. Platform adapters own portal SDK, persistence and ad capability differences.
+5. UI features own stable DOM roots and update incrementally.
+6. One structural CSS owner exists per feature/layout concern.
+7. Tests encode product contracts, not historical markup.
+8. Presentation must consume domain identity/state rather than re-derive it from localized text.
 
-## Build/runtime boundary
-Authoritative source lives in `src/`.
+## Current published runtime
+Published `main` uses dependency-light browser TypeScript + DOM/CSS.
 
-`tsconfig.json` compiles `src/**/*.ts` to ES2022 modules under `build/` with strict TypeScript settings. `build/` is generated output, not an independent source of game rules.
+Current source boundaries:
+- `src/core/` — deterministic main-game and Campaign logic;
+- `src/ui/game-view.ts` — one large renderer for most main-game UI;
+- `src/main.ts` — bootstrap, state coordination, platform calls, effects and Campaign event bridge;
+- `src/platform/` — local/Yandex adapters;
+- `src/feedback/` — audio/visual feedback;
+- `public/` — many CSS presentation layers plus plain-JS Campaign/mobile enhancers;
+- `tests/` / `scripts/` — Node tests, package checks and Playwright smoke scripts.
 
-Current scripts:
-- `npm run build` — TypeScript compile + locale parity validation;
-- `npm test` / `npm run verify` — build + deterministic Node test suite;
-- `npm run serve` — rebuild, then serve on port 4173;
-- `npm run package` / `package:yandex` — build, portal package checks and release audit;
-- browser smoke scripts cover runtime, Campaign, final Restore/Mastery flow, RC, motion, locale and Yandex integration.
+### Current critical weakness: destructive rendering
+`GameView.render()` replaces the full `#app` HTML and rebinds controls. Normal passive-income updates can trigger that full rebuild.
 
-The repository currently commits `build/` so the published GitHub state contains a current runnable compiled snapshot. Any TypeScript change must still be made in `src/` and regenerated.
+This creates unnecessary lifecycle instability:
+- DOM identity is lost;
+- focus can reset;
+- pointer capture/drag can race a timed render;
+- modal/sheet scroll state can reset;
+- external observers must rediscover nodes;
+- feature state risks being stored indirectly in DOM rather than explicit controllers.
 
-## Source boundaries
-- `src/core/` — deterministic merge/progression/economy/save/Campaign rules; no DOM or portal SDK calls.
-- `src/ui/` — authoritative-state rendering and input wiring.
-- `src/i18n/` + `locales/` — locale loading/normalization and EN/RU resources.
-- `src/platform/` — local/Yandex adapters, persistence, ads and lifecycle capabilities.
-- `src/feedback/` — non-authoritative audio and visual feedback.
-- `public/` — browser presentation shells, Campaign map/run UI and production assets.
-- `tests/` + `scripts/` — deterministic logic tests, packaging checks and browser smoke infrastructure.
+### Current critical weakness: override-stack CSS
+The packaged page loads `src/styles.css` followed by many public CSS layers. Multiple files target the same structural selectors and rely heavily on `!important` to establish final ownership.
 
-## Canonical GameState — save v6
-`GameState.version` is **6**.
+The old right rail is referenced by several independent layers. This is exactly the class of architecture that lets a UI move be completed visually in one file while another responsive layer silently restores old placement.
 
-The canonical save currently owns:
-- main 6×5 board;
-- coins, XP, merge/spawn counters and paid Brain Box inflation;
+### Current critical weakness: observer-based lifecycle
+Several MutationObservers in feedback/mobile/Campaign runtime compensate for frequently replaced DOM. Observers should not be the primary component lifecycle system.
+
+## Canonical save — published v6
+The published canonical `GameState` includes:
+- main 6×5 cells;
+- coins, XP, merge/spawn counters and paid Brain Box count;
 - lifetime `maxDiscoveredTier`;
 - mission cursor;
-- Brain Lab run upgrades;
-- elapsed-time passive/offline accounting;
+- Brain Lab levels;
+- passive/offline accounting cursor/remainder;
 - Collection Reward claim ids;
-- Prestige count;
-- Brain Cells;
-- permanent Prestige-upgrade levels;
-- permanent `CampaignProgress`;
-- optional resumable `CampaignRunState`;
-- ephemeral-safe selection/message fields that are sanitized on load.
+- Prestige count, Brain Cells and permanent Prestige upgrade levels;
+- permanent Campaign progress;
+- optional resumable Campaign run;
+- ephemeral selection/message fields.
 
-`sanitizeState()` is the single migration/sanitization boundary. Valid v1-v5 saves migrate into v6 deterministically. Campaign/meta state must not create an extra unversioned localStorage system.
+`sanitizeState()` is the version/migration boundary and accepts v1-v6 inputs.
 
-## Main run ownership
-The main board remains the primary account-growth loop. It owns ordinary merge/economy state and lifetime discovery.
+### Save improvements required
+Add an explicit snapshot freshness field such as monotonic `revision` plus `updatedAt`, then arbitrate cloud vs local using validity + freshness. Storage location alone must not decide the winner.
 
-First lifetime discovery is merge-first. Brain Box and Campaign Supply may rebuild only content allowed by lifetime discovery rules.
+Unify safe local storage namespaces across Local/Yandex fallback paths and explicitly migrate legacy keys.
 
-## Campaign domain
-`src/core/campaign.ts` owns persistent Campaign semantics:
-- full target world count = 8;
-- 7 persistent Locations per world;
-- World 1 and World 2 definitions;
-- stable Location ids and Landmark identity;
-- phase order and weights;
-- derived Location / World restoration;
-- restored-Landmark counting;
-- Raid gate and world-unlock derivation;
-- permanent world/location/raid progress sanitization.
+Timed rewarded boosts, once recovered/implemented, must use absolute expiry timestamps in canonical save rather than in-memory countdowns.
 
-Each Location uses:
-1. Stabilize — 20%;
-2. Deliver Orders — 25%;
-3. Restore Landmark — 45%;
-4. Mastery — 10%.
+## Platform boundary
+`PlatformAdapter` is the correct high-level abstraction and should remain.
 
-Initial World Raid gate:
-- at least 80% World Restored;
-- at least 5 restored Landmarks.
+Keep behind the adapter/controller boundary:
+- initialization;
+- preferred locale;
+- load/save;
+- Game Ready / Gameplay API lifecycle;
+- rewarded/interstitial ads;
+- future payments/leaderboards.
 
-## CampaignRunState
-`CampaignRunState` is implemented and serialized inside save v6.
+### Required hardening
+- ad calls need watchdog timeouts;
+- gameplay resume must remain idempotent;
+- no reward is granted without rewarded callback;
+- local dev needs an explicit fixture/dev mode to display rewarded surfaces without faking production capability;
+- cloud/local conflict resolution must be freshness-aware.
 
-It owns a resumable isolated encounter snapshot:
-- `worldId` / `locationId` / phase;
-- separate 6×5 Campaign cells;
-- world-modifier state (`overgrowth` in the current World 1 slice);
-- merge/spawn counters;
-- deterministic order tiers and cursor;
-- Campaign selection;
-- completion state.
+## Campaign architecture
+### Published main
+Published `main` has a complete isolated Sneaker Garden run but the runnable engine/presentation remains strongly Sneaker-Garden-specific.
 
-It never aliases main-board cells. Campaign actions cannot silently spend ordinary coins, mutate paid Brain Box inflation, increment main-run merge counters or consume main-board units.
+### Unmerged PR #5
+`campaign-world1-data-driven-v1` starts the correct generalization:
+- shared World 1 Location run configs;
+- sequential Location unlock;
+- location-specific Overgrowth pressure;
+- generalized order tier ranges;
+- Toilet Pond coverage.
 
-## Implemented reference Location — Sneaker Garden
-World 1 / Location 1 is the reference implementation for future data-driven Locations.
+It must be reconciled after the true current local branch is recovered.
 
-### Stabilize
-- six Overgrowth cells;
-- four starting T1 Campaign units;
-- every successful merge clears exactly one nearest blocker;
-- six clearing pulses commit the phase exactly once.
+### Target Campaign split
+```text
+src/core/campaign/
+  definitions.ts       # stable worlds/locations/domain IDs
+  progress.ts          # permanent phase/raid/world progress
+  save.ts              # campaign-specific sanitizer helpers
+  run-state.ts         # CampaignRun lifecycle + validation
+  run-board.ts         # campaign move/merge/supply operations
+  run-orders.ts        # deliver/restore/mastery order operations
+  world1-config.ts     # World 1 data, overgrowth/order pressure/perks
+  presentation.ts      # derived snapshots for UI
+```
 
-### Deliver
-- deterministic 4-order queue capped by lifetime discovery;
-- reference max-T4 queue: `T2, T2, T3, T4`;
-- delivery consumes only the selected Campaign unit;
-- each order commits one quarter of Deliver progress exactly once.
+Presentation may separately own coordinates and art mapping, but must key everything by stable domain IDs received from the core snapshot.
 
-### Restore Landmark
-- six orders in three two-order batches;
-- only complete batches commit permanent restoration;
-- three batches map to Giant Sneaker Flower Bed Lv1/Lv2/Lv3;
-- reference max-T4 queue: `T2, T2, T3, T3, T4, T4`;
-- stronger Campaign Supply chance = 25% base + 5 percentage points per Landmark level, capped at 40% at Lv3.
+Do not infer identity by comparing localized visible strings.
 
-### Mastery
-- reference max-T4 queue: `T3, T4, T4`;
-- five Overgrowth cells remain permanently blocked during the phase;
-- merge pulses do not clear Mastery blockers;
-- completion commits the final 10% and reaches 100% Location restoration.
+## Main-game deterministic core target
+The current `game.ts` is still manageable logically, but further systems should not accumulate there.
 
-## Campaign presentation ownership
-Campaign presentation spans current browser files under `public/` plus core presentation snapshots.
+Target:
+```text
+src/core/game/
+  state.ts
+  save.ts
+  merge.ts
+  economy.ts
+  missions.ts
+  upgrades.ts
+  hints.ts
+  catalog.ts
+```
 
-The UI may own ephemeral open/selection/focus state. It must not invent persistent percentages, Landmark levels, order completion or Raid state.
+These modules remain DOM-free and platform-free.
 
-Raster assets may own appearance only. They must never own currency values, progress, localized text, hit areas or gameplay rules.
+## Application layer target
+`src/main.ts` currently coordinates too many concerns.
 
-## Platform/persistence boundary
-`PlatformAdapter.saveState(state, flush?)` is the persistence boundary.
+Target:
+```text
+src/app/
+  bootstrap.ts
+  game-controller.ts
+  lifecycle.ts
+  persistence.ts
+  platform-controller.ts
+  event-types.ts
+```
 
-Current adapters:
-- local: localStorage fallback/development runtime;
-- Yandex: SDK integration, local/safe fallback, player cloud save, ads, locale signal and lifecycle hooks.
+Responsibilities:
+- initialize platform/locales/save;
+- own canonical in-memory state;
+- serialize state transitions;
+- schedule passive accounting;
+- request persistence;
+- call feature view updates;
+- bridge Campaign and main game through typed interfaces.
 
-Campaign, Collection and Prestige remain platform-neutral core data. Portal adapters cannot fork game rules.
+`main.ts` should become a thin entrypoint.
 
-## Localization boundary
-EN and RU are mandatory production locales with key parity. Player-facing copy belongs in locale resources rather than gameplay/core code.
+## Feature UI target
+The owner-approved current composition has Collection and Brain Lab as top-level systems rather than permanent right-side cards. The exact recovered layout becomes authoritative once pushed.
 
-Generated world/boss/icon art remains text-free. Campaign names, objective copy, progress, rewards and lock reasons remain live localized UI.
+Target feature boundaries:
+```text
+src/features/board/
+  board-view.ts
+  board-controller.ts
 
-## Character rendering
-All canonical T1-T18 identities render from one physical `public/assets/characters/character-atlas.webp` (6 columns × 3 rows). Per-character visual normalization is presentation-only.
+src/features/missions/
+  mission-view.ts
+  mission-controller.ts
 
-## Mobile composition
-Phone default is board-first:
-- main board + Brain Box remain the primary loop;
-- Missions / Collection / Brain Lab use the three-item dock and modal sheets;
-- Campaign is a prominent top-level destination rather than a fourth cramped dock item;
-- Campaign map/detail/run UI must remain touch-safe and safe-area aware.
+src/features/collection/
+  collection-view.ts
 
-## Current implemented vs pending meta
-Implemented storage/foundation:
-- Collection Reward claim ids;
-- Prestige count;
-- Brain Cells;
-- permanent Prestige upgrade-level fields;
-- Campaign permanent state;
-- active Campaign run persistence.
+src/features/brain-lab/
+  brain-lab-view.ts
 
-Still pending product transactions/UI:
-- claim-once Collection Reward grants;
-- actual Prestige eligibility/reset/reward transaction;
-- permanent Brain Cell spend tree;
-- proof that gameplay-earned Campaign progress survives the implemented Prestige transaction.
+src/features/rewarded/
+  rewarded-state.ts
+  rewarded-view.ts
+  rewarded-controller.ts
 
-## World Raid architecture
-Persistent Raid state/storage and unlock derivation exist as foundation. Full playable Raid gameplay is still pending.
+src/features/campaign/
+  campaign-view.ts
+  campaign-controller.ts
 
-Target Raid contract:
-- three phases;
-- progress survives sessions;
-- merge/order contributions are deterministic;
-- later phases intensify the world modifier;
-- final high-value deliveries;
-- clear unlocks the next world exactly once.
+src/features/prestige/
+  prestige-view.ts
+  prestige-controller.ts
+```
 
-No separate combat engine is required.
+Each feature should expose explicit `mount()` / `update()` / optional `destroy()` behavior or equivalent stable component functions.
 
-## Validation baseline
-Current repository contains deterministic/unit and Chromium smoke coverage for the main runtime, Campaign shell, save migration/sanitization, Campaign/main-board isolation, active run resume, Deliver exact-once behavior, Restore batch atomicity, Landmark perk and Mastery completion.
+## Rendering contract
+### Do
+- mount persistent shells once;
+- update only changed text/state/classes/feature subtrees;
+- preserve board cell DOM identity when possible;
+- preserve focused control and panel scroll position;
+- update HUD/passive counters without rebuilding unrelated panels;
+- use explicit controller state for open/closed panels.
 
-A documentation claim is not evidence that a gate passed; verification status must come from an actual test/CI run.
+### Do not
+- replace the full root on every passive tick;
+- use MutationObserver to reconstruct normal component state;
+- infer application state from visible localized text;
+- attach independent layout policy in multiple presentation files.
 
-## Next architecture milestone
-Generalize the proven Sneaker Garden implementation into data-driven World 1 Location configuration instead of authoring bespoke handlers. Then implement the remaining six World 1 Locations and the persistent three-phase World 1 Raid on the same state/persistence boundary.
+## CSS target
+Consolidate the current layered override stack into:
+```text
+src/styles/
+  tokens.css
+  base.css
+  shell.css
+  top-actions.css
+  board.css
+  missions.css
+  collection.css
+  brain-lab.css
+  rewarded.css
+  campaign.css
+  fx.css
+  responsive.css
+  accessibility.css
+```
+
+Rules:
+- component structure belongs to the component stylesheet;
+- `responsive.css` may change composition but not redefine component art internals;
+- `fx.css` never owns layout/order/hit areas;
+- accessibility is last and may override only accessibility-critical interaction behavior;
+- `!important` should be exceptional, not the normal cascade mechanism;
+- remove dead 4×2 / first-eight atlas routing after confirming 6×3 atlas parity.
+
+## Generated build policy
+Preferred: remove committed `build/` and generate it for serve/package/CI.
+
+If committed build is retained, CI must run a clean build then fail on:
+
+```bash
+git diff --exit-code -- build/
+```
+
+Agents must never edit `build/` to fix behavior.
+
+## Testing architecture
+Tests must follow contracts at three levels.
+
+### Core
+Pure deterministic transactions, migrations, economy, Campaign isolation/progression.
+
+### Integration/browser
+Real user actions:
+- merge/move;
+- Mission Claim click and exact reward;
+- Collection/Brain Lab top-level navigation;
+- rewarded boost activation, expiry and reload;
+- ad failure/no-callback recovery;
+- Campaign location/run interactions;
+- keyboard/touch/focus persistence.
+
+### Product-layout contract
+Screenshots/selectors must assert the **current approved composition**, not historical `.right-rail`/three-button mobile dock assumptions.
+
+## Immediate architecture sequence
+1. Recover actual current local UI to a GitHub branch.
+2. Freeze feature work temporarily.
+3. Reconcile PR #5 without losing owner-approved UI.
+4. Rewrite stale layout tests.
+5. Fix confirmed high-tier reject FX and platform persistence/ad issues.
+6. Introduce stable shell + incremental HUD/board/panel rendering.
+7. Split `main.ts`, `game-view.ts`, Campaign run and CSS by ownership.
+8. Remove legacy CSS/atlas overrides.
+9. Re-run full package/browser matrix and approve screenshots.
+10. Merge the reconciled branch to `main` only after the recovered product state is represented exactly.
