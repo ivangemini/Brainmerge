@@ -1,14 +1,25 @@
-# Brainmerge — Asset Manifest
+# Brainmerge Asset Manifest
+
+## Repository-recovery note
+The production asset inventory below remains valid for published `main`, but UI composition is being recovered. Asset existence must not be used as evidence that a legacy panel placement is still approved.
+
+Collection and Brain Lab icons remain approved; their owner-approved current placement is top-level UI rather than a permanent right rail.
 
 ## Character runtime
-Brainmerge uses one canonical sequential T1-T18 chain. All production board/Collection identities render through:
+Canonical T1–T18 production art:
 
 `public/assets/characters/character-atlas.webp`
 
-The physical atlas is 6 columns × 3 rows. Per-character board/Collection normalization remains runtime presentation data.
+Physical atlas: 6 columns × 3 rows.
 
-## Existing production UI
-Core runtime UI assets:
+Per-character board/Collection normalization belongs to runtime presentation data. Historical 4×2/first-eight CSS routing is legacy and should be removed after recovery verification.
+
+### Standalone compatibility character assets currently present
+The repository also contains standalone WebP character files used historically/for compatibility/asset workflows. They are not a second progression source of truth.
+
+Production identity/order comes from the canonical catalog + 6×3 atlas.
+
+## Core UI assets
 - `public/assets/ui/ui-atlas.webp`
 - `public/assets/ui/upgrade-ui-atlas.webp`
 - `public/assets/ui/reward-gift.webp`
@@ -17,112 +28,107 @@ Core runtime UI assets:
 - `public/assets/ui/icon-rewards.webp`
 - `public/assets/ui/icon-brain-lab.webp`
 
-## Approved Campaign / Prestige UI pack
-The approved transparent source PNGs were normalized/downsampled and encoded as runtime WebP assets.
+## Meta/navigation assets
+- `public/assets/ui/icon-campaign.webp`
+- `public/assets/ui/icon-prestige.webp`
+- `public/assets/ui/icon-brain-cell.webp`
 
-### Meta/navigation
-- `public/assets/ui/icon-campaign.webp` — Campaign entry/map icon.
-- `public/assets/ui/icon-prestige.webp` — Prestige / Brain Reset icon.
-- `public/assets/ui/icon-brain-cell.webp` — Brain Cell currency icon.
+### Ownership note
+Icons identify systems; they do not define layout.
 
-### Reusable Campaign marker/phase family
-Legacy filenames remain for compatibility, but the old short-stage semantics are obsolete.
+The current product contract treats Collection and Brain Lab as top-level systems. Do not place them permanently on the right merely because the assets were previously integrated into `.side-card` markup.
 
-- `public/assets/ui/stage-normal.webp` — primary **Location map marker** and Stabilize-phase icon.
-- `public/assets/ui/stage-challenge.webp` — Deliver Orders / challenge treatment.
-- `public/assets/ui/stage-elite.webp` — Landmark restoration / Mastery treatment.
-- `public/assets/ui/stage-boss.webp` — World Raid marker / Raid phase treatment.
-- `public/assets/ui/stage-locked.webp` — locked Location/phase treatment.
+## Campaign marker/phase family
+Legacy filenames remain for compatibility:
+- `stage-normal.webp` — Location/Stabilize family;
+- `stage-challenge.webp` — Deliver family;
+- `stage-elite.webp` — Landmark/Mastery family;
+- `stage-boss.webp` — World Raid family;
+- `stage-locked.webp` — locked state.
 
-Do not infer `Normal / Challenge / Elite short stage` gameplay from those filenames.
+Do not infer old Normal/Challenge/Elite one-shot-stage gameplay from filenames.
 
-Location number, restoration %, phase state, World Restored %, Landmark level, lock state and Raid progress remain code-owned overlays/state.
+## World 1 Campaign art
+- `public/assets/campaign/campaign-world-01.webp`
+- `public/assets/campaign/boss-world-01.webp`
 
-## Approved World 1 / World 2 Campaign art
-### World 1 — Backyard Brainrot Zone
-- `public/assets/campaign/campaign-world-01.webp` — production opaque environment.
-- `public/assets/campaign/boss-world-01.webp` — transparent World 1 boss.
+Environment contains no baked Location circles/player-facing text/progression state.
 
-The environment uses world-wide surreal backyard brainrot and intentionally contains no baked Location circles, player-facing text or progression UI.
+## World 2 Campaign art
+- `public/assets/campaign/campaign-world-02.webp`
+- `public/assets/campaign/boss-world-02.b64`
+- `public/assets/campaign/boss-world-02.webp`
 
-### World 2 — Surreal Brainrot City
-- `public/assets/campaign/campaign-world-02.webp` — normalized production opaque environment.
-- `public/assets/campaign/boss-world-02.b64` — current packaged base64-backed WebP payload for the transparent World 2 boss; Campaign presentation resolves it to a data URL at runtime.
+Published repository currently carries a base64-backed transport path for the World 2 boss alongside the WebP asset. Treat that as packaging compatibility, not gameplay state. Consolidate to one normal binary asset path when the transport workaround is no longer needed, with package/browser coverage updated at the same time.
 
-The base64-backed path is a repository transport workaround, not gameplay state. If replaced with a normal binary WebP later, update this manifest and browser/package coverage in the same pass.
+## Current published runtime use
+Published `main` uses:
+- shared T1–T18 atlas on board/Collection;
+- Campaign icon for Campaign entry;
+- World 1/2 environment art for map scenes;
+- reusable Location/Raid marker family;
+- World 1/2 boss art as Raid destinations;
+- Missions/Collection/Brain Lab icons in legacy card/mobile-sheet presentation.
 
-The environment uses city-wide viral surrealism and contains no baked Location circles, text or progression UI.
+The last bullet describes the **published baseline**, not the recovered current UI contract.
 
-## Current runtime integration
-The Campaign runtime uses:
-- `icon-campaign.webp` for the top-level Campaign entry;
-- World 1 / World 2 environment assets as responsive map scenes;
-- `stage-normal.webp` for persistent Location nodes;
-- the reusable phase family inside Location/phase presentation;
-- `stage-boss.webp` for node 8, the World Raid;
-- World 1 / World 2 boss renders as decorative Raid destinations.
+## Rewarded-ad asset policy
+No dedicated raster is required for timers, cooldowns or reward availability.
 
-Sneaker Garden is now a fully playable four-phase Location. Its progression is still rendered with code-owned state/treatment rather than bespoke raster Landmark-state variants.
+Rewarded boost UI should reuse approved icon/toy-console language while keeping:
+- benefit text;
+- timer;
+- active/loading/unavailable state;
+- daily/cooldown counters
+as code-owned presentation.
 
-`icon-prestige.webp` and `icon-brain-cell.webp` are repository-ready production assets, but the actual Prestige/Brain Cell transactions are not yet implemented. Do not surface fake functional controls simply because the art exists.
+Do not generate a screenshot-like rewarded card with baked values.
 
-## Ownership rules
-Raster assets remain presentation-only. Live code owns:
+## Landmark strategy
+Sneaker Garden Landmark progression is currently code/state driven. No dedicated Giant Sneaker Flower Bed Lv1/Lv2/Lv3 raster set is required for the reference slice.
+
+Continue with existing world art + code-owned restoration treatment for remaining World 1 Locations unless playtesting proves bespoke overlays are necessary.
+
+## Asset ownership rules
+Raster assets may own:
+- character/world/boss/icon imagery;
+- non-semantic decorative detail.
+
+Raster assets must not own:
 - localized labels;
-- Location number/name;
-- Location restoration %;
-- phase progress/status;
-- Landmark level/restoration;
-- World Restored %;
-- Raid gate/phase/HP/progress;
-- rewards/amounts;
+- counts/currency amounts;
+- tier/progress values;
+- timers;
+- lock/claim state;
+- Location identity/progress;
+- Raid HP/progress;
 - Prestige eligibility;
-- Brain Cell balance;
-- hit targets and interaction state.
-
-## Campaign surrealism rule
-Future worlds must not be generic casual-game environments with a few brain/meme props pasted on top.
-
-Required formula:
-**theme + environment-wide surreal infection**.
-
-The brainrot comes from impossible physical fusion, scale, anatomy and object logic while rendering remains polished, colorful, readable and kid-friendly.
-
-## Landmark visual strategy — current
-The first full Landmark loop has now been proven in Sneaker Garden:
-- Restore uses six orders in three permanent two-order batches;
-- Giant Sneaker Flower Bed progresses Lv1→Lv3 in code/state;
-- the Landmark perk affects Campaign Supply;
-- no dedicated raster Lv1/Lv2/Lv3 Landmark pack is required for the current implementation.
-
-For the next six World 1 Locations, continue with:
-- existing world art;
-- code-owned highlight/restoration treatment;
-- reusable Campaign marker assets.
-
-Generate dedicated Landmark overlays only if multi-Location playtesting demonstrates that code-owned treatment fails to communicate restoration payoff/readability.
-
-## Later art queue
-No additional generated art is required before data-driving the remaining World 1 Locations and implementing the World 1 Raid.
-
-Potential later additions:
-- dedicated Landmark state overlays where demonstrated necessary;
-- World Complete treatment;
-- World 3–8 environments/bosses after Worlds 1–2 validation.
-
-Do not regenerate approved Campaign UI, Worlds 1–2 or bosses without an explicit replacement decision.
+- hit targets;
+- responsive placement.
 
 ## Technical-art pipeline
-For generated sources:
-1. verify source dimensions/transparency;
-2. remove accidental opaque background where required;
-3. normalize/crop without clipping;
-4. downsample to approved runtime source dimensions;
-5. encode WebP appropriate to transparency/detail;
-6. validate at actual UI/map size;
-7. run package raster integrity and Chromium screenshot QA.
+1. verify dimensions/transparency;
+2. normalize/crop without clipping;
+3. downsample to intended runtime size;
+4. encode WebP with appropriate alpha/detail quality;
+5. validate actual render size;
+6. run package raster-integrity check;
+7. run desktop/mobile Chromium screenshot QA.
 
-`scripts/check-package.mjs` structurally validates packaged PNG/WebP assets.
+## Build/publication policy
+Assets live under `public/assets/` and are independent from TypeScript compilation.
 
-## Build/publication note
-The current repository commits generated `build/` JavaScript, but runtime art continues to live under `public/assets/` and remains independent of TypeScript compilation. `build/` must not become a duplicate asset source.
+`build/` is generated JavaScript and must never become a duplicate asset/source-of-truth tree.
+
+If `build/` remains committed, enforce generated parity in CI.
+
+## Later asset queue
+No broad new asset generation should happen during repository recovery.
+
+After recovery/reconciliation, possible later additions:
+- dedicated Landmark overlays only where justified;
+- World Complete treatment;
+- World 3–8 environments/bosses;
+- rarity/shiny reusable frames/auras if the system ships.
+
+Do not regenerate already approved T1–T18, Worlds 1–2, core icons or bosses without an explicit replacement decision.
