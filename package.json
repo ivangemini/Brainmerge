@@ -17,7 +17,7 @@
     "smoke:motion": "node scripts/motion-smoke.mjs",
     "smoke:locale": "node scripts/locale-runtime-smoke.mjs",
     "smoke:yandex": "node scripts/yandex-browser-smoke.mjs",
-    "serve": "python3 -m http.server 4173"
+    "serve": "npm run build && python3 -m http.server 4173"
   },
   "devDependencies": {
     "playwright": "^1.55.0",

@@ -17,9 +17,10 @@ See `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 ## Run locally
 
 ```bash
-npm run build
 npm run serve
 ```
+
+The serve command rebuilds the TypeScript bundle before starting the local server.
 
 Open `http://localhost:4173`.
 
