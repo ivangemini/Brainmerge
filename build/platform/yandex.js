@@ -2,6 +2,7 @@ import { localeFromLanguage } from '../i18n/i18n.js';
 const SAVE_KEY = 'brainmerge.save.v2';
 const CLOUD_FIELD = 'brainmerge';
 const CLOUD_SAVE_DELAY_MS = 1200;
+const AD_WATCHDOG_MS = 30_000;
 function yaGamesGlobal() {
     const value = window.YaGames;
     return value ?? null;
@@ -109,14 +110,20 @@ export class YandexPlatformAdapter {
         this.setGameplayActive(false);
         return new Promise((resolve) => {
             let settled = false;
+            let watchdog = null;
             const finish = (shown) => {
                 if (settled)
                     return;
                 settled = true;
+                if (watchdog !== null) {
+                    window.clearTimeout(watchdog);
+                    watchdog = null;
+                }
                 if (pageIsVisible())
                     this.setGameplayActive(true);
                 resolve(shown);
             };
+            watchdog = window.setTimeout(() => finish(false), AD_WATCHDOG_MS);
             try {
                 this.sdk?.adv.showFullscreenAdv({ callbacks: { onClose: (wasShown) => finish(Boolean(wasShown)), onError: () => finish(false) } });
             }
@@ -132,14 +139,20 @@ export class YandexPlatformAdapter {
         return new Promise((resolve) => {
             let rewarded = false;
             let settled = false;
+            let watchdog = null;
             const finish = () => {
                 if (settled)
                     return;
                 settled = true;
+                if (watchdog !== null) {
+                    window.clearTimeout(watchdog);
+                    watchdog = null;
+                }
                 if (pageIsVisible())
                     this.setGameplayActive(true);
                 resolve(rewarded);
             };
+            watchdog = window.setTimeout(() => finish(), AD_WATCHDOG_MS);
             try {
                 this.sdk?.adv.showRewardedVideo({ callbacks: { onRewarded: () => { rewarded = true; }, onClose: () => finish(), onError: () => finish() } });
             }
