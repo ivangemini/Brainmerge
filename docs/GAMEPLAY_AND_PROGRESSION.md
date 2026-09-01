@@ -1,13 +1,13 @@
 # Brainmerge — Gameplay and Progression Baseline
 
 ## Product structure
-Brainmerge has three progression layers:
+Brainmerge currently has three progression layers:
 
 1. **Run progression** — build the main board from T1 toward T18, improve Brain Lab and generate coins.
-2. **Permanent meta** — Collection Rewards + Prestige / Brain Cells.
+2. **Permanent meta foundation** — Collection Reward claims, Prestige count, Brain Cells and permanent upgrade slots live in save v6; the actual reward/reset/spend transactions are still pending.
 3. **Long-term objective** — restore the Brainverse through persistent Campaign Locations, Landmarks and World Raids.
 
-T18 is terminal for the current core chain, but it is not the final reason to play. First T18 unlocks Prestige, while Campaign progress persists across resets.
+T18 is terminal for the current core chain. The intended first Prestige unlock is T18, while Campaign/Collection permanent progress is preserved by contract.
 
 The old `8 short Campaign stages per world / 64 one-shot stages / 3 stars` model is obsolete.
 
@@ -19,13 +19,12 @@ Detailed Campaign/meta rules: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 3. use Box drops as board feed;
 4. merge two identical characters into exactly one next-tier identity;
 5. merged result produces more than both source pieces combined;
-6. first-time merge discoveries unlock the next character for Collection/future rebuilding;
-7. claim Collection milestones once implemented;
-8. reach T18 to unlock Prestige;
-9. Prestige converts a completed run into permanent Brain Cells while preserving Collection/Campaign progress;
-10. use lifetime discovery and permanent power to push deeper into Campaign Locations and World Raids.
+6. first-time merge discoveries raise lifetime discovery;
+7. continue through the T1→T18 run;
+8. use lifetime discovery to unlock harder Campaign order targets;
+9. once Prestige is implemented, T18 completion will convert a run into permanent meta growth while preserving Collection/Campaign state.
 
-## Canonical T1-T18 character chain
+## Canonical T1-T18 chain
 1. T1 Toilet Buddy
 2. T2 Camera Dude
 3. T3 Sigma Rock
@@ -50,7 +49,7 @@ Different identities do not merge. Two identical non-terminal units merge into e
 ## Merge-first discovery
 Brain Box may only drop tiers already discovered through merging. It accelerates rebuilding but cannot reveal a new lifetime character first.
 
-Campaign initially follows the same account rule: Campaign orders cannot require an unseen lifetime tier. This keeps the main T1-T18 progression relevant instead of letting Campaign replace it.
+Campaign follows the same account boundary: current Campaign order/supply logic is capped by lifetime discovery, so Campaign cannot bypass the T1→T18 discovery chain.
 
 ## Passive production
 Base production per board unit:
@@ -78,8 +77,8 @@ Base production per board unit:
 
 Every next tier produces more than twice the previous tier, so a normal merge is production-positive.
 
-Current run-level Brain Income multiplier:
-`x1.00 -> x1.15 -> x1.32 -> x1.52 -> x1.75 -> x2.00`.
+Current Brain Income multiplier:
+`x1.00 → x1.15 → x1.32 → x1.52 → x1.75 → x2.00`.
 
 ## Brain Box economy
 Paid Brain Box price:
@@ -89,7 +88,7 @@ Paid Brain Box price:
 Only successful paid purchases increase `paidBoxes`. Rewarded Brain Boxes are free and do not increase paid price.
 
 ## Brain Lab
-Current run-level upgrades use coins and are expected to reset on Prestige.
+Current run-level upgrades use coins and are intended to reset on Prestige.
 
 ### Base Drop Tier
 Raises minimum Box tier from T1 up to T4, discovery-gated.
@@ -114,9 +113,7 @@ Costs: `300 / 900 / 2500 / 7000`.
 ## Passive-income accounting
 Online production is elapsed-time based with fractional remainder. Offline income is capped, explicit to collect and cannot be double-claimed. Clock rollback never moves accounting backwards.
 
-Prestige must reset/normalize old-run passive fields so old elapsed time cannot be credited into a new run.
-
-Campaign opening must not duplicate or erase main-board passive accounting.
+Campaign opening must not duplicate or erase main-board elapsed-time accounting. Future Prestige must normalize old-run passive fields so a reset cannot inherit unaccounted elapsed time from the previous run.
 
 ## Merge/discovery rewards
 - Merge reward: `4 × result tier` coins.
@@ -134,18 +131,10 @@ Onboarding teaches:
 3. first Brain Box;
 4. Box-vs-Brain-Lab economic decision.
 
-The first session should not attempt to finish T18 or the Campaign.
+The first session is not expected to finish T18 or the Campaign.
 
-## Pacing guardrails
-- T4 reachable without passive waiting;
-- meaningful Brain Lab tradeoff appears by T4;
-- T5 remains early active loop;
-- T8 remains meaningful first-cycle checkpoint;
-- T9-T18 are long-tail run progression;
-- later Prestige cycles materially accelerate rebuilding without making Campaign orders trivial.
-
-## First-cycle mission journey
-Current save-v5 mission indices remain stable:
+## First-cycle missions
+Mission indices remain stable in canonical save v6:
 
 | Goal | Requirement | Reward |
 | --- | --- | ---: |
@@ -161,21 +150,21 @@ Current save-v5 mission indices remain stable:
 This remains onboarding, not permanent Campaign content.
 
 ## Collection Rewards
-Approved permanent account milestones:
+Approved permanent milestones:
 - 5/18;
 - 10/18;
 - 15/18;
 - 18/18.
 
-Each reward is claimed once and survives Prestige. Exact reward values remain balance data.
+Save v6 already stores claim ids. Reward definitions, claim transaction/UI and no-double-claim behavior still need implementation.
 
 ## Prestige / Brain Reset
-First Prestige unlocks after reaching T18.
+Target first unlock: reaching T18.
 
 Expected reset:
 - main board;
 - coins;
-- paid Box inflation;
+- paid Brain Box inflation;
 - Brain Lab run upgrades;
 - run-level passive remainder/pending state.
 
@@ -187,163 +176,105 @@ Expected preserve:
 - Brain Cells;
 - permanent Prestige upgrades.
 
-Brain Cells are permanent-meta-only.
+Save v6 already contains `prestigeCount`, `brainCells` and permanent upgrade-level fields. The actual eligibility/reset/reward/spend transactions are still pending.
 
 # Brainverse Campaign
 
 ## Macro loop
-Each world contains **7 persistent Locations + 1 World Raid**.
+Each target world contains **7 persistent Locations + 1 persistent World Raid**.
 
-The Campaign loop is:
+`enter Location → Stabilize → Deliver Orders → Restore Landmark → Mastery → raise World Restored % → unlock World Raid → clear persistent Raid → next world`
 
-`enter Location -> stabilize -> create/deliver requested Brainrots -> restore Landmark -> mastery -> raise World Restored % -> unlock World Raid -> defeat persistent raid -> next world`
+World 1 and World 2 definitions exist. The target complete Campaign is eight worlds.
 
-The first two production worlds are:
-- World 1 — Backyard Brainrot Zone;
-- World 2 — Surreal Brainrot City.
+## Location phase weights
+- Stabilize: 20%
+- Deliver Orders: +25% (45% cumulative)
+- Restore Landmark: +45% (90% cumulative)
+- Mastery: +10% (100% cumulative)
 
-Target complete Campaign is eight worlds.
-
-## Persistent Location phases
-Every Location uses the same four-phase structure:
-
-### 1. Stabilize — 20%
-Deal with the world's board modifier and establish control.
-
-### 2. Deliver Orders — 25%
-Create requested Brainrots on the isolated Campaign board and deliver them.
-
-A delivered unit disappears from the Campaign board. This intentionally creates a decision:
-
-`merge this unit upward` **vs** `deliver it now for permanent Location progress`.
-
-### 3. Restore Landmark — 45%
-Order batches restore/upgrade the Location's signature landmark. Landmark progress persists across sessions and Prestige.
-
-### 4. Mastery — 10%
-Optional harder rules complete the final 10% of the Location.
-
-A fully restored Location without Mastery reaches 90%; Mastery reaches 100%.
-
-## World Progress
-World Restored % is the average restoration percentage of the seven Locations.
+World Restored % is derived from the seven Location restoration values.
 
 Initial World Raid gate:
-- >=80% World Restored;
-- >=5 restored landmarks.
-
-This makes the Raid a major world goal while 100% remains completionist progression.
-
-## World modifiers
-Campaign worlds must change board decisions.
-
-First production modifiers:
-- **World 1 — Overgrowth:** Campaign cells can become overgrown/blocked and must be cleared through merge/location play.
-- **World 2 — Traffic Lock:** roadblock cells temporarily reduce usable board/spawn space.
-
-Future world modifiers are data-driven concepts and must stay readable on touch screens.
-
-## Deliver Orders safety
-- order targets are data-driven;
-- deliveries consume Campaign-board units only;
-- main-board units/coins are never silently consumed;
-- order completion commits persistent progress exactly once;
-- orders initially stay <= lifetime max discovered tier;
-- leaving/restarting Campaign cannot mutate the main board.
-
-## Landmarks
-Every Location has one signature surreal landmark.
-
-Landmark progression provides visible restoration payoff and bounded Campaign/world perks. Exact perk values require simulation/playtest.
-
-World 1 examples:
-- Giant Sneaker Flower Bed;
-- Toilet Birdbath;
-- Living Watermelon Grill;
-- Hose Creature Well;
-- Gnome Signal Tower;
-- Sneaker Mushroom Grove;
-- Backyard Brain Core.
-
-## World Raids
-World Raid is persistent and multi-session, not a short stage.
-
-Initial structure:
-- 3 phases;
-- progress/HP persists between sessions;
-- merge/order objectives drive progress;
-- later phases intensify the world modifier;
-- final phase requires high-value deliveries;
-- clear unlocks the next world exactly once.
-
-No separate combat engine is introduced.
+- at least 80% World Restored;
+- at least 5 restored Landmarks.
 
 ## Campaign/main-board isolation
-Campaign uses an isolated `CampaignRunState` and its own temporary 6x5 board.
+Campaign uses a separate 6×5 `CampaignRunState` stored inside save v6.
 
-Campaign can influence permanent account/meta only through explicit deterministic reward/progress commits. It cannot consume main-board pieces accidentally.
+Campaign actions cannot silently:
+- consume main-board pieces;
+- spend ordinary main-board coins;
+- increase paid Brain Box inflation;
+- mutate main-run merge counters;
+- reveal an undiscovered lifetime tier.
 
-## Current implementation state
-Implemented:
-- `src/core/campaign.ts` domain foundation;
-- seven stable Location definitions for Worlds 1-2;
-- Location phase weighting;
-- World Progress calculation;
-- restored Landmark counting;
-- Raid gate calculation;
-- Campaign map with World Progress summary;
-- seven Location nodes + Raid node;
-- four-phase Location overview;
-- three-phase Raid overview;
-- EN/RU shell parity;
-- automated core/shell tests.
+Permanent Campaign progress flows through explicit deterministic commits only.
 
-Not yet implemented:
-- save v6 Campaign persistence;
-- real CampaignRunState;
-- playable Stabilize/Deliver/Restore/Mastery flow;
-- actual Landmark perks;
-- persistent Raid HP.
+## Implemented Location 1 — Sneaker Garden
+Sneaker Garden is fully playable through all four phases and is the reference implementation for future data-driven Locations.
 
-The next playable vertical slice is **World 1 Location 1 — Sneaker Garden**.
+### Stabilize
+- six Overgrowth blockers;
+- four starting T1 Campaign units;
+- each successful merge clears exactly one nearest blocker;
+- six clearing pulses commit Stabilize exactly once.
 
-## Save contract
-Current production schema is **v5**.
+### Deliver Orders
+- deterministic 4-order queue capped by lifetime discovery;
+- max-T4 reference: `T2, T2, T3, T4`;
+- matching delivery consumes only the selected Campaign unit;
+- each order commits one quarter of Deliver progress exactly once.
 
-Next coherent **v6** must include:
-- Collection Reward claims;
-- Prestige count;
-- Brain Cells;
-- permanent Prestige upgrades;
-- world unlock/clear state;
-- Location phase progress;
-- Landmark restoration/level;
-- Raid phase/progress/clear state;
-- optional active CampaignRunState snapshot if resume is supported.
+### Restore Landmark
+- six orders in three atomic two-order batches;
+- max-T4 reference: `T2, T2, T3, T3, T4, T4`;
+- batches restore Giant Sneaker Flower Bed Lv1→Lv3;
+- incomplete batches do not commit partial permanent Landmark levels;
+- stronger Campaign Supply chance starts at 25% and gains +5 percentage points per Landmark level, reaching 40% at Lv3.
 
-Do not add ad-hoc unversioned Campaign localStorage.
+### Mastery
+- max-T4 reference: `T3, T4, T4`;
+- five Overgrowth cells remain blocked throughout the phase;
+- Mastery merge pulses do not clear those blockers;
+- Landmark Supply perk remains active;
+- completion commits the final 10% and reaches 100% Sneaker Garden restoration.
+
+### Persistence
+- active Stabilize/Deliver/Restore/Mastery run state resumes after leaving/reload;
+- permanent Location/Landmark progress is separate from the temporary board snapshot;
+- completed temporary run state can be acknowledged without erasing permanent progress.
+
+## World modifiers
+Current implemented reference:
+- **World 1 — Overgrowth** in Sneaker Garden.
+
+Next planned production modifier:
+- **World 2 — Traffic Lock**.
+
+Future modifiers must remain readable, deterministic and data-driven; they must not fork the main merge identity rules.
+
+## World Raids
+Permanent Raid state/storage and gate/unlock derivation exist as foundation. Full playable Raid phases are not implemented yet.
+
+Target structure:
+- three phases;
+- progress persists between sessions;
+- merge/order objectives drive progress;
+- later phases intensify the world modifier;
+- final phase uses high-value deliveries;
+- clear unlocks the next world exactly once.
 
 ## Progression safety rules
-- First-account new-tier discovery remains merge-first.
-- Rewarded ads remain optional acceleration.
-- Coins remain ordinary run currency; Brain Cells remain permanent-meta-only.
-- Merge remains production-positive.
-- Campaign/Collection permanent progress survives Prestige.
-- Delivery consumes Campaign units only.
-- Campaign rewards/progress commit exactly once.
-- No arbitrary real-time or energy gate is required.
-- Economy/meta tables remain centralized and deterministic.
+- first-account new-tier discovery remains merge-first;
+- rewarded ads remain optional acceleration;
+- coins remain ordinary run currency;
+- Brain Cells remain permanent-meta-only;
+- merge remains production-positive;
+- Campaign and Collection permanent progress survive Prestige by contract;
+- delivery consumes Campaign units only;
+- progress commits are exact-once/idempotent where required;
+- no mandatory ad, energy gate or arbitrary real-time wait is required.
 
-## Validation baseline
-Automated coverage must include:
-- v5 -> v6 migration/sanitization;
-- Collection one-time claim;
-- Prestige reset/preserve/no-double-award;
-- Campaign/main-board isolation;
-- Location phase calculation;
-- World Progress / Landmark count / Raid gate;
-- delivery consumption and exact-once progress;
-- persistent Raid state/world unlock;
-- Campaign progress surviving Prestige;
-- EN/RU parity;
-- responsive Location/Raid runtime QA.
+## Immediate next gameplay milestone
+Generalize the proven Sneaker Garden phase engine into data-driven World 1 Location definitions, then author the remaining six World 1 Locations and the first persistent three-phase World 1 Raid.

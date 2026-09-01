@@ -1,306 +1,190 @@
-# Brainmerge Architecture — Browser Production Runtime
+# Brainmerge Architecture — Current Browser Runtime
 
 ## Decision
-Use dependency-light browser TypeScript + DOM/CSS. Deterministic gameplay/economy/save/meta rules stay independent from rendering and portal SDKs so the same canonical state can run on local web, Yandex Games and future portals through adapters.
+Brainmerge is a dependency-light browser TypeScript game with DOM/CSS presentation. Deterministic gameplay, economy, save and meta rules remain separate from rendering and portal SDKs.
 
-The architecture has three product layers:
+Current product layers:
+1. main T1→T18 merge-idle run;
+2. permanent Collection / Prestige metadata;
+3. isolated persistent Brainverse Campaign built from Locations, Landmarks and World Raids.
 
-1. core T1-T18 merge-idle run;
-2. permanent Collection/Prestige meta;
-3. isolated persistent Campaign worlds made from Locations, Landmarks and World Raids.
+The obsolete architecture based on dozens of one-shot Campaign stages is retired.
 
-The old architecture assumption of dozens of isolated short Campaign stages is obsolete.
+## Build/runtime boundary
+Authoritative source lives in `src/`.
 
-## Boundaries
-- `src/core/` — deterministic merge, progression, economy, idle income, Collection, Prestige, Campaign definitions/state transitions and save rules; no DOM or platform SDKs.
-- `src/ui/` — board/HUD/mission/upgrade/Collection/Campaign/Prestige rendering and input wiring.
-- `src/i18n/` + `locales/` — EN/RU localization and locale normalization.
-- `src/platform/` — portal adapters, persistence, ads and lifecycle capabilities.
-- `src/feedback/` — non-authoritative audio/particle/game-feel feedback.
-- `public/assets/characters/` — production character atlas plus retained source/reference renders.
-- `public/assets/ui/` — production UI icons/atlases and Campaign/meta art.
-- `public/assets/campaign/` — world environments and boss renders.
+`tsconfig.json` compiles `src/**/*.ts` to ES2022 modules under `build/` with strict TypeScript settings. `build/` is generated output, not an independent source of game rules.
 
-## Campaign domain foundation
-`src/core/campaign.ts` is now the first authoritative Campaign domain module.
+Current scripts:
+- `npm run build` — TypeScript compile + locale parity validation;
+- `npm test` / `npm run verify` — build + deterministic Node test suite;
+- `npm run serve` — rebuild, then serve on port 4173;
+- `npm run package` / `package:yandex` — build, portal package checks and release audit;
+- browser smoke scripts cover runtime, Campaign, final Restore/Mastery flow, RC, motion, locale and Yandex integration.
 
-It currently owns:
+The repository currently commits `build/` so the published GitHub state contains a current runnable compiled snapshot. Any TypeScript change must still be made in `src/` and regenerated.
+
+## Source boundaries
+- `src/core/` — deterministic merge/progression/economy/save/Campaign rules; no DOM or portal SDK calls.
+- `src/ui/` — authoritative-state rendering and input wiring.
+- `src/i18n/` + `locales/` — locale loading/normalization and EN/RU resources.
+- `src/platform/` — local/Yandex adapters, persistence, ads and lifecycle capabilities.
+- `src/feedback/` — non-authoritative audio and visual feedback.
+- `public/` — browser presentation shells, Campaign map/run UI and production assets.
+- `tests/` + `scripts/` — deterministic logic tests, packaging checks and browser smoke infrastructure.
+
+## Canonical GameState — save v6
+`GameState.version` is **6**.
+
+The canonical save currently owns:
+- main 6×5 board;
+- coins, XP, merge/spawn counters and paid Brain Box inflation;
+- lifetime `maxDiscoveredTier`;
+- mission cursor;
+- Brain Lab run upgrades;
+- elapsed-time passive/offline accounting;
+- Collection Reward claim ids;
+- Prestige count;
+- Brain Cells;
+- permanent Prestige-upgrade levels;
+- permanent `CampaignProgress`;
+- optional resumable `CampaignRunState`;
+- ephemeral-safe selection/message fields that are sanitized on load.
+
+`sanitizeState()` is the single migration/sanitization boundary. Valid v1-v5 saves migrate into v6 deterministically. Campaign/meta state must not create an extra unversioned localStorage system.
+
+## Main run ownership
+The main board remains the primary account-growth loop. It owns ordinary merge/economy state and lifetime discovery.
+
+First lifetime discovery is merge-first. Brain Box and Campaign Supply may rebuild only content allowed by lifetime discovery rules.
+
+## Campaign domain
+`src/core/campaign.ts` owns persistent Campaign semantics:
 - full target world count = 8;
 - 7 persistent Locations per world;
-- first production definitions for Worlds 1-2;
-- stable Location ids;
-- Location phase ordering;
-- phase weighting;
-- initial World Raid gate;
-- pure Location/World progress calculations;
-- restored-landmark counting;
-- World Raid unlock derivation.
+- World 1 and World 2 definitions;
+- stable Location ids and Landmark identity;
+- phase order and weights;
+- derived Location / World restoration;
+- restored-Landmark counting;
+- Raid gate and world-unlock derivation;
+- permanent world/location/raid progress sanitization.
 
-The UI shell must not invent different Campaign semantics.
-
-## Campaign macro model
-Every world is:
-
-`7 persistent Locations -> World Progress / Landmarks -> persistent World Raid`
-
-Each Location progresses through:
-
+Each Location uses:
 1. Stabilize — 20%;
 2. Deliver Orders — 25%;
 3. Restore Landmark — 45%;
 4. Mastery — 10%.
 
 Initial World Raid gate:
-- >=80% World Restored;
-- >=5 restored landmarks.
+- at least 80% World Restored;
+- at least 5 restored Landmarks.
 
-The current map shell displays 0% defaults until save v6 is wired. Presentation defaults are not authoritative save state.
+## CampaignRunState
+`CampaignRunState` is implemented and serialized inside save v6.
 
-## Campaign state separation
-Campaign must not mutate the persistent main idle board accidentally.
+It owns a resumable isolated encounter snapshot:
+- `worldId` / `locationId` / phase;
+- separate 6×5 Campaign cells;
+- world-modifier state (`overgrowth` in the current World 1 slice);
+- merge/spawn counters;
+- deterministic order tiers and cursor;
+- Campaign selection;
+- completion state.
 
-Target ownership:
+It never aliases main-board cells. Campaign actions cannot silently spend ordinary coins, mutate paid Brain Box inflation, increment main-run merge counters or consume main-board units.
 
-### `GameState`
-Persistent ordinary run state:
-- main 6x5 board;
-- coins;
-- paid Brain Box count;
-- Brain Lab run upgrades;
-- lifetime discovery;
-- missions;
-- passive/offline accounting;
-- other current canonical run counters.
+## Implemented reference Location — Sneaker Garden
+World 1 / Location 1 is the reference implementation for future data-driven Locations.
 
-### `CampaignProgress`
-Permanent account-level Campaign state planned for save v6:
-- world unlock/clear state;
-- per-Location Stabilize progress;
-- per-Location Deliver/order progress;
-- per-Location Landmark restoration/level;
-- per-Location Mastery progress;
-- World Raid phase/progress/clear state;
-- exact-once Campaign reward markers where needed.
+### Stabilize
+- six Overgrowth cells;
+- four starting T1 Campaign units;
+- every successful merge clears exactly one nearest blocker;
+- six clearing pulses commit the phase exactly once.
 
-World Restored percentage should normally be derived from Location progress rather than maintained as an independent mutable source of truth.
+### Deliver
+- deterministic 4-order queue capped by lifetime discovery;
+- reference max-T4 queue: `T2, T2, T3, T4`;
+- delivery consumes only the selected Campaign unit;
+- each order commits one quarter of Deliver progress exactly once.
 
-### `CampaignRunState`
-Temporary isolated encounter state:
-- Campaign 6x5 board;
-- stage-local/campaign-local counters;
-- active orders;
-- active world modifier state;
-- local Box/action restrictions if any;
-- current Location or Raid context.
+### Restore Landmark
+- six orders in three two-order batches;
+- only complete batches commit permanent restoration;
+- three batches map to Giant Sneaker Flower Bed Lv1/Lv2/Lv3;
+- reference max-T4 queue: `T2, T2, T3, T3, T4, T4`;
+- stronger Campaign Supply chance = 25% base + 5 percentage points per Landmark level, capped at 40% at Lv3.
 
-Entering Campaign never converts the main board into Campaign state.
+### Mastery
+- reference max-T4 queue: `T3, T4, T4`;
+- five Overgrowth cells remain permanently blocked during the phase;
+- merge pulses do not clear Mastery blockers;
+- completion commits the final 10% and reaches 100% Location restoration.
 
-## Deliver Orders architecture
-Deliver Orders are a core Campaign mechanic, not UI flavor.
+## Campaign presentation ownership
+Campaign presentation spans current browser files under `public/` plus core presentation snapshots.
 
-Rules:
-- an order references stable tier requirements;
-- eligible requested units are created on the Campaign board;
-- delivering consumes only the Campaign-board unit;
-- delivering never consumes a main-board unit;
-- completed order progress commits to permanent CampaignProgress exactly once;
-- Campaign orders initially cannot request a lifetime-undiscovered tier;
-- order tables are data/configuration, not bespoke handlers per Location.
+The UI may own ephemeral open/selection/focus state. It must not invent persistent percentages, Landmark levels, order completion or Raid state.
 
-The implementation should expose pure core functions for eligibility, delivery, progress commit and sanitization before UI handlers are considered authoritative.
+Raster assets may own appearance only. They must never own currency values, progress, localized text, hit areas or gameplay rules.
 
-## Landmark architecture
-Every Location owns one stable Landmark definition.
+## Platform/persistence boundary
+`PlatformAdapter.saveState(state, flush?)` is the persistence boundary.
 
-Landmark state is permanent Campaign progression. It should include enough data to support:
-- restoration threshold / level;
-- visual map state;
-- bounded Campaign/world perk;
-- exact-once milestone reward if one exists.
+Current adapters:
+- local: localStorage fallback/development runtime;
+- Yandex: SDK integration, local/safe fallback, player cloud save, ads, locale signal and lifecycle hooks.
 
-Landmarks must not become an unversioned localStorage side system.
+Campaign, Collection and Prestige remain platform-neutral core data. Portal adapters cannot fork game rules.
 
-## World modifier architecture
-Each world may define one reusable board modifier that changes Campaign decisions without changing canonical merge identity rules.
+## Localization boundary
+EN and RU are mandatory production locales with key parity. Player-facing copy belongs in locale resources rather than gameplay/core code.
 
-First production targets:
-- World 1 `overgrowth`;
-- World 2 `traffic-lock`.
+Generated world/boss/icon art remains text-free. Campaign names, objective copy, progress, rewards and lock reasons remain live localized UI.
 
-Modifier state belongs inside `CampaignRunState`. Modifier rendering belongs in UI. Modifier definitions/config belong in core data.
+## Character rendering
+All canonical T1-T18 identities render from one physical `public/assets/characters/character-atlas.webp` (6 columns × 3 rows). Per-character visual normalization is presentation-only.
 
-A modifier may affect usable cells, action rules, spawn lanes or order pressure, but it must not:
-- alter T1-T18 identity rules unpredictably;
-- mutate the main board;
-- depend on frame rate;
-- require a separate physics engine.
+## Mobile composition
+Phone default is board-first:
+- main board + Brain Box remain the primary loop;
+- Missions / Collection / Brain Lab use the three-item dock and modal sheets;
+- Campaign is a prominent top-level destination rather than a fourth cramped dock item;
+- Campaign map/detail/run UI must remain touch-safe and safe-area aware.
+
+## Current implemented vs pending meta
+Implemented storage/foundation:
+- Collection Reward claim ids;
+- Prestige count;
+- Brain Cells;
+- permanent Prestige upgrade-level fields;
+- Campaign permanent state;
+- active Campaign run persistence.
+
+Still pending product transactions/UI:
+- claim-once Collection Reward grants;
+- actual Prestige eligibility/reset/reward transaction;
+- permanent Brain Cell spend tree;
+- proof that gameplay-earned Campaign progress survives the implemented Prestige transaction.
 
 ## World Raid architecture
-World Raids are persistent multi-session boss encounters.
+Persistent Raid state/storage and unlock derivation exist as foundation. Full playable Raid gameplay is still pending.
 
-Initial contract:
-- 3 phases;
-- code-owned phase/progress/HP;
+Target Raid contract:
+- three phases;
 - progress survives sessions;
 - merge/order contributions are deterministic;
-- later phases may intensify the world modifier;
-- final phase can require high-tier deliveries;
+- later phases intensify the world modifier;
+- final high-value deliveries;
 - clear unlocks the next world exactly once.
 
-Boss art is decorative. Boss HP, phase, orders, rewards and unlock logic are never baked into raster art.
+No separate combat engine is required.
 
-## Current presentation layers
-Campaign presentation currently lives in:
-- `public/campaign-map.js`;
-- `public/campaign-map.css`;
-- `locales/campaign-en.json`;
-- `locales/campaign-ru.json`.
+## Validation baseline
+Current repository contains deterministic/unit and Chromium smoke coverage for the main runtime, Campaign shell, save migration/sanitization, Campaign/main-board isolation, active run resume, Deliver exact-once behavior, Restore batch atomicity, Landmark perk and Mastery completion.
 
-The Campaign shell currently provides:
-- top-level Campaign entry;
-- World 1/2 switcher;
-- World Restored / Landmarks / Raid-gate summary;
-- connected route;
-- seven Location nodes + one Raid node;
-- Location overview with four phases;
-- Raid overview with three phases;
-- responsive desktop/mobile layout;
-- approved world/boss art.
-
-This shell is still presentation-only for progress. It must be replaced/wired to core/save state rather than allowed to evolve into an independent state owner.
-
-## UI ownership contract
-`GameView` and future Campaign controllers render authoritative data. UI may own ephemeral selection/focus/open state only.
-
-Raster assets may provide:
-- character art;
-- icons;
-- world backgrounds;
-- boss renders;
-- decorative reward/landmark art.
-
-Raster assets must never own:
-- currency values;
-- Location progress;
-- order requirements;
-- Landmark levels;
-- World Restored percentage;
-- Raid HP/phase;
-- Prestige reset/preserve lists;
-- localized text;
-- prices/upgrade levels;
-- hit areas.
-
-## Character rendering contract
-All canonical T1-T18 identities resolve through one physical **6x3 `public/assets/characters/character-atlas.webp`**.
-
-Board and Collection select slots through presentation data. The atlas is a rendering optimization, not gameplay state.
-
-## Mobile composition contract
-Phone default remains board-first.
-
-- main board and Brain Box remain primary flow;
-- Missions / Collection / Brain Lab open from the three-item bottom dock as modal sheets;
-- Campaign uses a prominent top-level entry rather than a fourth cramped dock item;
-- Campaign map and detail surfaces respect safe areas;
-- Location detail is a bottom sheet on narrow screens;
-- touch targets remain at least practical mobile size;
-- Collection Rewards stay inside Collection;
-- Prestige appears only when eligible or as a clearly locked meta entry.
-
-## Current save state
-Production schema remains **v5**.
-
-Current v5 includes the main run/economy/discovery/mission/passive state and is sanitized/migrated through `sanitizeState()`.
-
-Do not add Campaign progress through ad-hoc localStorage keys.
-
-## Planned save v6
-Campaign + Collection Rewards + Prestige must move together into one coherent v6 migration.
-
-Required permanent categories:
-- Collection reward claim state;
-- Prestige count;
-- Brain Cells;
-- permanent Prestige upgrade levels;
-- world unlock/clear state;
-- Location phase progress;
-- Landmark state;
-- World Raid progress/phase/clear state.
-
-Optional active CampaignRunState may be persisted only if resume is explicitly supported.
-
-Migration v1-v5 -> v6 must preserve all valid current run data and initialize Campaign/meta state deterministically.
-
-## Main run vs permanent meta
-Expected Prestige reset:
-- main board units;
-- coins;
-- paid Brain Box inflation;
-- Brain Lab run upgrades;
-- run-level fractional/pending income state.
-
-Expected Prestige preserve:
-- lifetime Collection discovery;
-- claimed Collection Rewards;
-- Campaign Worlds/Locations/Landmarks/Raids;
-- Prestige count;
-- Brain Cells;
-- permanent meta upgrades.
-
-Reset/preserve behavior belongs in deterministic core transitions with tests.
-
-## Collection Rewards architecture
-Collection milestones remain immutable data records with:
-- stable id;
-- discovery threshold;
-- reward definition;
-- localization keys.
-
-Claiming must be transactional/idempotent and survive rerender/reload/cloud retry without duplicate grants.
-
-## Prestige architecture
-Prestige remains a pure core transition:
-- derive eligibility from run milestone;
-- compute Brain Cell award from data;
-- produce a new run state;
-- preserve permanent meta exactly;
-- return reset/preserve/reward summary for UI.
-
-Brain Cells are permanent-meta-only. Ordinary Brain Box/Brain Lab code must not accept them.
-
-## Time / passive-income model
-Passive income remains elapsed-time based, not frame-count based.
-
-Campaign opening must not accidentally duplicate/erase main-board elapsed-time accounting. Whether main passive income continues while Campaign is active must be deterministic in core lifecycle logic.
-
-Prestige must normalize old-run passive fields so elapsed time from an old run cannot credit a new run.
-
-## Persistence boundary
-`PlatformAdapter.saveState(state, flush?)` remains the persistence boundary.
-
-Local and Yandex adapters persist the same canonical versioned save. Campaign/Prestige cannot create platform-specific gameplay forks.
-
-## Validation
-Current CI already covers the core runtime and Campaign presentation shell.
-
-Campaign expansion must add deterministic coverage for:
-- v5 -> v6 migration;
-- corrupt Campaign meta sanitization;
-- Location phase calculations;
-- World Progress;
-- restored landmark counting;
-- Raid gate;
-- Campaign/main-board isolation;
-- delivery consuming Campaign units only;
-- exact-once order/Landmark progress;
-- persistent Raid progress;
-- Raid clear/world unlock;
-- Campaign progress surviving Prestige;
-- EN/RU parity;
-- desktop/mobile Location and Raid geometry.
+A documentation claim is not evidence that a gate passed; verification status must come from an actual test/CI run.
 
 ## Next architecture milestone
-Implement save v6 permanent Campaign/meta fields, then isolated `CampaignRunState`, then make **World 1 Location 1 — Sneaker Garden** playable end-to-end through Stabilize -> Deliver -> Restore -> Mastery.
-
-Do not author 56 bespoke levels. Additional Locations should be mostly data + world modifier + approved art.
+Generalize the proven Sneaker Garden implementation into data-driven World 1 Location configuration instead of authoring bespoke handlers. Then implement the remaining six World 1 Locations and the persistent three-phase World 1 Raid on the same state/persistence boundary.

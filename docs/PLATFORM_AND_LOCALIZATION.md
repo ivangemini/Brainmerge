@@ -3,58 +3,99 @@
 ## Distribution
 Brainmerge is browser-first and portal-agnostic. Yandex Games is the first implemented production adapter, not a gameplay dependency.
 
-Platform integrations expose capabilities for ads, rewarded ads, cloud save, leaderboards, payments and lifecycle. Current adapters:
-- `local` — localStorage development fallback, no monetization capabilities;
-- `yandex` — Yandex SDK, safe storage fallback, player cloud save, rewarded/fullscreen ads, locale signal and Loading/Gameplay lifecycle.
+Current adapters:
+- `local` — localStorage development/runtime fallback, no monetization capabilities;
+- `yandex` — Yandex SDK integration with safe/local storage fallback, player cloud save, rewarded/fullscreen ads, locale signal and loading/gameplay lifecycle.
 
-Yandex cloud writes remain debounced during ordinary activity; safe/local storage is written immediately so progress does not depend on a cloud round-trip.
+Platform-specific behavior stays behind `src/platform/` adapters and capability checks. Core gameplay/Campaign/meta code must not call Yandex APIs directly.
 
-Campaign, Collection Rewards and Prestige are **platform-neutral core systems**. They must persist inside the same versioned game save and must not call Yandex SDK APIs directly.
+## Canonical persistence
+Current runtime schema is **save v6**.
 
-## Save evolution
-Current runtime schema is v5. The planned Campaign/Prestige/Collection Rewards expansion should migrate coherently to v6.
+The same versioned `GameState` travels through `PlatformAdapter.saveState(state, flush?)` for local and Yandex persistence.
 
-New permanent meta fields must travel through the existing `PlatformAdapter.saveState()` path:
-- Collection Reward claims;
+Save v6 currently includes:
+- main run/economy/discovery/mission/passive state;
+- Collection Reward claim ids;
 - Prestige count;
 - Brain Cells;
-- permanent Prestige upgrade levels;
-- Campaign stage/world/star progress;
-- optional active Campaign run snapshot if resumable stages are explicitly supported.
+- permanent Prestige upgrade-level fields;
+- permanent Campaign world/Location/Landmark/Raid progress;
+- optional resumable `CampaignRunState`.
 
-Do not create portal-specific or unversioned localStorage state for these systems.
+Valid v1-v5 data migrates into v6 through core sanitization. Do not create portal-specific or unversioned localStorage side state for Campaign, Prestige or Collection.
+
+## Campaign platform neutrality
+Campaign is an isolated core system:
+- Campaign board state is separate from the main board;
+- delivery consumes Campaign units only;
+- Campaign Supply does not spend ordinary coins or alter paid Brain Box inflation;
+- persistent Campaign progress is stored in the same canonical save;
+- Campaign progress must remain valid regardless of whether the save came from local or Yandex storage.
+
+The first complete playable Location is World 1 / Sneaker Garden through Stabilize, Deliver, Restore and Mastery.
+
+## Build / published repository contract
+Authoritative source is TypeScript under `src/`.
+
+`npm run build` compiles to `build/` and validates locale parity. The current repository also commits the generated `build/` output so the published GitHub state contains a current runnable snapshot.
+
+`npm run serve` rebuilds before starting the local HTTP server. Generated output must never be hand-edited as the source of product behavior.
+
+Packaging commands:
+- `npm run package` — local portal package + structural checks + release audit;
+- `npm run package:yandex` — Yandex package + structural checks + release audit.
+
+`node_modules/`, `dist/`, `runtime-artifacts/` and `.DS_Store` are ignored.
 
 ## Localization
-English (`en`) and Russian (`ru`) are mandatory production locales with 100% key parity. Player-facing source uses localization keys instead of hardcoded sentences.
+English (`en`) and Russian (`ru`) are mandatory production locales with 100% key parity.
 
-The new meta/campaign layer must localize:
-- Campaign/world/stage names;
-- objective names/descriptions;
-- star/mastery conditions;
-- boss names and objective cards;
+Player-facing runtime copy must use localization resources rather than hardcoded gameplay/UI sentences.
+
+Campaign/meta localization covers:
+- world and Location names;
+- phase/objective labels;
+- Landmark state;
+- World Restored / Raid gate / Raid status;
+- Campaign Supply and run-state actions;
 - reward/claim states;
-- Collection Rewards copy;
+- Collection Rewards;
 - Prestige eligibility/confirmation/result copy;
-- Brain Cell/meta-upgrade names/effects;
+- Brain Cell/permanent-upgrade names and effects;
 - reset/preserve explanations and lock reasons.
 
-Generated Campaign environments, bosses, icons and emblems must contain **no baked player-facing text**. World names and numbers remain live localized DOM/UI so EN/RU and future languages can share the same art.
+Generated world environments, bosses, icons and emblems must contain no baked player-facing text. World names, numbers, progress and rewards remain live localized UI.
 
-The localization architecture remains extensible to future languages without gameplay/screen forks. Platform locale signals normalize into supported locales and fall back to English.
-
-Current automated parity validation must remain green after every new key. Campaign/Prestige runtime screenshot QA should include Russian at phone width because longer objective/reward text is a likely overflow risk.
+Platform locale signals normalize into supported locales and fall back to English.
 
 ## Input baseline
-Touch + mouse are first-class. Keyboard remains additive desktop UX. Gamepad stays optional unless a future portal requires it.
+Touch + mouse are first-class. Keyboard is additive desktop UX. Gamepad remains optional unless a future portal requires it.
 
 Campaign requirements:
-- map/stage selection must be touch-friendly;
-- stage board uses the same pointer/touch/keyboard interaction primitives as the main board;
-- Prestige confirmation cannot be accidentally triggered by a global shortcut;
-- Campaign sheets/dialogs must preserve visible keyboard focus and Escape/back behavior where applicable;
-- all coarse-pointer production controls stay at least 44×44 CSS px where practical.
+- map/Location selection is touch-friendly;
+- Campaign board uses the same pointer/touch/keyboard interaction principles as the main board;
+- modal/sheet flows preserve visible keyboard focus and usable back/Escape behavior;
+- coarse-pointer production controls stay at least 44×44 CSS px where practical;
+- future Prestige confirmation cannot be accidentally triggered by an unrelated global shortcut.
 
 ## Ads / progression safety
-Rewarded ads remain optional acceleration. Campaign stage completion, boss unlocks, Collection Rewards and Prestige must never require an ad callback to progress.
+Rewarded ads remain optional acceleration.
 
-If future Campaign rewards offer an optional rewarded multiplier, the base earned reward must commit correctly without the ad and must never double-claim on close/error/reload.
+Campaign phase completion, World Raid unlocks, Collection Rewards and Prestige must never require an ad callback to make earned progress valid.
+
+If future Campaign rewards use optional rewarded multipliers:
+- base earned progress/reward must commit without the ad;
+- ad close/error/reload must not double-claim;
+- ad state must not become a second gameplay save system.
+
+## Validation expectations
+Any platform/localization change should preserve:
+- EN/RU key parity;
+- save-v6 compatibility;
+- local/Yandex adapter boundaries;
+- touch/mouse behavior;
+- package integrity;
+- browser runtime smoke where relevant.
+
+Documentation does not substitute for running those checks.
