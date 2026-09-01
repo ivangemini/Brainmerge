@@ -1,234 +1,268 @@
 # Brainmerge Repository Audit — 2026-09-01
 
-## Purpose
-This audit separates three different things that had started to be treated as one project state:
+## Executive status
+The audit found that the repository had stopped representing one coherent product state. There are three independent lines that must not be conflated:
 
-1. **published `main`** — the version currently present on GitHub and packaged by CI;
-2. **unmerged GitHub work** — especially PR #5 / `campaign-world1-data-driven-v1`;
-3. **the newer product state described by the owner** — including Collection and Brain Lab moved to the top-level UI and rewarded-ad boost work that is not present in published `main`.
+1. **published `main`** — internally consistent, packaged and tested, but stale relative to the owner-approved UI;
+2. **open Campaign PR #5 / `campaign-world1-data-driven-v1`** — useful later World 1 generalization that is not merged;
+3. **the newer local product state** — Collection and Brain Lab moved to top-level UI and additional rewarded-ad boost work described by the owner, but not present in any GitHub branch inspected.
 
-Until the newer local state is recovered and pushed to a dedicated branch, **do not treat `main` as the latest product design** and do not rewrite the newer UI to satisfy tests that encode the old layout.
+The GitHub-side recovery/hardening work is isolated on draft PR #6 / `hardening/repository-recovery-2026-09-01`. It fixes defects that are independent of the missing newer UI and must remain separate from `main` until the real local product state is recovered.
 
-## Published baseline
-Published `main` before this audit branch is:
+## Verified hardening follow-up — PR #6
+Current hardening head validated by GitHub Actions:
+
+`129a12103292bcfd99ef12138afd7553f77ac7c9`
+
+Workflow `Brainmerge CI` run 381 completed successfully for that head.
+
+Verified fixes/gates on the recovery line:
+- valid T8→T9 through T17→T18 pointer merges no longer receive historical max-tier reject FX; terminal state is derived from `MAX_RUNTIME_TIER`;
+- packaged Chromium regression performs a real T8→T9 pointer merge and asserts that no reject FX is emitted;
+- packaged Chromium regression clicks Mission Claim and verifies exact reward delta, one mission advance and no duplicate reward;
+- Yandex rewarded/fullscreen ads have a bounded 30-second watchdog so a lost SDK close/error callback cannot leave the caller waiting forever;
+- a confirmed `onRewarded` event remains valid if the later close callback is the callback that is lost;
+- asynchronous GameplayAPI rejection clears the cached lifecycle state and permits a later retry;
+- Local and Yandex use the same canonical safe key `brainmerge.save.v2`;
+- Local reads legacy `brainmerge.save.v1` when needed and dual-writes v2/v1 during the recovery migration window;
+- Local save migration has dedicated unit coverage;
+- committed generated `build/` must match a fresh TypeScript compile in CI;
+- packaged release audit scans CSS as well as HTML/JS/JSON;
+- the new recovery regression browser smoke is part of CI.
+
+These fixes do **not** make published `main` the current product design. PR #6 intentionally leaves the obsolete right-rail composition untouched so it does not invent or overwrite the missing newer local UI.
+
+## Published baseline audited
+Published `main` before recovery work:
 
 `9c2dadbf9be01d424a7ba41447a4a14206524f57`
 
-The last gameplay source baseline on that line is effectively the completed Sneaker Garden slice from `429b2b1`; later `main` commits publish generated `build/` output and synchronize documentation.
+That baseline passed its configured Node/package/Chromium/Yandex/Campaign gates. Green CI proves internal consistency of that baseline, not product freshness.
 
-GitHub Actions for that published baseline was green:
-- 96/96 Node tests;
-- local/Yandex packaging;
-- runtime Chromium smoke;
-- Campaign shell smoke;
-- Sneaker Garden Restore/Mastery smoke;
-- RC/accessibility smoke;
-- motion smoke;
-- RU locale smoke;
-- Yandex adapter smoke.
+## P0 — repository/product state split
 
-**Important:** green CI does not prove this is the intended current game. Several tests explicitly require the obsolete right-rail/mobile-sheet composition and therefore protect the wrong product state.
-
-## P0 — repository state is split
-
-### 1. `main` still contains the old right rail
-`src/ui/game-view.ts` renders:
-- Missions at the left;
+### 1. Published main still contains the obsolete right rail
+`src/ui/game-view.ts` on published `main` renders:
+- Missions on the left;
 - Merge Board in the center;
 - Collection and Brain Lab inside `.right-rail`.
 
-The packaged CI screenshots confirm that composition.
+The owner-approved newer composition moved Collection and Brain Lab to top-level UI. No GitHub branch inspected contains that newer composition.
 
-The owner-approved newer composition has Collection and Brain Lab moved to top-level UI rather than permanently occupying the right side. That newer composition is not in published `main`.
+**Conclusion:** do not rebuild the product from `main` screenshots or old layout tests.
 
-### 2. Tests encode the obsolete layout
-Current tests assert that:
-- desktop retains Collection and Brain Lab cards;
-- compact layout puts the right-rail cards in a row;
-- phone exposes Missions / Collection / Brain Lab through a three-button bottom dock;
-- `.right-rail` remains part of responsive composition.
+### 2. Tests encode the old composition
+Existing tests in the published line explicitly expect:
+- desktop Collection/Brain Lab cards in the right rail;
+- compact right-rail cards in a row;
+- phone Missions / Collection / Brain Lab through the old three-button mobile dock/sheet model;
+- `.right-rail` to remain part of responsive composition.
 
-Those assertions must be replaced with tests for the recovered current design. Otherwise an implementation agent can make CI green by restoring UI that the product owner already removed.
+An implementation agent can therefore regress the intended UI while making CI greener.
 
-### 3. Rewarded boost feature is missing from `main`
-Published `main` contains rewarded Brain Box support but no complete rewarded-boost system/card:
-- no canonical boost state/expiry fields;
-- no x2 timed income/click boost transaction;
-- no separate boost presentation with remaining time.
+**Required after local recovery:** replace those assertions with tests for the actual top-level Collection/Brain Lab contract and approved mobile composition.
 
-If that work exists locally, it must be recovered rather than reimplemented from memory.
+### 3. Timed rewarded boosts are absent from GitHub
+Published `main` contains rewarded Brain Box support only. The owner-described timed boost/card system is not present in canonical source/save state or any inspected GitHub branch.
+
+Missing GitHub-side pieces include:
+- canonical boost expiry state;
+- x2 timed income/click transaction;
+- dedicated boost presentation states;
+- remaining-time UI.
+
+If that implementation exists on the Mac, recover it before re-specifying it.
 
 ### 4. Significant Campaign work is stranded in PR #5
-PR #5, `campaign-world1-data-driven-v1`, is open and diverged from `main`.
-It:
-- generalizes World 1 Campaign runs;
-- adds data-driven Location configs;
-- adds sequential Location unlocks;
-- includes Toilet Pond work;
-- replaces the old monolithic `campaign-run.ts` entry with a World 1 implementation module;
-- has passing CI at its head.
+Open PR #5 / `campaign-world1-data-driven-v1` contains:
+- data-driven World 1 Location run configuration;
+- sequential Location unlock after the previous Restore milestone;
+- location-specific Overgrowth pressure;
+- location-specific order tier ranges;
+- Toilet Pond persistence/isolation coverage;
+- generalized World 1 run presentation work.
 
-Do not discard or blindly merge it. Rebase/reconcile it after the actual current product branch is recovered.
+The PR changes `src/core/campaign-run.ts` into a compatibility barrel over `world1-campaign-run.ts` and adds generalized World 1 runtime UI/lock helpers.
 
-## P1 — architecture risks that cause intermittent UI regressions
+**Rule:** preserve it, but do not blindly merge it into stale `main`. Reconcile it onto the recovered current product branch together with verified PR #6 hardening.
 
-### 5. The entire app DOM is rebuilt during normal state updates
-`GameView.render()` replaces `#app.innerHTML` and then rebinds interactions.
-`main.ts` calls render on passive-income updates, gameplay actions, lifecycle changes and locale changes.
+## Architecture measurements from the exact packaged runtime
+A CI-built Yandex artifact from the hardening line was downloaded and inspected directly.
+
+Package inventory:
+- 76 runtime files;
+- 22 CSS stylesheets loaded by `index.html`;
+- 636 `!important` declarations;
+- 7 MutationObserver references;
+- 11 direct `.innerHTML =` assignments.
+
+Largest runtime code modules:
+- `build/core/campaign-run.js` — ~24.9 KB / 569 lines;
+- `public/campaign-map.js` — ~22.0 KB / 474 lines;
+- `build/ui/game-view.js` — ~21.0 KB / 321 lines;
+- `build/core/game.js` — ~21.0 KB / 530 lines;
+- `build/main.js` — ~18.7 KB / 462 lines;
+- `public/campaign-run-ui.js` — ~17.8 KB / 447 lines;
+- `build/feedback/visual-effects.js` — ~14.5 KB / 314 lines.
+
+Cross-file CSS ownership:
+- `.cell` — 11 CSS files / 144 selector occurrences;
+- `.game-shell` — 8 files;
+- `.board-header` — 8 files;
+- `.side-card--mission` — 9 files;
+- `.side-card--collection` — 8 files;
+- `.side-card--lab` — 6 files;
+- `.right-rail` — 4 files.
+
+Largest `!important` contributors include `code-ui.css`, `ui-icon-pass.css`, `mobile-runtime.css`, `standalone-character-art.css`, `game-feel-advanced.css` and `chain-polish.css`.
+
+**Conclusion:** files should be split and CSS consolidated, but by ownership boundaries rather than arbitrary line count.
+
+## P1 — rendering/lifecycle risks
+
+### 5. The primary view destroys the full app tree
+`GameView.render()` replaces `#app.innerHTML` and rebinds controls. `main.ts` invokes rendering for normal gameplay and for passive-income presentation updates.
 
 Consequences:
-- focused controls are destroyed and recreated;
-- pointer capture/drag can be interrupted by a timed render;
-- sheet scroll/focus state can reset;
-- external DOM enhancers must rediscover/redecorate nodes;
-- a click can race with an unrelated render.
+- focus/DOM identity can be lost;
+- pointer capture and drag can race a timed render;
+- panel/sheet scroll state can reset;
+- external DOM enhancers must rediscover nodes;
+- unrelated state updates can disturb active UI controls.
 
-This architecture is especially risky for Mission Claim, modal/sheet controls and future timed rewarded boosts.
+This architecture becomes increasingly risky for Missions, modals, Campaign, top-level Collection/Brain Lab and timed rewarded boosts.
 
-**Target:** stable feature roots and incremental rendering. Passive income should update HUD/economy presentation without recreating the board and all panels.
+**Target:** mount stable feature roots once and update only changed state/classes/text/subtrees. Passive income must not recreate the board and all panels.
 
-### 6. Multiple MutationObservers compensate for destructive rendering
-The packaged runtime contains several global DOM observers across:
-- visual effects;
-- mobile sheets;
-- Campaign map;
-- Campaign run UI.
+### 6. MutationObservers are acting as lifecycle glue
+Campaign map, Campaign run UI, mobile sheets and visual FX use global observers partly because the main view continually recreates DOM.
 
-Observers are useful for isolated integration, but here they are acting as lifecycle glue because the main view continually destroys DOM. Replace this with explicit mount/update/unmount boundaries.
+Observers are valid for genuinely external changes, but they should not be the ordinary component mount/update mechanism.
 
 ### 7. CSS ownership is fragmented
-The packaged runtime loads more than twenty CSS files after `src/styles.css`.
-The same structural selectors are owned by many layers, for example:
-- `.cell`;
-- `.game-shell`;
-- `.board-header`;
-- `.side-card--mission`;
-- `.side-card--collection`;
-- `.side-card--lab`;
-- `.right-rail`.
+Twenty-two CSS files form an override stack, and later layers frequently rely on `!important` to win against earlier assumptions.
 
-The package contains hundreds of `!important` declarations. Later files frequently exist to override assumptions from earlier files.
+This makes layout migration fragile: Collection can be moved in one layer while old mobile/runtime/economy CSS still repositions a legacy node.
 
-This makes a layout move — such as moving Collection/Brain Lab upward — easy to partially implement while old responsive/presentation rules continue to reposition or restyle the legacy nodes.
+**Target:** one structural owner per feature plus one responsive composition owner. Motion/art layers must not silently own position/order/visibility.
 
-**Target:** one structural owner per component, with tokens/base/layout/feature/responsive/accessibility layers and minimal `!important`.
+### 8. Legacy atlas rules remain under the current atlas
+Older first-eight / 4×2 character routing remains in CSS while later `standalone-character-art.css` establishes the production 6×3 T1–T18 atlas using higher specificity/`!important`.
 
-### 8. Legacy character-atlas rules remain under the current atlas layer
-Older CSS still contains first-eight / 4×2-era routing and family overrides, while `standalone-character-art.css` later overrides those rules for the production 6×3 T1–T18 atlas.
+The final output currently works, but this is dead compatibility debt and should be removed after recovered-UI screenshot parity is frozen.
 
-The final output currently works, but the dead routing should be removed so future character/UI changes do not depend on specificity wars.
+## Confirmed gameplay/feedback defect — fixed on PR #6
+### 9. High-tier false reject FX
+Published feedback code treated same-family `sourceTier >= 8` as a max-tier reject even though the actual terminal tier is T18.
 
-### 9. Main Campaign run remains Sneaker-Garden-specific
-Published `main` hardcodes the runnable Campaign Location to World 1 / Sneaker Garden in core/runtime UI. PR #5 starts the correct generalization and should be used as the integration base after repository recovery.
+Result: valid T8→T9 through T17→T18 pointer merges could visually reject while the deterministic core accepted the merge.
 
-### 10. Campaign domain data is duplicated in presentation JS
-`src/core/campaign.ts` owns Campaign definitions while `public/campaign-map.js` repeats world/location identity, keys, coordinates and assets in plain JavaScript.
+PR #6 derives terminal state from `MAX_RUNTIME_TIER` and includes a real browser regression.
 
-Keep visual coordinates/assets in presentation config if needed, but stable domain IDs, unlock semantics and progress contracts should not be redefined independently in two runtimes.
+## Mission Claim audit — transaction now browser-tested
+Core Mission Claim on the published line was already correct:
+- claimability comes from active mission progress;
+- reward is added exactly once;
+- mission cursor advances once;
+- a claimed mission cannot be immediately claimed again through the same state.
 
-### 11. Campaign detail selection is coupled to localized visible text
-Parts of Campaign presentation infer the selected Location by comparing rendered/localized names. Use explicit `data-location-id` / typed identity throughout instead.
+DOM wiring was also present. The gap was test coverage: old browser smoke only checked that the button was enabled.
 
-## Confirmed code bug
+PR #6 now physically clicks Claim Reward and verifies:
+- exact +80 fixture reward;
+- `missionIndex` advances from 0 to 1;
+- next incomplete mission is not claimable;
+- rerender/FX does not duplicate the reward.
 
-### 12. Valid high-tier merges can receive reject FX
-The pointer feedback layer treats a same-family source with `sourceTier >= 8` as a max-tier reject. The actual terminal tier is T18.
+The previously suspected `translateX(-50%)` is not inherently a bug in published `main`: that button is intentionally centered from `left:50%`. Any real-device failure in the newer UI must be reproduced against the recovered current CSS stack.
 
-Therefore valid T8→T9 through T17→T18 pointer merges can receive a rejection animation even though core gameplay accepts the merge.
+## Platform/persistence audit
 
-Fix the feedback rule to derive terminal status from the catalog (`nextFamilyFor` / `MAX_RUNTIME_TIER`) rather than a historical hard-coded T8 threshold.
+### 10. Safe-storage key split — hardened on PR #6
+Published Local used `brainmerge.save.v1` while Yandex safe storage used `brainmerge.save.v2`.
 
-Add a browser regression covering a valid T8+ pointer merge.
+PR #6 introduces shared key ownership:
+- canonical: `brainmerge.save.v2`;
+- Local fallback reads legacy v1;
+- Local dual-writes v2/v1 during migration;
+- Yandex consumes the shared canonical constant.
 
-## Platform / persistence findings
+This removes the immediate fallback-to-unrelated-slot risk while preserving old local progress.
 
-### 13. Local and Yandex safe-storage keys differ
-Local adapter uses `brainmerge.save.v1`; Yandex safe storage uses `brainmerge.save.v2`.
+### 11. Cloud/local freshness arbitration — still unresolved
+Yandex still prefers any cloud object over local safe storage. A newer safe-local snapshot may therefore lose to older cloud state after a failed/delayed cloud write.
 
-If Yandex initialization fails and boot falls back to the Local adapter, the player may read/write a different local slot from the normal Yandex safe copy.
+**Target after local recovery:** add validated snapshot freshness metadata, preferably monotonic `revision` plus diagnostic `updatedAt`; sanitize both candidates; select the newest valid one; reconcile both stores.
 
-**Target:** one canonical local-safe save key/version namespace behind the adapter boundary, with explicit migration from old keys.
+Do not trust arbitrary unsanitized client timestamps as the sole conflict signal.
 
-### 14. Cloud/local conflict resolution is not freshness-aware
-Yandex load prefers any cloud object over local safe storage. A newer local save can therefore lose to an older cloud snapshot after a failed/deferred write.
+### 12. Lost ad callback — hardened on PR #6
+Published ad promises depended entirely on SDK callbacks and could leave `adBusy`/gameplay waiting indefinitely.
 
-Add a canonical save revision or `updatedAt`/monotonic sequence and choose the newest valid snapshot. Never resolve by storage location alone.
+PR #6 adds a bounded watchdog and tests normal close/error, no callbacks and confirmed reward followed by lost close.
 
-### 15. Ad callbacks have no watchdog timeout
-Rewarded/interstitial promises resolve only when the SDK invokes close/error callbacks. If the platform never calls back, `adBusy` can remain stuck indefinitely.
+### 13. Async GameplayAPI rejection — hardened on PR #6
+Published lifecycle code recovered from synchronous throws only. A rejected promise could leave cached lifecycle state incorrect and emit an unhandled rejection.
 
-Add a bounded watchdog that safely returns unavailable/no-reward and restores gameplay state without granting a reward.
+PR #6 catches asynchronous rejection, clears the matching cached state and allows a later lifecycle signal to retry.
 
-### 16. Local development cannot visually exercise rewarded surfaces
-`LocalPlatformAdapter.rewardedAds` is false, so rewarded controls gated directly by capability disappear.
+### 14. Controller-level rewarded cleanup should still use `try/finally`
+`main.ts` currently performs `adBusy = true` → await platform ad → `adBusy = false` without a generic `try/finally` boundary.
 
-Keep production reward grants capability-gated, but provide an explicit dev/fixture presentation mode for visual/browser testing of rewarded cards and timers.
+The hardened Yandex adapter contains its own error/watchdog containment, but future adapters should not be able to strand application-level busy state. Move this guarantee into the application/platform controller during the architecture split.
 
-## Mission Claim audit
+### 15. Local rewarded UI cannot be visually exercised in production Local mode
+`LocalPlatformAdapter.rewardedAds` is false, which correctly prevents fake production rewards but also hides capability-gated rewarded surfaces during local visual QA.
 
-### Core state
-The current published core implementation is correct:
-- claimability is derived from the active mission and cumulative signal;
-- claim adds exactly the configured reward;
-- mission index advances once;
-- an already-claimed mission cannot be claimed again through the same state.
+Add a clearly separated fixture/dev presentation mode after the current rewarded UI is recovered.
 
-### DOM wiring
-Published `GameView` binds `[data-action="claim-mission"]` to `claimMission()`.
-The CI reward-state screenshot shows a visible enabled `Claim reward` button.
+## Campaign audit
 
-### Missing regression
-The packaged runtime smoke only checks that the button is enabled. It does **not** click it and verify:
-- exact coin delta;
-- `missionIndex + 1`;
-- next mission rendered;
-- no duplicate reward;
-- behavior inside the recovered current top/sheet/modal composition.
+### 16. Published runnable Campaign remains Sneaker-Garden-specific
+The typed Campaign model defines Worlds 1–2 and seven Locations per world, but the runnable published engine/UI targets only World 1 / Sneaker Garden.
 
-Add this as a real browser test.
+PR #5 is the correct starting point for World 1 data-driving, subject to reconciliation.
 
-### Correction to a previous diagnosis
-The `translateX(-50%)` used by the current published Mission button is not inherently wrong: `code-ui.css` intentionally positions that button with `left:50%`. Do not “fix” that transform in isolation. The reported real-device failure must be reproduced against the recovered newer UI and its complete CSS stack.
+### 17. Domain data is duplicated in presentation JavaScript
+`src/core/campaign.ts` owns typed world/location definitions while `public/campaign-map.js` repeats stable IDs, copy keys, asset paths and map coordinates.
 
-## Test-system audit
+Coordinates/art may remain presentation-owned, but stable domain IDs/progression semantics should originate from one typed definition/snapshot.
 
-### What is strong
-- deterministic core tests are broad;
-- packaging integrity checks assets/imports;
-- Yandex lifecycle/reward callbacks are unit-tested;
-- browser smoke covers multiple viewport classes;
-- reduced-motion and touch-target gates exist;
-- Campaign persistence/isolation has meaningful coverage.
+### 18. Published Campaign run detail has localized-text identity coupling
+`public/campaign-run-ui.js` contains fallback selection logic that compares the rendered detail title to localized `w1Location1Name`.
 
-### What must change
-1. Remove obsolete layout assertions.
-2. Add product-contract tests for the recovered top navigation/panels.
-3. Add Mission Claim click-through regression.
-4. Add rewarded-boost activation/expiry/reload tests.
-5. Add valid T8–T17 pointer merge regression.
-6. Add cloud-vs-local freshness tests.
-7. Add rewarded-ad no-callback watchdog test.
-8. Add a generated-build parity gate if `build/` remains committed.
-9. Add screenshot assertions/checkpoints for the intended desktop/mobile composition.
+Stable application identity must use `data-location-id` / typed IDs, never visible translated text.
 
-## `build/` policy
-`src/` is authoritative. `build/` is generated.
+### 19. Campaign progress sanitization does not fully canonicalize phase ordering
+Individual phase values are clamped, but malformed/tampered progress can contain later-phase progress while an earlier phase is incomplete. Normal transactional APIs enforce progression order, but the canonical sanitizer should eventually decide whether to normalize or reject impossible phase combinations.
 
-Committing generated JS while implementation agents also edit TypeScript creates two visible representations of the same logic and encourages accidental edits to the wrong one.
+Do this deliberately with migration tests; do not silently rewrite current saves during unrelated recovery work.
 
-Preferred option: stop committing `build/` and always build in local serve/package/CI.
+### 20. Published core does not enforce sequential Location unlock globally
+The published phase-advance API validates world unlock and phase order but not previous-Location completion. Because published runnable UI only exposes Sneaker Garden, current user-facing impact is bounded. PR #5 adds sequential World 1 run unlock logic and should inform the final rule.
 
-If repository publication requires committed `build/`, add a CI gate:
-1. clean build;
-2. `git diff --exit-code -- build/`;
-3. fail if generated output differs from the committed snapshot.
+## Additional lower-priority findings
+- Campaign dialogs use `role="dialog"`/`aria-modal` and initial focus/escape handling, but a complete focus trap/background-inert contract is not obvious; verify after UI recovery.
+- Campaign locale refresh can recreate the open overlay, potentially losing nested detail/focus state.
+- `AudioFeedback` appends its toggle to `<body>` while one press-FX listener is rooted at `#app`, so the audio control does not necessarily receive the same press class as in-app controls.
+- locale loading caches completed dictionaries but not an explicit in-flight promise; duplicate concurrent fetches are possible in edge cases.
+- dynamic Yandex SDK loading has no explicit script-load watchdog in the factory path; evaluate whether the portal loader contract makes this necessary.
 
-Never hand-edit `build/`.
+## Generated build policy — enforced on PR #6
+`src/` is authoritative and `build/` is generated.
 
-## Recommended module split
-Do not split files only by line count. Split by ownership and state boundaries.
+While generated JS remains committed, CI now runs a TypeScript build and then:
 
-### Deterministic core
+```bash
+git diff --exit-code -- build/
+```
+
+Any source/output drift fails CI. Long term, remove committed `build/` if publication requirements allow it.
+
+## Target module split
+Split by responsibility, preserving compatibility exports during migration.
+
+### Deterministic game core
 ```text
 src/core/game/
   state.ts
@@ -238,10 +272,17 @@ src/core/game/
   missions.ts
   upgrades.ts
   hints.ts
+  catalog.ts
+```
 
+Suggested extraction order: save → missions → economy → upgrades → merge → hints.
+
+### Campaign core
+```text
 src/core/campaign/
   definitions.ts
   progress.ts
+  save.ts
   run-state.ts
   run-board.ts
   run-orders.ts
@@ -257,7 +298,10 @@ src/app/
   lifecycle.ts
   persistence.ts
   platform-controller.ts
+  event-types.ts
 ```
+
+Suggested extraction order: lifecycle/persistence → platform/rewarded → Campaign bridge → game transitions → FX orchestration.
 
 ### Feature UI
 ```text
@@ -270,7 +314,7 @@ src/features/campaign/
 src/features/prestige/
 ```
 
-Each feature should expose an explicit mount/update API. Avoid global DOM discovery as the primary integration contract.
+Each feature should mount a stable root and expose explicit update behavior.
 
 ### CSS
 ```text
@@ -290,46 +334,34 @@ src/styles/
   accessibility.css
 ```
 
-One file/layer owns structural layout for a feature. Presentation layers must not silently re-own position/order/visibility.
+Migrate one feature at a time against frozen screenshots. Track `!important` count as a decreasing architecture metric; an unexplained increase is a regression signal.
 
-## Recovery procedure — mandatory before major implementation
-Do **not** force-push or overwrite `main` yet.
+## Test-system changes required after current UI recovery
+Keep the strong deterministic/package checks, then replace stale layout contracts and add current-product coverage:
+1. top-level Collection/Brain Lab desktop composition;
+2. approved mobile composition without restoring old right rail/dock semantics;
+3. recovered timed rewarded-boost activation/reload/expiry using absolute expiry time;
+4. local-vs-cloud freshness conflict matrix;
+5. Campaign generalized Location launch/persistence after integrating PR #5;
+6. Campaign identity based on stable IDs;
+7. keyboard/touch/focus behavior in the recovered UI;
+8. screenshot checkpoints for intended desktop/mobile states.
 
-On the machine that contains the visually current game:
+PR #6 already covers Mission Claim transaction, valid high-tier pointer merge, ad watchdog, async GameplayAPI retry, save-key migration and build parity.
 
-```bash
-git status --short
-git branch -vv
-git worktree list
-git log --graph --decorate --oneline --all -40
-git remote -v
-```
+## Mandatory reconciliation sequence
+1. Keep PR #6 draft and green; do not merge it into stale `main`.
+2. Recover the exact visually current Mac working state to a dedicated GitHub branch without resetting it from `main`.
+3. Compare recovered state vs `main` vs PR #5 vs PR #6.
+4. Create reconciliation branch **from the recovered product state**.
+5. Replace obsolete right-rail/mobile-dock tests with the actual product contract.
+6. Integrate verified, UI-independent PR #6 hardening.
+7. Selectively integrate PR #5 data-driven Campaign work.
+8. Freeze screenshot baselines for the approved current UI.
+9. Perform ownership-based TS/CSS refactor incrementally with behavior-preserving gates.
+10. Merge to `main` only when GitHub represents the actual current game exactly.
 
-Then create a recovery branch from exactly that working state:
+## Hard boundary of this audit
+The GitHub repository, all inspected branches/PRs and exact CI artifacts have been audited. Files that exist only on the user's Mac and have never been pushed are not remotely accessible and cannot be reconstructed faithfully from GitHub history.
 
-```bash
-git switch -c recovery/local-current-2026-09-01
-git add -A
-git commit -m "chore: recover current local Brainmerge state"
-git push -u origin recovery/local-current-2026-09-01
-```
-
-Before committing, inspect secrets/build/cache files and do not add accidental generated/temp content.
-
-After that, compare:
-- published `main`;
-- `recovery/local-current-2026-09-01`;
-- `campaign-world1-data-driven-v1` / PR #5.
-
-Create a reconciliation branch from the recovered current product state. Selectively integrate the useful PR #5 Campaign refactor, then update source tests and screenshots to the intended UI contract.
-
-Only merge to `main` after:
-- Collection and Brain Lab are in the approved top-level composition;
-- no stale right rail remains unless explicitly required for another feature;
-- rewarded boost UI/state is recovered or deliberately rebuilt;
-- Mission Claim is click-tested in Chromium/mobile layout;
-- full tests/package/smoke pass;
-- screenshots match the approved current design.
-
-## Audit status
-This audit validates the GitHub repository and the exact CI package produced from published `main`. It cannot validate local files that have never been pushed. Recovering that local state is the next P0 action.
+That local state is the only remaining P0 source needed before the actual product UI can be reconciled. Until then, recovery work must preserve rather than overwrite the published branch.
