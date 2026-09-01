@@ -15,6 +15,7 @@
     "smoke:campaign:final": "node scripts/campaign-restore-mastery-smoke.mjs",
     "smoke:rc": "node scripts/rc-smoke.mjs",
     "smoke:motion": "node scripts/motion-smoke.mjs",
+    "smoke:regression": "node scripts/regression-smoke.mjs",
     "smoke:locale": "node scripts/locale-runtime-smoke.mjs",
     "smoke:yandex": "node scripts/yandex-browser-smoke.mjs",
     "serve": "npm run build && python3 -m http.server 4173"

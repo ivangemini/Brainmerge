@@ -1,232 +1,211 @@
-# Brainmerge — Production Roadmap
+# Brainmerge Roadmap — Recovery First
 
-## Product goal
-Brainmerge is a browser/mobile merge-idle game with one T1→T18 chain and a board-first mobile runtime. Long-term play is organized around restoring the Brainverse through persistent Campaign Locations, Landmarks and multi-session World Raids, with Collection Rewards and Prestige providing permanent account growth.
+## Current phase
+Brainmerge is temporarily in **P0 repository recovery / architecture stabilization**.
 
-The previous `8 short stages per world / 64 one-shot stages / 3 stars` Campaign model is retired.
+Do not continue normal feature expansion until the actual owner-approved current local build is recovered into GitHub and reconciled with existing branches.
 
-## Current repository baseline — 2026-09-01
-Published game-build baseline before this documentation refresh: `d5a2b291b59a781c28bff4fb642ab89488693348` (`chore: publish current game build`).
+## P0.0 — Recover the real current product state
+### Goal
+Establish one canonical branch containing the game the owner is actually using now.
 
-That publication commit did **not** introduce new `src/` gameplay logic relative to `429b2b1`; it synchronized repository/runtime infrastructure by adding the compiled `build/`, `package-lock.json`, `.gitignore`, and making `npm run serve` rebuild before serving.
+### Required actions
+- inspect local `git status`, branches and worktrees;
+- create `recovery/local-current-2026-09-01` from the exact current working state;
+- commit all intended source/assets/docs, excluding secrets/cache/temp output;
+- push the recovery branch without force-pushing `main`;
+- compare recovery vs published `main` vs PR #5.
 
-Current source baseline already contains save v6 and the complete four-phase Sneaker Garden vertical slice.
+### Acceptance
+- GitHub contains the current UI where Collection and Brain Lab are top-level systems rather than permanent right-side cards;
+- any existing rewarded-ad boost work is present or explicitly confirmed absent;
+- no local intended changes remain stranded in another worktree;
+- screenshots from the recovery branch match the game the owner expects.
 
-## Current production baseline — implemented
-- [x] 6×5 touch/mouse/keyboard merge board.
-- [x] One canonical T1→T18 character chain; T18 is terminal for the current run.
-- [x] Passive production, escalating paid Brain Box and optional rewarded Brain Box.
-- [x] Brain Lab: Base Drop Tier, Lucky Drop, Brain Income, Offline Storage.
-- [x] Merge-first discovery and persistent Collection.
-- [x] First-cycle missions, offline reward, `Next move`, deadlock Rescue.
-- [x] Canonical save migration through **v6** with local/Yandex persistence.
-- [x] EN/RU production locale parity architecture.
-- [x] Unified physical 6×3 `character-atlas.webp` for T1-T18.
-- [x] Board-first mobile layout with Missions / Collection / Brain Lab modal sheets.
-- [x] Production Missions / Collection / Rewards / Brain Lab icon set.
-- [x] Browser/runtime/package/Yandex QA infrastructure.
-- [x] Generated `build/` published in repository; TypeScript source remains authoritative.
+## P0.1 — Reconcile branch history
+### Inputs
+- published `main` (`9c2dad...` pre-audit baseline);
+- recovered local-current branch;
+- PR #5 / `campaign-world1-data-driven-v1`.
 
-## Brainverse Campaign north star
-Target complete Campaign:
-- [ ] 8 worlds completed.
-- [ ] 7 persistent Locations per world.
-- [ ] 1 persistent World Raid per world.
-- [ ] 56 Locations + 8 World Raids total.
-- [x] Standard Location contract: Stabilize → Deliver Orders → Restore Landmark → Mastery.
-- [x] World Progress derived from Location restoration.
-- [x] Initial Raid gate: ≥80% World Restored + ≥5 restored Landmarks.
-- [ ] Persistent 3-phase World Raid gameplay.
-- [ ] Campaign progress proven to survive the actual Prestige transaction.
-- [ ] Meaningful board modifier implemented for every production world.
+### Goal
+Create one reconciliation branch from the recovered current product state.
 
-Detailed contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
+### Rules
+- do not reset the recovered UI back to old `main` merely to satisfy tests;
+- selectively integrate useful data-driven Campaign work from PR #5;
+- do not reimplement PR #5 from memory;
+- keep save compatibility deliberate;
+- generated `build/` never decides source behavior.
 
-## Campaign foundation — implemented
-- [x] Prominent Campaign entry outside the mobile three-item dock.
-- [x] Responsive full-screen Campaign map.
-- [x] World 1 / World 2 definitions and art.
-- [x] Connected route with seven Location nodes + one Raid node.
-- [x] World Restored / Landmark count / Raid gate summary.
-- [x] Four-phase Location overview.
-- [x] Three-phase Raid overview shell.
-- [x] EN/RU Campaign resources.
-- [x] Core Campaign domain in `src/core/campaign.ts`.
-- [x] Canonical save-v6 Campaign state drives presentation snapshots.
-- [x] Isolated resumable `CampaignRunState` in canonical save v6.
-- [x] Campaign/main-board isolation.
-- [x] Lifetime-discovery caps for Campaign orders/supply.
-- [x] Sneaker Garden playable through all four phases.
+## P0.2 — Replace stale UI contracts/tests
+Remove tests that require the obsolete permanent right rail or obsolete three-button mobile dock if those are not part of the recovered design.
 
-## Save v6 permanent-meta foundation — implemented
-- [x] Per-world unlock/clear state.
-- [x] Per-Location Stabilize progress.
-- [x] Per-Location Deliver progress.
-- [x] Per-Location Landmark restoration progress.
-- [x] Per-Location Mastery progress.
-- [x] World Raid progress/clear storage foundation.
-- [x] Collection Reward claim-id storage.
-- [x] Prestige count, Brain Cells and permanent upgrade-level fields.
-- [x] v1-v5 → v6 migration/sanitization.
-- [x] Active CampaignRunState persistence/resume.
+Add browser/product contract coverage for:
+- Collection top-level entry and panel;
+- Brain Lab top-level entry and panel;
+- intended desktop and mobile composition;
+- no stale `.right-rail` layout unless explicitly retained for another feature;
+- focus/scroll preservation during passive state updates.
 
-## World 1 / Location 1 — Sneaker Garden — proven vertical slice
-### Stabilize
-- [x] Six Overgrowth blockers.
-- [x] Four starting T1 Campaign units.
-- [x] Successful merges clear one nearest blocker.
-- [x] Exact-once phase commit.
+## P0.3 — Mission Claim regression
+Published main core/wiring is correct but browser coverage is incomplete.
 
-### Deliver
-- [x] Deterministic 4-order queue, lifetime-discovery capped.
-- [x] Reference max-T4 queue `T2, T2, T3, T4`.
-- [x] Delivery consumes Campaign unit only.
-- [x] Exact-once quarter-progress commits.
+Add a real Chromium transaction test:
+1. create/earn a claimable mission;
+2. open Missions in the recovered current UI;
+3. click Claim Reward;
+4. verify exact coin delta;
+5. verify `missionIndex + 1`;
+6. verify next mission rendering;
+7. verify previous reward cannot be duplicated;
+8. repeat on mobile/touch composition.
 
-### Restore Landmark
-- [x] Six orders in three atomic two-order batches.
-- [x] Reference max-T4 queue `T2, T2, T3, T3, T4, T4`.
-- [x] Giant Sneaker Flower Bed Lv1→Lv3.
-- [x] Landmark Supply perk: 25% base, +5 percentage points per level, 40% at Lv3.
+Do not diagnose/fix isolated CSS transforms without reproducing against the recovered full stylesheet stack.
 
-### Mastery
-- [x] Reference max-T4 queue `T3, T4, T4`.
-- [x] Five non-clearing Overgrowth cells.
-- [x] Final 10% commit to 100% Location restoration.
+## P0.4 — Rewarded-ad boost recovery/implementation
+Rewarded boost functionality described by the owner is absent from published `main`.
 
-### Still missing around the Location engine
-- [ ] Explicit abandon/restart UX with confirmation.
-- [ ] Generalized data-driven Location definitions.
-- [ ] Human pacing/decision-quality tuning across multiple Locations.
+First recover any existing local implementation. If none exists, implement after reconciliation.
 
-## P0 — Generalize World 1 Locations — next implementation target
-Do not clone Sneaker Garden into six bespoke handlers.
+Minimum contract for the timed income boost:
+- rewarded-only activation;
+- x2 passive income and click/clicker income for 15 minutes where click income exists in the recovered game;
+- absolute expiry timestamp in canonical save;
+- remaining-time display;
+- active / available / loading / unavailable states;
+- reload resumes remaining duration rather than resetting;
+- no reward on ad close/error without rewarded callback;
+- watchdog timeout prevents permanent `adBusy` lock;
+- visual dev fixture can render the card without granting fake production rewards;
+- EN/RU parity;
+- never mandatory for base progression.
 
-- [ ] Extract data-driven Location configuration for phase goals.
-- [ ] Data-drive order queues/pressure.
-- [ ] Data-drive Overgrowth layouts/variants.
-- [ ] Data-drive Landmark identity/perk parameters within bounded rules.
-- [ ] Toilet Pond.
-- [ ] Watermelon Grill.
-- [ ] Hose Tunnels.
-- [ ] Gnome Yard.
-- [ ] Mushroom Field.
-- [ ] Backyard Core.
-- [ ] Preserve one shared CampaignRunState engine.
+Other approved ad rewards can be layered after the timer foundation is correct.
 
-## P0 — World 1 persistent Raid
-Foundation exists; playable Raid does not.
+## P0.5 — Fix confirmed technical defects
+- correct high-tier pointer reject FX so only actual terminal/non-mergeable states reject;
+- unify Local/Yandex safe-save key/migration behavior;
+- add cloud/local freshness arbitration;
+- add ad callback watchdog;
+- enforce generated `build/` parity or stop committing generated output;
+- replace localized-text identity lookup with stable data IDs in Campaign UI.
 
-- [ ] Three playable Raid phases.
-- [x] Persistent Raid progress/clear storage foundation.
-- [x] Core Raid gate and World 2 unlock derivation.
-- [ ] Merge/order contributions to Raid progress.
-- [ ] Stronger Overgrowth pressure in later phases.
-- [ ] High-tier final deliveries.
-- [ ] Reload/session persistence gameplay test.
-- [ ] Raid clear → World 2 unlock gameplay test.
+## P1 — Stabilize rendering architecture
+### Goal
+Stop rebuilding the entire application DOM on normal passive ticks.
 
-## P0 — Collection Rewards
-- [ ] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
-- [ ] Rewards section inside Collection; no new mobile dock item.
-- [ ] Permanent bounded reward data.
-- [x] Claim-id persistence field exists in v6.
-- [ ] Transactional no-double-claim behavior/tests.
+### Work
+- introduce stable app shell;
+- split HUD update from board/panel rendering;
+- preserve board DOM/focus/pointer identity;
+- make panels explicit feature components/controllers;
+- reduce MutationObserver lifecycle glue;
+- serialize state transitions through an app controller.
 
-## P0 — Prestige / Brain Reset
-- [ ] Unlock after first T18.
-- [ ] Confirmation clearly shows reset vs preserved state.
-- [ ] Reset run board/economy/Brain Lab/passive run fields only.
-- [ ] Preserve Collection + Campaign + permanent meta.
-- [x] Prestige count / Brain Cell / permanent-upgrade fields exist in v6.
-- [ ] Brain Cell award transaction; first valid reset awards at least one.
-- [ ] Data-driven permanent upgrade tree/spend transactions.
-- [ ] Deterministic reset/preserve/no-double-award coverage.
-- [ ] Prove gameplay-earned Campaign progress survives Prestige.
+### Acceptance
+- a passive income tick does not replace board/panel nodes;
+- dragging cannot be interrupted by unrelated passive re-render;
+- open panel and scroll position survive passive updates;
+- Mission/Brain Lab controls remain stable under repeated ticks.
 
-## P1 — World 2
-- [ ] Traffic Lock board modifier.
-- [ ] Sneaker Transit.
-- [ ] Pigeon Plaza.
-- [ ] Vending Block.
-- [ ] Long-Neck Junction.
-- [ ] Sunglasses Strip.
-- [ ] Appliance District.
-- [ ] City Core.
-- [ ] Persistent three-phase World 2 Raid.
-- [ ] Validate T18 → Prestige → World 1 → World 2 long loop.
+## P1.1 — Split large source modules by ownership
+Do not split merely because a file exceeds a line threshold.
 
-## P2 — Worlds 3–8
-Only after Worlds 1–2 prove duration, decision quality and retention.
+### Main game
+Split `game.ts` into state/save/merge/economy/missions/upgrades/hints.
 
-- [ ] World 3 — Meme Factory.
-- [ ] World 4 — Italian / Mediterranean Chaos.
-- [ ] World 5 — Sky Brainrot.
-- [ ] World 6 — Surreal Brain Lab.
-- [ ] World 7 — Space Brainrot.
-- [ ] World 8 — Brainverse Core / final Raid.
+### Application
+Split `main.ts` into bootstrap/controller/lifecycle/persistence/platform coordination.
 
-Future worlds should add one readable board modifier each. Do not create 56 bespoke gameplay branches.
+### UI
+Split `game-view.ts` into Board, Missions, Collection, Brain Lab, Rewarded and shell/top-actions feature views.
 
-## P2 — Rare / Shiny
-- [ ] Rarity remains orthogonal to T1-T18 tier.
-- [ ] Reuse base atlas + reusable effects instead of 18 duplicate renders.
-- [ ] Separate normal/rare Collection state only if shipped.
-- [ ] Preserve rarity through Prestige/Campaign by explicit contract.
+### Campaign
+Use the PR #5 generalization as input, then split World 1 Campaign run concerns into config/state/board/orders/progression/presentation.
 
-## P2 — Live ops
-- [ ] Re-evaluate Daily Missions / streaks after the long Campaign loop is playable.
-- [ ] Events reuse Location/order/Raid primitives.
-- [ ] Avoid bespoke gameplay/art pipelines per event.
+## P1.2 — CSS consolidation
+Current CSS has overlapping structural ownership and extensive `!important` use.
 
-## Art status
-Approved and repository-ready:
-- Campaign icon;
-- Prestige icon;
-- Brain Cell icon;
-- reusable Location/phase/Raid marker family;
-- World 1 environment + boss;
-- World 2 environment + boss.
+Target one structural owner per concern:
+- tokens/base;
+- shell/top actions;
+- board;
+- missions;
+- collection;
+- brain lab;
+- rewarded;
+- campaign;
+- FX;
+- responsive composition;
+- accessibility.
 
-No new generated art is required to generalize the World 1 Location engine. Use code-owned restoration/phase treatment first; generate Landmark-state overlays only if playtesting demonstrates a real readability/payoff problem.
+Remove dead legacy 4×2/first-eight atlas rules after visual verification of the current 6×3 T1–T18 atlas.
 
-## Automated quality-gate status in repository
-Existing coverage includes:
-- main runtime deterministic tests;
-- save migration/sanitization;
-- Campaign percentage / Landmark count / Raid gate;
-- Campaign/main-board isolation;
-- active run resume;
-- Deliver exact-once behavior;
-- Restore batch atomicity/persistence;
-- Landmark Supply perk;
-- Mastery completion to 100%;
-- browser Campaign/runtime smoke infrastructure;
-- EN/RU parity tooling;
-- package/release/Yandex smoke infrastructure.
+## P2 — World 1 Campaign expansion
+After repository/UI stability is restored:
+1. integrate/generalize World 1 Location engine;
+2. Sneaker Garden remains the reference complete Location;
+3. Toilet Pond;
+4. Watermelon Grill;
+5. Hose Tunnels;
+6. Gnome Yard;
+7. Mushroom Field;
+8. Backyard Core;
+9. persistent three-phase World 1 Raid;
+10. World 1 completion/persistence QA.
 
-Still required:
-- gameplay-earned Raid persistence/world unlock;
-- Collection one-time claims;
-- Prestige reset/preserve/no-double-award;
-- Campaign-survives-Prestige proof;
-- dedicated RU CampaignRun interaction smoke.
+Sequential Location unlock should use permanent prior-Location restoration state. Campaign remains isolated from the main board/economy except explicitly designed permanent meta interactions.
 
-Do not infer a gate passed merely because the script exists; run it for the relevant change.
+## P3 — Collection Rewards and Prestige transactions
+Storage fields exist in published save v6, but actual product transactions remain pending.
 
-## External acceptance gates
-- [ ] Approved Figma acceptance for core UI plus Campaign/Prestige surfaces.
-- [ ] Real Yandex Games Portal/debug-panel run.
-- [ ] Human pacing/retention sign-off: multiple World 1 Locations, World 1 Raid, first Prestige and World 2 entry.
+Implement:
+- Collection milestone claim definitions and exact-once claims;
+- Prestige eligibility;
+- confirmation showing reset vs preserved state;
+- Brain Cell award;
+- reset transaction;
+- permanent Brain Cell spend tree;
+- proof that Campaign progress survives Prestige;
+- save migration only if the schema actually changes.
 
-## Guardrails
-- First lifetime discovery stays merge-first.
-- Campaign orders/supply do not reveal unseen lifetime tiers.
-- T1-T18 remains one readable sequential chain.
-- Coins remain ordinary run currency; Brain Cells remain permanent-meta-only.
-- CampaignRunState remains isolated from the main board.
-- Delivery consumes Campaign-board units only.
-- Permanent Campaign/Collection/meta data survives Prestige by contract.
-- No mandatory ads, energy gates or arbitrary real-time waits.
-- World/Landmark/Raid state is code-owned; generated art does not bake progression UI.
-- Mobile default gameplay remains board-first.
+## P4 — World 2 validation
+After World 1 and meta loop are stable:
+- validate World 2 map/state semantics;
+- Traffic Lock modifier;
+- seven persistent Locations;
+- World 2 Raid;
+- world unlock from World 1 Raid completion.
+
+## P5 — Later worlds / live product systems
+Only after the above loops are proven:
+- Worlds 3–8;
+- rarity/shiny treatment if justified;
+- additional rewarded placements based on retention/economy data;
+- analytics/live-ops surfaces;
+- leaderboards/payments if portal/product requirements justify them.
+
+## Verification gates for every structural merge
+At minimum, relevant work must run:
+- TypeScript build;
+- locale parity;
+- deterministic tests;
+- local/Yandex package integrity;
+- runtime Chromium smoke;
+- RC/accessibility smoke;
+- motion smoke when interaction/FX changed;
+- Campaign smoke when Campaign changed;
+- Yandex smoke when platform/ads/save changed.
+
+For UI architecture changes also require approved desktop + mobile screenshots from CI artifacts.
+
+## Current do-not-do list
+Until recovery/reconciliation completes:
+- do not force-push `main`;
+- do not delete PR #5;
+- do not restore right-rail Collection/Brain Lab to make old tests pass;
+- do not implement new major features on stale `main`;
+- do not hand-edit `build/`;
+- do not add another CSS override layer as a permanent fix;
+- do not claim Mission Claim or rewarded boosts fixed without a real browser transaction test.

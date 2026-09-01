@@ -1,3 +1,4 @@
+import { MAX_RUNTIME_TIER } from '../core/catalog.js';
 function motionAllowed() {
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -215,8 +216,8 @@ function installMoveRejectFx() {
             }, 0);
             return;
         }
-        if (sourceFamily !== targetFamily || sourceTier >= 8) {
-            const maxTierReject = sourceFamily === targetFamily && sourceTier >= 8;
+        if (sourceFamily !== targetFamily || sourceTier >= MAX_RUNTIME_TIER) {
+            const maxTierReject = sourceFamily === targetFamily && sourceTier >= MAX_RUNTIME_TIER;
             window.setTimeout(() => {
                 const rejected = targetIndex === undefined ? null : root.querySelector(`[data-cell="${targetIndex}"]`);
                 transientClass(rejected, maxTierReject ? 'fx-max-reject' : 'fx-reject', 460);

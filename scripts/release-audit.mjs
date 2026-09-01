@@ -32,7 +32,10 @@ const secretPatterns = [
   { label: 'Slack token', pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/ }
 ];
 
-const textExtensions = new Set(['.html', '.js', '.json']);
+// CSS is executable presentation logic in this project and carries a large part of the
+// runtime surface. Scan it alongside HTML/JS/JSON so stale debug/placeholder markers
+// cannot bypass the release audit merely because they live in a stylesheet.
+const textExtensions = new Set(['.html', '.js', '.json', '.css']);
 const files = await walk(distPath);
 const textFiles = files.filter((file) => textExtensions.has(path.extname(file).toLowerCase()));
 

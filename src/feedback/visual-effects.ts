@@ -1,3 +1,5 @@
+import { MAX_RUNTIME_TIER } from '../core/catalog.js';
+
 export interface FxPoint { x: number; y: number }
 
 function motionAllowed(): boolean {
@@ -222,8 +224,8 @@ function installMoveRejectFx(): void {
       return;
     }
 
-    if (sourceFamily !== targetFamily || sourceTier >= 8) {
-      const maxTierReject = sourceFamily === targetFamily && sourceTier >= 8;
+    if (sourceFamily !== targetFamily || sourceTier >= MAX_RUNTIME_TIER) {
+      const maxTierReject = sourceFamily === targetFamily && sourceTier >= MAX_RUNTIME_TIER;
       window.setTimeout(() => {
         const rejected = targetIndex === undefined ? null : root.querySelector<HTMLElement>(`[data-cell="${targetIndex}"]`);
         transientClass(rejected, maxTierReject ? 'fx-max-reject' : 'fx-reject', 460);

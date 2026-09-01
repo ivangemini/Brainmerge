@@ -1,122 +1,116 @@
 # Active Session — Brainmerge
 
 ## Current objective
-Brainmerge is in post-RC retention/meta development. The long-term product objective is **Brainverse world restoration**, not a ladder of short Campaign stages.
+The project is in **repository recovery and architecture stabilization**, not normal feature expansion.
 
-Each Campaign world contains:
-- 7 persistent Locations;
-- 1 persistent multi-phase World Raid;
-- a World Restored percentage;
-- Location Landmarks;
-- four Location phases: Stabilize → Deliver Orders → Restore Landmark → Mastery.
+The published GitHub `main` does not match the owner-approved current product layout. Published `main` still places Collection and Brain Lab in a permanent right rail, while the newer intended product moved those systems to top-level UI. Rewarded-ad boost work described by the owner is also absent from every GitHub branch inspected.
 
-The validated T1→T18 merge-idle board remains the primary account-growth loop.
+Do not implement more product work on top of the stale layout until the actual current local state is recovered.
 
-## Current repository baseline
-Published game-build baseline before the documentation sync:
-`d5a2b291b59a781c28bff4fb642ab89488693348` — `chore: publish current game build`.
+## Published GitHub baseline
+`main` baseline audited:
 
-Documentation was synchronized on top of that published baseline on 2026-09-01. Use current `main` as the active documentation/runtime reference.
+`9c2dadbf9be01d424a7ba41447a4a14206524f57`
 
-The publication commit added the generated `build/`, `package-lock.json`, `.gitignore`, and rebuild-before-serve behavior. It did not change `src/` gameplay relative to `429b2b1`.
+That baseline is internally green but its product-layout assertions are stale.
 
-Authoritative behavior remains in TypeScript `src/`; `build/` is generated ES-module output.
+## Recovery / hardening branch
+Safe GitHub-side hardening is being performed on:
 
-## Current production baseline
-- browser-first TypeScript runtime;
-- 6×5 main merge board;
-- one sequential T1→T18 chain;
-- passive income, Brain Box economy, Brain Lab, missions, offline reward, Collection, Rescue and `Next move`;
-- canonical save v6 with local/Yandex persistence and v1-v5 migration;
-- permanent Campaign Location/Landmark/Raid progress in save v6;
-- resumable isolated `CampaignRunState` in the same canonical save;
-- permanent Collection/Prestige metadata slots in save v6;
-- board-first mobile UI with Missions / Collection / Brain Lab sheets;
-- unified T1-T18 character atlas;
-- EN/RU runtime architecture/parity tooling;
-- browser/motion/accessibility/package/Yandex QA infrastructure.
+`hardening/repository-recovery-2026-09-01`
 
-## Implemented Campaign foundation
-- `src/core/campaign.ts` owns persistent Campaign domain semantics;
-- first two production worlds define seven stable Location ids each;
-- pure Location/World restoration calculations;
-- restored-Landmark counting;
-- Raid gate and next-world unlock derivation;
-- Campaign map reads canonical save-v6 presentation snapshots;
-- World Restored / Landmarks / Raid-gate summary;
-- Location overview with four persistent phases and Landmark;
-- Raid overview shell with three persistent phases;
-- EN/RU Campaign resources;
-- active CampaignRunState persists/resumes through canonical save v6.
+Draft PR:
 
-## First complete Campaign Location — Sneaker Garden
-World 1 / Location 1 is playable end-to-end on one isolated 6×5 Campaign board.
+`#6 — recovery: harden published baseline without restoring stale UI`
 
-### Stabilize — 20%
-- six Overgrowth cells start blocked;
-- four T1 Campaign units provide the initial merge state;
-- free Campaign Supply never spends main-board coins or paid Brain Box inflation;
-- supply tiers are capped by lifetime discovery;
-- each successful merge clears exactly one nearest Overgrowth blocker;
-- six clearing pulses commit Stabilize exactly once.
+Do **not** merge PR #6 into `main` until the visually current local product state has been recovered and reconciled. The PR exists to preserve and CI-test fixes that are independent of the stale right-rail composition.
 
-### Deliver Orders — +25%
-- deterministic four-order queue, reference max-T4: `T2, T2, T3, T4`;
-- delivery consumes only the matching Campaign-board unit;
-- each order commits one quarter of Deliver exactly once;
-- partial order cursor survives exit/reload;
-- completing all four raises Sneaker Garden to 45%.
+## Verified hardening completed on PR #6
+- fixed false max-tier reject FX for valid T8→T9 through T17→T18 pointer merges by deriving terminal status from `MAX_RUNTIME_TIER`;
+- added real Chromium regression coverage for a valid T8→T9 pointer merge with no reject FX;
+- added real Chromium Mission Claim transaction coverage: click, exact reward delta, mission advance, and no duplicate reward;
+- added 30-second Yandex rewarded/interstitial watchdogs so lost SDK close/error callbacks cannot leave gameplay/ad state stuck forever;
+- preserved a confirmed `onRewarded` event if only the later close callback is lost;
+- made GameplayAPI lifecycle state retryable after asynchronous SDK rejection;
+- introduced one canonical safe-storage key (`brainmerge.save.v2`) shared by Local/Yandex, while Local continues reading and dual-writing legacy `brainmerge.save.v1` during the recovery migration window;
+- added local save migration regressions;
+- added a committed `build/` parity gate (`git diff --exit-code -- build/`) after TypeScript compilation;
+- expanded packaged release-audit scanning to CSS as well as HTML/JS/JSON;
+- added `smoke:regression` to packaged CI.
 
-### Restore Landmark — +45%
-- six restoration orders in three atomic two-order batches;
-- reference max-T4: `T2, T2, T3, T3, T4, T4`;
-- batches map to Giant Sneaker Flower Bed Lv1, Lv2 and Lv3;
-- stronger Campaign Supply chance is 25% base + 5 percentage points per level, reaching 40% at Lv3;
-- completing all three levels raises Sneaker Garden to 90%.
+The first PR #6 CI pass completed successfully with build parity, packaging and all browser smokes including the new Mission/T8 regression. Later hardening commits must pass a fresh PR CI run before being treated as verified.
 
-### Mastery — +10%
-- reference max-T4 queue: `T3, T4, T4`;
-- five Overgrowth cells remain blocked and merge pulses do not clear them;
-- Landmark Supply bonus remains active;
-- completion commits the final 10% and reaches 100%.
+## Exact packaged architecture metrics from CI artifact
+The audited packaged runtime contains 76 files.
 
-### Isolation / persistence contract
-- Campaign board never aliases or consumes main-board cells;
-- Campaign actions do not change main-board coins, XP, main merge count or paid Brain Box inflation;
-- active Stabilize/Deliver/Restore/Mastery runs persist in save v6 and resume after reload;
-- completed temporary run state can be acknowledged without erasing permanent Location progress.
+Largest runtime code files include:
+- `build/core/campaign-run.js` — ~24.9 KB / 569 lines;
+- `public/campaign-map.js` — ~22.0 KB / 474 lines;
+- `build/ui/game-view.js` — ~21.0 KB / 321 lines;
+- `build/core/game.js` — ~21.0 KB / 530 lines;
+- `build/main.js` — ~18.7 KB / 462 lines;
+- `public/campaign-run-ui.js` — ~17.8 KB / 447 lines;
+- `build/feedback/visual-effects.js` — ~14.5 KB / 314 lines.
 
-## Meta implementation status
-Storage/foundation exists:
-- Collection Reward claim ids;
-- Prestige count;
-- Brain Cells;
-- permanent Prestige upgrade levels;
-- Campaign progress and active Campaign run.
+CSS debt in the packaged runtime:
+- 636 `!important` declarations;
+- `.cell` is modified by 11 CSS files / 144 selector occurrences;
+- `.side-card--mission` by 9 CSS files;
+- `.side-card--collection` by 8;
+- `.side-card--lab` by 6;
+- `.right-rail` by 4.
 
-Still pending:
-- actual Collection Reward claim transaction/UI;
-- Prestige unlock/reset/reward transaction;
-- Brain Cell spend tree;
-- gameplay proof that Campaign progress survives the implemented Prestige transaction.
+Runtime lifecycle glue:
+- 7 `MutationObserver` references;
+- 11 direct `.innerHTML =` assignments;
+- Campaign map/run and mobile sheets rely on global DOM discovery after the main view recreates nodes.
 
-## Next implementation sequence
-1. Generalize Sneaker Garden into data-driven World 1 Location configs.
-2. Implement Toilet Pond on the shared engine.
-3. Implement Watermelon Grill, Hose Tunnels, Gnome Yard, Mushroom Field and Backyard Core.
-4. Build persistent three-phase World 1 Raid on the same isolated Campaign state boundary.
-5. Implement Collection Rewards + Prestige transactions using the existing save-v6 meta fields.
-6. Implement World 2 Traffic Lock + seven Locations + Raid.
+These metrics confirm that file/ownership refactoring is warranted; line count alone is not the reason.
 
-## Documentation status
-Documentation was synchronized with the current code/runtime state on 2026-09-01. `docs/CHANGELOG.md` records the exact `429b2b1 → d5a2b2` repository delta and explains that the publication commit contains infrastructure/generated-build changes rather than new gameplay source changes.
+## Unmerged Campaign work
+PR #5 / `campaign-world1-data-driven-v1` remains open.
+It contains useful World 1 Campaign generalization, sequential Location unlocking and Toilet Pond work. Preserve it for reconciliation; do not blindly merge or reimplement it.
 
-## Source of truth
-- `docs/ROADMAP.md`
-- `docs/CAMPAIGN_AND_META_PROGRESSION.md`
-- `docs/GAMEPLAY_AND_PROGRESSION.md`
-- `docs/ARCHITECTURE.md`
-- `docs/ART_BIBLE.md`
-- `docs/ASSET_MANIFEST.md`
-- `docs/PLATFORM_AND_LOCALIZATION.md`
-- `docs/CHANGELOG.md`
+## P0 recovery sequence still required
+GitHub contains no branch with the owner-approved newer top-level Collection/Brain Lab UI or the described rewarded-boost implementation. Therefore the unpushed local Mac state cannot be reconstructed from GitHub.
+
+When the machine containing that state is available:
+1. inspect `git status`, branches and worktrees;
+2. commit that exact current state to `recovery/local-current-2026-09-01`;
+3. push only the recovery branch;
+4. compare recovery vs `main` vs PR #5 vs PR #6;
+5. create a reconciliation branch from the recovered product state;
+6. replace obsolete right-rail/mobile-dock tests with the actual top-level product contract;
+7. selectively integrate verified hardening from PR #6 and useful Campaign work from PR #5;
+8. only then resume feature delivery.
+
+## Remaining high-priority technical debt
+- `GameView.render()` still rebuilds the entire `#app` tree on ordinary state changes and passive-income presentation updates;
+- global MutationObservers remain lifecycle glue for Campaign/mobile/FX;
+- CSS structural ownership is fragmented across many override layers;
+- Yandex cloud-vs-safe-local conflict resolution is still location-priority-based rather than revision/freshness-based;
+- generic `main.ts` rewarded flow should eventually guard `adBusy` with `try/finally` even though the Yandex adapter now contains its own watchdog/error containment;
+- Campaign definition/state is duplicated between typed core and presentation JS;
+- Campaign run/detail presentation remains Sneaker-Garden-specific on published main;
+- campaign detail identity must stop depending on localized visible text;
+- obsolete first-eight/4×2 character-atlas rules should be deleted after the current UI is recovered;
+- old layout tests must not be rewritten until the actual current UI source is available.
+
+## Refactor direction
+Split by ownership, not arbitrary line count:
+- deterministic game core: state/save/merge/economy/missions/upgrades/hints;
+- Campaign: definitions/progress/run-state/run-board/orders/world config/presentation;
+- app controllers: bootstrap/game/lifecycle/persistence/platform;
+- feature UI: Board, Missions, Collection, Brain Lab, Rewarded, Campaign, Prestige;
+- CSS: tokens/base/shell/feature/responsive/accessibility with one structural owner per feature.
+
+Avoid full-root `innerHTML` replacement for passive ticks and avoid global MutationObservers as the primary component lifecycle.
+
+## Source-of-truth order during recovery
+1. owner-approved current product behavior/layout;
+2. recovered local branch once pushed;
+3. deterministic core contracts that remain valid;
+4. reconciled documentation/tests;
+5. generated `build/` only as output, never as independent source.
+
+The detailed findings are recorded in `docs/REPOSITORY_AUDIT_2026-09-01.md`.
