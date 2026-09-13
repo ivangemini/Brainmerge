@@ -168,6 +168,13 @@ Normalized-build final gate on `codex/normalized-full-build-20260913`:
 
 The recovery snapshot remains `codex/recovery-full-build-20260913` at `ca39fb2`; historical feature branches remain untouched.
 
+## Forensic source audit — 2026-09-13
+
+- Added `docs/COMPLETE_BRAINMERGE_AUDIT.md` and `docs/COMPLETE_BRAINMERGE_FEATURE_MATRIX.md` after inspecting all refs, reflogs, stashes, worktrees, Codex checkpoint refs, local candidate copies, and `git fsck` unreachable/dangling objects.
+- `git fsck --full --no-reflogs --unreachable` found one source-irrelevant build-only commit, 343 trees and 523 blobs. Fifty-three complete post-RC Brainmerge root trees were compared by source paths; no production behavior exists only outside the normalized HEAD.
+- One invalid, truncated 1.6 MiB `.git/objects/da/tmp_obj_hvf1gd` cannot be decompressed or classified and was left untouched; the audit records this as the only inaccessible potential source.
+- Current HEAD `9536cfc6` is the recommended canonical base. Historical `world1-campaign-run.ts`, split collection/prestige modules, old character assets, and save-v6 forms are recovery references only and must not be mechanically restored.
+
 ## Source of truth
 - `docs/ROADMAP.md`
 - `docs/CAMPAIGN_AND_META_PROGRESSION.md`
