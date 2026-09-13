@@ -55,7 +55,7 @@ function rewardAndUpgradeState() {
 }
 function maxedUpgradeState() {
   const cells = Array(30).fill(null); cells[0] = unit('tung-wood', 8, 0);
-  return baseState({ cells, coins: 250000, merges: 120, spawns: 90, paidBoxes: 60, maxDiscoveredTier: 8, missionIndex: 8, upgrades: { boxBaseTier: 3, luckyDrop: 5, income: 5, offline: 4 } });
+  return baseState({ cells, coins: 250000, merges: 120, spawns: 90, paidBoxes: 60, maxDiscoveredTier: 8, missionIndex: 18, upgrades: { boxBaseTier: 13, luckyDrop: 5, income: 5, offline: 4 } });
 }
 function discoveryState() {
   const cells = Array(30).fill(null); cells[0] = unit('coffee-ballerina', 7, 'a'); cells[1] = unit('coffee-ballerina', 7, 'b');
