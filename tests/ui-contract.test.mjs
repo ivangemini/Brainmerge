@@ -2,6 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
+test('runtime persistence stays disabled until asynchronous boot completes', async () => {
+  const source = await readFile(new URL('../src/main.ts', import.meta.url), 'utf8');
+  assert.match(source, /let bootComplete = false/);
+  assert.match(source, /if \(!bootComplete \|\| document\.hidden\) return/);
+  assert.match(source, /visibilitychange[\s\S]*?if \(!bootComplete\) return/);
+  assert.match(source, /pagehide[\s\S]*?if \(!bootComplete\) return/);
+  assert.ok(source.indexOf('bootComplete = true') > source.indexOf('await platform.gameReady()'));
+});
+
 const [html, upgradeArt, chainPolish, characterAtlasRouting, economyLoop, mobileRuntime, visualFinish, gameView, main] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../public/upgrade-art.css', import.meta.url), 'utf8'),

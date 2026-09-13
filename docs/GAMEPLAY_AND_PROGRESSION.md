@@ -82,24 +82,22 @@ Current run-level Brain Income multiplier:
 `x1.00 -> x1.15 -> x1.32 -> x1.52 -> x1.75 -> x2.00`.
 
 ## Brain Box economy
-Paid Brain Box price:
+Paid Brain Box price is bounded by its current base tier:
 
-`price = ceil(20 × 1.045 ^ paidBoxes)`
+`price = ceil(20 × 2.25 ^ (baseTier - 1))`
 
-Only successful paid purchases increase `paidBoxes`. Rewarded Brain Boxes are free and do not increase paid price.
+Historical purchases do not inflate future prices. Rewarded Brain Boxes remain free.
 
 ## Brain Lab
 Current run-level upgrades use coins and are expected to reset on Prestige.
 
 ### Base Drop Tier
-Raises minimum Box tier from T1 up to T4, discovery-gated.
-
-Costs: `600 / 3000 / 15000`.
+Raises minimum Box tier from T1 up to T14, discovery-gated and four tiers behind current-run progress.
 
 ### Lucky Drop
 Adds a +1 tier roll while capped to lifetime discovered content.
 
-Chance: `0% / 5% / 10% / 16% / 23% / 30%`.
+Chance: `0% / 3% / 6% / 9% / 12% / 15%`.
 Costs: `200 / 500 / 1200 / 3000 / 7500`.
 
 ### Brain Income
@@ -299,7 +297,7 @@ Implemented:
 - automated core/shell tests.
 
 Not yet implemented:
-- save v6 Campaign persistence;
+- save v7 Campaign persistence with v1-v6 migration;
 - real CampaignRunState;
 - playable Stabilize/Deliver/Restore/Mastery flow;
 - actual Landmark perks;

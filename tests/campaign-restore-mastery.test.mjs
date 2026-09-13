@@ -152,7 +152,7 @@ test('Landmark levels provide a bounded permanent Campaign Supply lucky-tier per
   assert.equal(boosted.campaignRun?.cells[2]?.tier, 3, 'Landmark Lv1 must turn 0.27 into a lucky T3 supply');
 });
 
-test('partial Restore batch state and permanent Landmark level survive save v6 roundtrip', () => {
+test('partial Restore batch state and permanent Landmark level survive save v7 roundtrip', () => {
   let state = createInitialState(14_000);
   state = { ...state, maxDiscoveredTier: 4 };
   state = withSneakerGardenProgress(state, { stabilize: 1, deliver: 1, restore: 1 / 3 });

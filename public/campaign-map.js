@@ -409,6 +409,8 @@ function openCampaign() {
   renderWorld();
   document.body.classList.add('campaign-open');
   overlay.classList.add('is-open');
+  overlay.setAttribute('aria-hidden', 'false');
+  if (appRoot) appRoot.inert = true;
   requestAnimationFrame(() => overlay.querySelector('.campaign-back')?.focus());
 }
 
@@ -416,6 +418,8 @@ function closeCampaign() {
   if (!overlay) return;
   closeDetail({ restoreFocus: false });
   overlay.classList.remove('is-open');
+  overlay.setAttribute('aria-hidden', 'true');
+  if (appRoot) appRoot.inert = false;
   document.body.classList.remove('campaign-open');
   entryButton?.focus();
 }
@@ -459,6 +463,17 @@ const langObserver = new MutationObserver(scheduleRefresh);
 langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Tab' && overlay?.classList.contains('is-open')) {
+    const detail = overlay.querySelector('.campaign-detail.is-open');
+    const container = detail instanceof HTMLElement ? detail : overlay;
+    const controls = [...container.querySelectorAll('button:not(:disabled):not([hidden]), [href], [tabindex]:not([tabindex="-1"])')]
+      .filter((element) => element instanceof HTMLElement && element.offsetParent !== null);
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (first && last && event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (first && last && !event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    return;
+  }
   if (event.key !== 'Escape' || !overlay?.classList.contains('is-open')) return;
   event.preventDefault();
   event.stopImmediatePropagation();

@@ -19,6 +19,8 @@ import {
   brainBoxBaseTier,
   brainBoxLuckyChance,
   canClaimCurrentMission,
+  canPrestige,
+  claimableCollectionRewardTiers,
   canMerge,
   canPurchaseUpgrade,
   currentBrainBoxCost,
@@ -35,7 +37,8 @@ import {
   unitProductionPerMinute,
   upgradeRequiredDiscoveryTier
 } from '../core/game.js';
-import type { GameState, NextActionHint, UpgradeId } from '../core/types.js';
+import { prestigeUpgradeCost } from '../core/game.js';
+import type { GameState, NextActionHint, PrestigeUpgradeId, UpgradeId } from '../core/types.js';
 import type { Locale } from '../i18n/i18n.js';
 
 export interface GameViewActions {
@@ -43,6 +46,9 @@ export interface GameViewActions {
   rewardedSpawn(): void;
   claimMission(): void;
   claimOffline(): void;
+  claimCollectionReward(tier: number): void;
+  prestige(): void;
+  purchasePrestigeUpgrade(id: PrestigeUpgradeId): void;
   purchaseUpgrade(id: UpgradeId): void;
   rescueDeadlock(): void;
   select(index: number): void;
@@ -70,7 +76,7 @@ function formatRate(value: number, locale: Locale): string {
 function upgradeEffect(state: GameState, id: UpgradeId, t: Translator): string {
   const level = state.upgrades[id];
   if (id === 'boxBaseTier') {
-    return t('upgrade.effect.boxBaseTier', { tier: Math.min(1 + level, state.maxDiscoveredTier) });
+    return t('upgrade.effect.boxBaseTier', { tier: Math.min(1 + level, state.runMaxTier) });
   }
   if (id === 'luckyDrop') {
     return t('upgrade.effect.luckyDrop', { chance: Math.round(luckyDropChanceForLevel(level) * 100) });
@@ -105,6 +111,26 @@ export class GameView {
     private readonly actions: GameViewActions
   ) {}
 
+  isDragging(): boolean {
+    return this.dragFrom !== null && this.dragMoved;
+  }
+
+  /** Updates passive economy presentation without replacing interactive board DOM. */
+  renderPassive(state: GameState, locale: Locale, t: Translator): void {
+    const coinValue = this.root.querySelector<HTMLElement>('.hud-pill--coin .hud-value');
+    if (coinValue) coinValue.textContent = state.coins.toLocaleString(locale);
+    const incomeValue = this.root.querySelector<HTMLElement>('.hud-pill--income strong');
+    if (incomeValue) incomeValue.textContent = `+${formatRate(productionPerMinute(state), locale)}`;
+    const message = this.root.querySelector<HTMLElement>('.message');
+    if (message && state.messageKey) message.textContent = t(state.messageKey);
+    const fever = this.root.querySelector<HTMLElement>('.fever-banner');
+    if (fever) {
+      fever.classList.toggle('is-active', state.events.feverRemainingMs > 0);
+      const seconds = fever.querySelector<HTMLElement>('strong');
+      if (seconds) seconds.textContent = t('fever.timer', { seconds: Math.ceil(state.events.feverRemainingMs / 1000) });
+    }
+  }
+
   render(state: GameState, locale: Locale, t: Translator, capabilities: GameViewCapabilities): void {
     const level = playerLevel(state.xp);
     const boardFull = isBoardFull(state);
@@ -124,8 +150,8 @@ export class GameView {
     const missionPercent = mission ? Math.min(100, missionCurrent / mission.target * 100) : 100;
     const missionAdvanced = this.lastMissionIndex !== null && state.missionIndex > this.lastMissionIndex;
     const xpProgress = Math.round(playerLevelProgress(state.xp) * 100);
-    const bestFamily = familyByTier.get(state.maxDiscoveredTier) ?? FAMILIES[0]!;
-    const nextFamily = familyByTier.get(state.maxDiscoveredTier + 1) ?? null;
+    const bestFamily = familyByTier.get(state.runMaxTier) ?? FAMILIES[0]!;
+    const nextFamily = familyByTier.get(state.runMaxTier + 1) ?? null;
     const newlyDiscovered = this.lastDiscoveredTier !== null && state.maxDiscoveredTier > this.lastDiscoveredTier
       ? bestFamily
       : null;
@@ -134,6 +160,8 @@ export class GameView {
     const boxLuckyPercent = Math.round(brainBoxLuckyChance(state) * 100);
     const production = productionPerMinute(state);
     const guidance = nextActionHint(state);
+    const collectionReady = new Set(claimableCollectionRewardTiers(state));
+    const prestigeIds: PrestigeUpgradeId[] = ['income', 'boxDiscount', 'startingCoins', 'offline', 'campaignPower'];
 
     this.root.innerHTML = `
       <main class="game-shell ${newlyDiscovered ? 'has-new-discovery' : ''} ${missionAdvanced ? 'has-mission-advance' : ''}">
@@ -175,6 +203,7 @@ export class GameView {
           </aside>
 
           <section class="board-zone">
+            <div class="fever-banner ${state.events.feverRemainingMs > 0 ? 'is-active' : ''}" role="status"><span>${t('fever.title')}</span><strong>${t('fever.timer', { seconds: Math.ceil(state.events.feverRemainingMs / 1000) })}</strong></div>
             ${newlyDiscovered ? `<div class="discovery-toast" role="status" aria-live="polite">
               <span class="discovery-toast__spark">✦</span>
               <span>${t('chain.discovery', { tier: newlyDiscovered.tier, character: t(newlyDiscovered.nameKey) })}</span>
@@ -277,6 +306,12 @@ export class GameView {
                 }).join('')}
               </div>
               <div class="collection-count"><span>${state.maxDiscoveredTier}</span>/${FAMILIES.length}</div>
+              <div class="meta-rewards">
+                ${[5, 10, 15, 18].map((tier) => {
+                  const claimed = state.collectionRewardClaims.includes(`collection-${tier}`);
+                  return `<button data-collection-reward="${tier}" ${collectionReady.has(tier) ? '' : 'disabled'}>${claimed ? t('collection.claimed') : t('collection.reward', { tier })}</button>`;
+                }).join('')}
+              </div>
             </aside>
 
             <aside class="side-card side-card--lab">
@@ -290,7 +325,7 @@ export class GameView {
                   const maxLevel = maxUpgradeLevel(id);
                   const cost = upgradeCost(id, currentLevel);
                   const requiredTier = upgradeRequiredDiscoveryTier(id, currentLevel);
-                  const discoveryLocked = requiredTier !== null && state.maxDiscoveredTier < requiredTier;
+                  const discoveryLocked = requiredTier !== null && state.runMaxTier < requiredTier;
                   const affordable = canPurchaseUpgrade(state, id);
                   const maxed = currentLevel >= maxLevel || cost === null;
                   const disabled = maxed || !affordable;
@@ -307,6 +342,18 @@ export class GameView {
                   </div>`;
                 }).join('')}
               </div>
+              <div class="prestige-panel">
+                <div class="upgrade-card__top"><strong>${t('prestige.title')}</strong><span>${state.brainCells} ${t('prestige.cells')}</span></div>
+                <small>${t('prestige.description')}</small>
+                <button class="side-action" data-action="prestige" ${canPrestige(state) ? '' : 'disabled'}>${canPrestige(state) ? t('prestige.reset') : t('prestige.locked')}</button>
+                <div class="prestige-upgrades">
+                  ${prestigeIds.map((id) => {
+                    const level = state.prestigeUpgrades[id];
+                    const cost = prestigeUpgradeCost(level);
+                    return `<button data-prestige-upgrade="${id}" ${cost === null || state.brainCells < cost ? 'disabled' : ''}>${t(`prestige.upgrade.${id}`)} · ${level}/5${cost === null ? '' : ` · ${cost}`}</button>`;
+                  }).join('')}
+                </div>
+              </div>
             </aside>
           </div>
         </section>
@@ -322,9 +369,16 @@ export class GameView {
     this.root.querySelector('[data-action="rewarded-spawn"]')?.addEventListener('click', () => this.actions.rewardedSpawn());
     this.root.querySelector('[data-action="claim-mission"]')?.addEventListener('click', () => this.actions.claimMission());
     this.root.querySelector('[data-action="claim-offline"]')?.addEventListener('click', () => this.actions.claimOffline());
+    this.root.querySelector('[data-action="prestige"]')?.addEventListener('click', () => this.actions.prestige());
     this.root.querySelector('[data-action="rescue"]')?.addEventListener('click', () => this.actions.rescueDeadlock());
     this.root.querySelectorAll<HTMLButtonElement>('[data-upgrade]').forEach((button) => {
       button.addEventListener('click', () => this.actions.purchaseUpgrade(button.dataset.upgrade as UpgradeId));
+    });
+    this.root.querySelectorAll<HTMLButtonElement>('[data-collection-reward]').forEach((button) => {
+      button.addEventListener('click', () => this.actions.claimCollectionReward(Number(button.dataset.collectionReward)));
+    });
+    this.root.querySelectorAll<HTMLButtonElement>('[data-prestige-upgrade]').forEach((button) => {
+      button.addEventListener('click', () => this.actions.purchasePrestigeUpgrade(button.dataset.prestigeUpgrade as PrestigeUpgradeId));
     });
     this.root.querySelectorAll<HTMLButtonElement>('[data-locale]').forEach((button) => {
       button.addEventListener('click', () => this.actions.setLocale(button.dataset.locale as Locale));

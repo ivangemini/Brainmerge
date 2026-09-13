@@ -11,6 +11,12 @@ The architecture has three product layers:
 
 The old architecture assumption of dozens of isolated short Campaign stages is obsolete.
 
+Save v9 owns foreground-only event time, combo continuation, Fever charge/timers and persisted visitor objectives in `GameState.events`. Hidden-page and advertising intervals never advance these timers. `src/analytics/analytics.ts` defines a provider-neutral, identifier-free gameplay event boundary; the default browser sink exposes structured events without coupling core rules to a platform SDK.
+
+Save v10 adds `raidRun`, an isolated temporary board for persistent World Raids. Location boards, Raid boards and the main idle board never share cells or currencies. Raid phase completion is committed through the Campaign progress transaction before the temporary phase board is cleared.
+
+`GameState.retention` stores identifier-free session and milestone aggregates: first/last session time, session count, active time to T5/T8/T18, post-T18 active continuation, first Prestige and World 1 Raid clear. D1/D7 eligibility is derived locally from elapsed calendar days and emitted through the provider-neutral analytics boundary.
+
 ## Boundaries
 - `src/core/` — deterministic merge, progression, economy, idle income, Collection, Prestige, Campaign definitions/state transitions and save rules; no DOM or platform SDKs.
 - `src/ui/` — board/HUD/mission/upgrade/Collection/Campaign/Prestige rendering and input wiring.
@@ -54,7 +60,7 @@ Initial World Raid gate:
 - >=80% World Restored;
 - >=5 restored landmarks.
 
-The current map shell displays 0% defaults until save v6 is wired. Presentation defaults are not authoritative save state.
+The Campaign map reads canonical save-v7 presentation snapshots. Presentation defaults are not authoritative save state.
 
 ## Campaign state separation
 Campaign must not mutate the persistent main idle board accidentally.
@@ -73,7 +79,7 @@ Persistent ordinary run state:
 - other current canonical run counters.
 
 ### `CampaignProgress`
-Permanent account-level Campaign state planned for save v6:
+Permanent account-level Campaign state in save v7:
 - world unlock/clear state;
 - per-Location Stabilize progress;
 - per-Location Deliver/order progress;
@@ -209,14 +215,12 @@ Phone default remains board-first.
 - Prestige appears only when eligible or as a clearly locked meta entry.
 
 ## Current save state
-Production schema remains **v5**.
-
-Current v5 includes the main run/economy/discovery/mission/passive state and is sanitized/migrated through `sanitizeState()`.
+Production schema is **v7**. It includes run/economy/discovery/mission/passive state, Campaign, Collection/Prestige meta slots, an optional resumable Campaign run, and persistence revision/timestamp metadata. Versions v1-v6 migrate through `sanitizeState()`.
 
 Do not add Campaign progress through ad-hoc localStorage keys.
 
-## Planned save v6
-Campaign + Collection Rewards + Prestige must move together into one coherent v6 migration.
+## Permanent meta in save v7
+Campaign + Collection Rewards + Prestige share one canonical platform-neutral save.
 
 Required permanent categories:
 - Collection reward claim state;
@@ -228,7 +232,7 @@ Required permanent categories:
 - Landmark state;
 - World Raid progress/phase/clear state.
 
-Optional active CampaignRunState may be persisted only if resume is explicitly supported.
+Active CampaignRunState is persisted and resumable.
 
 Migration v1-v5 -> v6 must preserve all valid current run data and initialize Campaign/meta state deterministically.
 
@@ -301,6 +305,6 @@ Campaign expansion must add deterministic coverage for:
 - desktop/mobile Location and Raid geometry.
 
 ## Next architecture milestone
-Implement save v6 permanent Campaign/meta fields, then isolated `CampaignRunState`, then make **World 1 Location 1 — Sneaker Garden** playable end-to-end through Stabilize -> Deliver -> Restore -> Mastery.
+Generalize the proven Sneaker Garden engine into data-driven World 1 Locations, then implement the persistent World 1 Raid, Collection Rewards and Prestige.
 
 Do not author 56 bespoke levels. Additional Locations should be mostly data + world modifier + approved art.

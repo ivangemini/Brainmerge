@@ -1,3 +1,4 @@
+import { newestValidState, prepareStateForSave } from '../core/game.js';
 import { localeFromLanguage } from '../i18n/i18n.js';
 const SAVE_KEY = 'brainmerge.save.v2';
 const CLOUD_FIELD = 'brainmerge';
@@ -25,6 +26,8 @@ export class YandexPlatformAdapter {
     cloudTimer = null;
     readySignaled = false;
     gameplayActive = null;
+    persistedRevision = 0;
+    cloudWriteChain = Promise.resolve();
     async initialize() {
         const yaGames = yaGamesGlobal();
         if (!yaGames)
@@ -61,35 +64,42 @@ export class YandexPlatformAdapter {
         return language ? localeFromLanguage(language) : null;
     }
     async loadState() {
+        let cloud = null;
         if (this.player) {
             try {
                 const data = await this.player.getData([CLOUD_FIELD]);
-                const cloud = data[CLOUD_FIELD];
-                if (cloud && typeof cloud === 'object')
-                    return cloud;
+                cloud = data[CLOUD_FIELD];
             }
             catch {
-                // Fall back to safe/local storage below.
+                // Resolve from safe/local storage below.
             }
         }
+        let local = null;
         try {
             const raw = this.storage?.getItem(SAVE_KEY);
-            return raw ? JSON.parse(raw) : null;
+            local = raw ? JSON.parse(raw) : null;
         }
         catch {
-            return null;
+            local = null;
         }
+        // Keep cloud first for equal-revision legacy saves, matching the previous
+        // cross-device behavior while allowing a newer local snapshot to win.
+        const selected = newestValidState([cloud, local]);
+        this.persistedRevision = selected?.saveRevision ?? 0;
+        return selected;
     }
     async saveState(state, flush = false) {
+        const snapshot = prepareStateForSave({ ...state, saveRevision: Math.max(state.saveRevision, this.persistedRevision) });
+        this.persistedRevision = snapshot.saveRevision;
         try {
-            this.storage?.setItem(SAVE_KEY, JSON.stringify(state));
+            this.storage?.setItem(SAVE_KEY, JSON.stringify(snapshot));
         }
         catch {
             // Safe/local persistence is best-effort; cloud save may still succeed.
         }
         if (!this.player)
             return;
-        this.pendingCloudState = state;
+        this.pendingCloudState = snapshot;
         if (this.cloudTimer !== null) {
             window.clearTimeout(this.cloudTimer);
             this.cloudTimer = null;
@@ -168,13 +178,16 @@ export class YandexPlatformAdapter {
             return;
         const state = this.pendingCloudState;
         this.pendingCloudState = null;
-        try {
-            await this.player.setData({ [CLOUD_FIELD]: state }, flush);
-        }
-        catch {
-            // Never let a failed older write overwrite a newer snapshot queued while it was in flight.
-            if (!this.pendingCloudState)
-                this.pendingCloudState = state;
-        }
+        const write = async () => {
+            try {
+                await this.player?.setData({ [CLOUD_FIELD]: state }, flush);
+            }
+            catch {
+                if (!this.pendingCloudState || this.pendingCloudState.saveRevision < state.saveRevision)
+                    this.pendingCloudState = state;
+            }
+        };
+        this.cloudWriteChain = this.cloudWriteChain.then(write, write);
+        await this.cloudWriteChain;
     }
 }

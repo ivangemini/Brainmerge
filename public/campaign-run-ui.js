@@ -4,7 +4,7 @@ const COPY_BY_LOCALE = {
 };
 
 const TARGET_WORLD = 1;
-const TARGET_LOCATION = 'w1-sneaker-garden';
+let targetLocation = 'w1-sneaker-garden';
 const BOARD_COLUMNS = 6;
 const RUN_PHASES = new Set(['stabilize', 'deliver', 'restore', 'mastery']);
 
@@ -16,6 +16,18 @@ let shell = null;
 let wantsOpen = false;
 let scheduledCopyRefresh = false;
 let scheduledLauncherRefresh = false;
+
+function focusable(container) {
+  return [...container.querySelectorAll('button:not(:disabled):not([hidden]), [href], [tabindex]:not([tabindex="-1"])')]
+    .filter((element) => element instanceof HTMLElement && element.offsetParent !== null);
+}
+
+function setBackgroundInert(active) {
+  for (const child of document.body.children) {
+    if (child === shell) continue;
+    child.inert = active;
+  }
+}
 
 function currentLocale() {
   return document.documentElement.lang?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
@@ -40,12 +52,12 @@ function worldSnapshot() {
 }
 
 function locationSnapshot() {
-  return worldSnapshot()?.locations?.find((location) => location.id === TARGET_LOCATION) ?? null;
+  return worldSnapshot()?.locations?.find((location) => location.id === targetLocation) ?? null;
 }
 
 function activeRun() {
   const run = campaignSnapshot?.activeRun;
-  return run?.worldId === TARGET_WORLD && run?.locationId === TARGET_LOCATION && RUN_PHASES.has(run?.phase)
+  return run?.worldId === TARGET_WORLD && run?.locationId === targetLocation && RUN_PHASES.has(run?.phase)
     ? run
     : null;
 }
@@ -124,6 +136,7 @@ function ensureShell() {
           <div class="campaign-run-supply-copy"><strong></strong><small></small></div>
           <button class="campaign-run-supply" type="button"></button>
           <button class="campaign-run-deliver" type="button" hidden></button>
+          <button class="campaign-run-restart" type="button"></button>
         </footer>
       </div>
       <div class="campaign-run-complete" aria-hidden="true">
@@ -143,12 +156,26 @@ function ensureShell() {
     if (!run || !isOrderPhase(run.phase) || run.selectedIndex === null || !run.canDeliverSelected) return;
     dispatchCommand({ type: 'deliver', index: run.selectedIndex });
   });
+  section.querySelector('.campaign-run-restart')?.addEventListener('click', () => {
+    const run = activeRun();
+    if (!run || run.completed || !window.confirm(copy.runRestartConfirm)) return;
+    dispatchCommand({ type: 'restart' });
+  });
   section.querySelector('.campaign-run-complete button')?.addEventListener('click', () => {
     wantsOpen = false;
     closeRun();
     dispatchCommand({ type: 'acknowledge' });
   });
   section.addEventListener('keydown', handleBoardKeydown);
+  section.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab' || !section.classList.contains('is-open')) return;
+    const controls = focusable(section);
+    if (controls.length === 0) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
   document.body.append(section);
   shell = section;
   return section;
@@ -159,12 +186,14 @@ function openRun() {
   if (!run || !copy) return;
   const currentShell = ensureShell();
   if (!currentShell) return;
+  const wasOpen = currentShell.classList.contains('is-open');
   wantsOpen = true;
   renderRun();
   currentShell.classList.add('is-open');
   currentShell.setAttribute('aria-hidden', 'false');
   document.body.classList.add('campaign-run-open');
-  requestAnimationFrame(() => currentShell.querySelector('.campaign-run-back')?.focus());
+  setBackgroundInert(true);
+  if (!wasOpen) requestAnimationFrame(() => currentShell.querySelector('.campaign-run-back')?.focus());
 }
 
 function closeRun() {
@@ -173,6 +202,7 @@ function closeRun() {
   shell.classList.remove('is-open');
   shell.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('campaign-run-open');
+  setBackgroundInert(false);
   const launcher = document.querySelector('.campaign-detail__run-button');
   if (launcher instanceof HTMLElement && launcher.offsetParent) launcher.focus();
 }
@@ -182,7 +212,7 @@ function openedDetailLocationId() {
   const detail = document.querySelector('.campaign-detail.is-open');
   if (!(detail instanceof HTMLElement)) return null;
   const title = detail.querySelector('.campaign-detail__title')?.textContent?.trim() ?? '';
-  if (title === String(copy.w1Location1Name ?? '').trim()) return TARGET_LOCATION;
+  if (title) return selectedLocationId;
   return selectedLocationId;
 }
 
@@ -205,7 +235,7 @@ function renderLauncher() {
   const run = activeRun();
   const openLocationId = openedDetailLocationId();
   const phase = run?.phase ?? progress?.currentPhase;
-  const available = openLocationId === TARGET_LOCATION && RUN_PHASES.has(phase);
+  const available = openLocationId === targetLocation && RUN_PHASES.has(phase);
   if (!available) {
     launcher?.remove();
     return;
@@ -217,7 +247,7 @@ function renderLauncher() {
     launcher.type = 'button';
     launcher.addEventListener('click', () => {
       wantsOpen = true;
-      if (!activeRun()) dispatchCommand({ type: 'start', worldId: TARGET_WORLD, locationId: TARGET_LOCATION });
+      if (!activeRun()) dispatchCommand({ type: 'start', worldId: TARGET_WORLD, locationId: targetLocation });
       window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
       if (activeRun()) openRun();
     });
@@ -338,7 +368,8 @@ function renderRun() {
   currentShell.setAttribute('aria-label', presentation.kicker);
   currentShell.querySelector('.campaign-run-back').textContent = `← ${copy.runBack}`;
   currentShell.querySelector('.campaign-run-heading small').textContent = copy.world1Kicker;
-  currentShell.querySelector('.campaign-run-heading strong').textContent = copy.w1Location1Name;
+  const locationIndex = worldSnapshot()?.locations?.findIndex((location) => location.id === targetLocation) ?? 0;
+  currentShell.querySelector('.campaign-run-heading strong').textContent = copy[`w1Location${Math.max(0, locationIndex) + 1}Name`] ?? copy.w1Location1Name;
   currentShell.querySelector('.campaign-run-progress small').textContent = presentation.progress;
   currentShell.querySelector('.campaign-run-progress strong').textContent = `${run.progressPercent}%`;
   const progressBar = currentShell.querySelector('.campaign-run-progress i');
@@ -358,7 +389,9 @@ function renderRun() {
     }
     currentShell.querySelector('.campaign-run-objective__counter strong').textContent = run.activeOrderTier === null
       ? '✓'
-      : interpolate(copy.runOrderTarget, { tier: run.activeOrderTier });
+      : (run.activeOrderTiers?.length > 1
+          ? interpolate(copy.runOrderChoiceTarget, { first: run.activeOrderTiers[0], second: run.activeOrderTiers[1] })
+          : interpolate(copy.runOrderTarget, { tier: run.activeOrderTier }));
   } else {
     currentShell.querySelector('.campaign-run-objective__counter small').textContent = copy.runOvergrowthLabel;
     currentShell.querySelector('.campaign-run-objective__counter strong').textContent = interpolate(copy.runRemaining, { remaining: run.overgrowthRemaining });
@@ -383,8 +416,15 @@ function renderRun() {
     if (orderPhase) {
       deliver.textContent = run.canDeliverSelected && run.selectedUnitTier !== null
         ? interpolate(copy.runDeliverSelected, { tier: run.selectedUnitTier })
-        : interpolate(copy.runSelectForOrder, { tier: run.activeOrderTier ?? 1 });
+        : (run.activeOrderTiers?.length > 1
+            ? interpolate(copy.runSelectForChoice, { first: run.activeOrderTiers[0], second: run.activeOrderTiers[1] })
+            : interpolate(copy.runSelectForOrder, { tier: run.activeOrderTier ?? 1 }));
     }
+  }
+  const restart = currentShell.querySelector('.campaign-run-restart');
+  if (restart instanceof HTMLButtonElement) {
+    restart.textContent = copy.runRestart;
+    restart.disabled = run.completed;
   }
 
   renderBoard(run);
@@ -417,6 +457,9 @@ function scheduleCopyRefresh() {
 window.addEventListener('brainmerge:campaign-state', (event) => {
   if (!(event instanceof CustomEvent) || !event.detail || typeof event.detail !== 'object') return;
   campaignSnapshot = event.detail;
+  if (campaignSnapshot.activeRun?.worldId === TARGET_WORLD && campaignSnapshot.activeRun?.locationId) {
+    targetLocation = campaignSnapshot.activeRun.locationId;
+  }
   scheduleLauncherRefresh();
   renderRun();
   if (wantsOpen && activeRun()) openRun();
@@ -426,6 +469,7 @@ document.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target.closest('.campaign-node--location') : null;
   if (target instanceof HTMLElement) {
     selectedLocationId = target.dataset.locationId ?? null;
+    if (selectedLocationId) targetLocation = selectedLocationId;
     scheduleLauncherRefresh();
   }
 }, true);

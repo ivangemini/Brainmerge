@@ -28,7 +28,8 @@ export const BOARD_SIZE = BOARD_COLUMNS * BOARD_ROWS;
 
 /** Paid Brain Box economy. Rewarded boxes never increment paidBoxes. */
 export const BASE_BOX_COST = 20;
-export const BOX_COST_GROWTH = 1.045;
+/** Compatibility export; purchase-count inflation was retired in save v8. */
+export const BOX_COST_GROWTH = 1;
 /** Compatibility alias for older code/tests; new code should use brainBoxCostForPurchases(). */
 export const SPAWN_COST = BASE_BOX_COST;
 export const DEADLOCK_RESCUE_REFUND = 5;
@@ -58,18 +59,18 @@ export const INCOME_PER_MINUTE_BY_TIER: Readonly<Record<number, number>> = {
   18: 3242000
 };
 
-export const LUCKY_DROP_CHANCE_BY_LEVEL = [0, 0.05, 0.10, 0.16, 0.23, 0.30] as const;
-export const INCOME_MULTIPLIER_BY_LEVEL = [1, 1.15, 1.32, 1.52, 1.75, 2] as const;
+export const LUCKY_DROP_CHANCE_BY_LEVEL = [0, 0.03, 0.06, 0.09, 0.12, 0.15] as const;
+export const INCOME_MULTIPLIER_BY_LEVEL = [1, 1.05, 1.10, 1.15, 1.20, 1.25] as const;
 export const OFFLINE_HOURS_BY_LEVEL = [2, 4, 6, 8, 12] as const;
 /** Level 0 = T1 base, level 3 = T4 base. Spawn is always capped to already-discovered tiers. */
-export const MAX_BOX_BASE_TIER_LEVEL = 3;
+export const MAX_BOX_BASE_TIER_LEVEL = 13;
 
 export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
   {
     id: 'boxBaseTier',
     titleKey: 'upgrade.boxBaseTier.title',
     descriptionKey: 'upgrade.boxBaseTier.description',
-    costs: [600, 3000, 15000]
+    costs: [42, 96, 216, 492, 1110, 2520, 5700, 12900, 29100, 65700, 148200, 334200, 753000]
   },
   {
     id: 'luckyDrop',
@@ -105,7 +106,17 @@ export const MISSION_TRACK: readonly MissionDefinition[] = [
   { id: 'merge-30', kind: 'merges', target: 30, reward: 150, titleKey: 'mission.merge30.title', textKey: 'mission.merge30.text' },
   { id: 'discover-6', kind: 'discover', target: 6, reward: 190, titleKey: 'mission.discover6.title', textKey: 'mission.discover6.text' },
   { id: 'discover-7', kind: 'discover', target: 7, reward: 260, titleKey: 'mission.discover7.title', textKey: 'mission.discover7.text' },
-  { id: 'discover-8', kind: 'discover', target: 8, reward: 400, titleKey: 'mission.discover8.title', textKey: 'mission.discover8.text' }
+  { id: 'discover-8', kind: 'discover', target: 8, reward: 400, titleKey: 'mission.discover8.title', textKey: 'mission.discover8.text' },
+  { id: 'discover-9', kind: 'discover', target: 9, reward: 513, titleKey: 'mission.discover9.title', textKey: 'mission.discover9.text' },
+  { id: 'discover-10', kind: 'discover', target: 10, reward: 1154, titleKey: 'mission.discover10.title', textKey: 'mission.discover10.text' },
+  { id: 'discover-11', kind: 'discover', target: 11, reward: 2595, titleKey: 'mission.discover11.title', textKey: 'mission.discover11.text' },
+  { id: 'discover-12', kind: 'discover', target: 12, reward: 5839, titleKey: 'mission.discover12.title', textKey: 'mission.discover12.text' },
+  { id: 'discover-13', kind: 'discover', target: 13, reward: 13138, titleKey: 'mission.discover13.title', textKey: 'mission.discover13.text' },
+  { id: 'discover-14', kind: 'discover', target: 14, reward: 29559, titleKey: 'mission.discover14.title', textKey: 'mission.discover14.text' },
+  { id: 'discover-15', kind: 'discover', target: 15, reward: 66508, titleKey: 'mission.discover15.title', textKey: 'mission.discover15.text' },
+  { id: 'discover-16', kind: 'discover', target: 16, reward: 149643, titleKey: 'mission.discover16.title', textKey: 'mission.discover16.text' },
+  { id: 'discover-17', kind: 'discover', target: 17, reward: 336696, titleKey: 'mission.discover17.title', textKey: 'mission.discover17.text' },
+  { id: 'discover-18', kind: 'discover', target: 18, reward: 757564, titleKey: 'mission.discover18.title', textKey: 'mission.discover18.text' }
 ] as const;
 
 export const FIRST_MISSION_TARGET = MISSION_TRACK[0]!.target;
@@ -259,8 +270,13 @@ export function discoveryBonusForTier(tier: number): number {
 }
 
 export function brainBoxCostForPurchases(paidBoxes: number): number {
-  const safePurchases = Math.max(0, Math.floor(paidBoxes));
-  return Math.max(BASE_BOX_COST, Math.ceil(BASE_BOX_COST * BOX_COST_GROWTH ** safePurchases));
+  void paidBoxes;
+  return BASE_BOX_COST;
+}
+
+export function brainBoxCostForBaseTier(baseTier: number): number {
+  const safeTier = Math.max(1, Math.min(14, Math.floor(Number.isFinite(baseTier) ? baseTier : 1)));
+  return Math.ceil(BASE_BOX_COST * 2.25 ** (safeTier - 1));
 }
 
 export function luckyDropChanceForLevel(level: number): number {

@@ -1,3 +1,4 @@
+import { prepareStateForSave } from '../core/game.js';
 const SAVE_KEY = 'brainmerge.save.v1';
 export class LocalPlatformAdapter {
     id = 'local';
@@ -8,6 +9,7 @@ export class LocalPlatformAdapter {
         leaderboards: false,
         payments: false
     };
+    persistedRevision = 0;
     async initialize() { }
     async gameReady() { }
     preferredLocale() {
@@ -16,7 +18,11 @@ export class LocalPlatformAdapter {
     async loadState() {
         try {
             const raw = localStorage.getItem(SAVE_KEY);
-            return raw ? JSON.parse(raw) : null;
+            const state = raw ? JSON.parse(raw) : null;
+            this.persistedRevision = typeof state?.saveRevision === 'number' && Number.isFinite(state.saveRevision)
+                ? Math.max(0, Math.floor(state.saveRevision))
+                : 0;
+            return state;
         }
         catch {
             return null;
@@ -24,7 +30,9 @@ export class LocalPlatformAdapter {
     }
     async saveState(state) {
         try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+            const snapshot = prepareStateForSave({ ...state, saveRevision: Math.max(state.saveRevision, this.persistedRevision) });
+            this.persistedRevision = snapshot.saveRevision;
+            localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
         }
         catch {
             // Local persistence is best-effort in private/restricted browser contexts.

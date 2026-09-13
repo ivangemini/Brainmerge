@@ -12,7 +12,7 @@ Yandex cloud writes remain debounced during ordinary activity; safe/local storag
 Campaign, Collection Rewards and Prestige are **platform-neutral core systems**. They must persist inside the same versioned game save and must not call Yandex SDK APIs directly.
 
 ## Save evolution
-Current runtime schema is v5. The planned Campaign/Prestige/Collection Rewards expansion should migrate coherently to v6.
+Current runtime schema is v7 with v1-v6 migration. Campaign/Prestige/Collection data and persistence-order metadata travel through the same canonical save.
 
 New permanent meta fields must travel through the existing `PlatformAdapter.saveState()` path:
 - Collection Reward claims;

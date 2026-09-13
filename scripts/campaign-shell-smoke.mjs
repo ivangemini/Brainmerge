@@ -74,7 +74,7 @@ async function bootSeededStorage(browser, viewport) {
   await page.locator('.board-tray .cell').first().waitFor({ state: 'visible' });
   await page.waitForFunction((key) => {
     const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
-    return saved?.version === 6 && saved?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden']?.mastery === 1;
+    return saved?.version === 10 && saved?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden']?.mastery === 1;
   }, SAVE_KEY);
 
   const storageState = await context.storageState();
@@ -90,7 +90,7 @@ async function assertPersistedSave(page) {
       location: saved?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden'] ?? null
     };
   }, SAVE_KEY);
-  assert(persisted.version === 6, `clean-context boot did not preserve save v6, got ${persisted.version}`);
+  assert(persisted.version === 10, `clean-context boot did not migrate to save v10, got ${persisted.version}`);
   assert(persisted.location?.stabilize === 1, 'stabilize progress did not survive persistence handoff');
   assert(persisted.location?.deliver === 1, 'deliver progress did not survive persistence handoff');
   assert(persisted.location?.restore === 1, 'landmark progress did not survive persistence handoff');
@@ -190,7 +190,7 @@ async function assertPlayableRunPersistence(browser) {
       permanentStabilize: save?.campaign?.worlds?.['1']?.locations?.['w1-sneaker-garden']?.stabilize
     };
   }, SAVE_KEY);
-  assert(persisted.version === 6, `playable run persisted wrong save version ${persisted.version}`);
+  assert(persisted.version === 10, `playable run persisted wrong save version ${persisted.version}`);
   assert(persisted.blockers === 5 && persisted.runMerges === 1, `playable run did not persist merge/Overgrowth state: ${JSON.stringify(persisted)}`);
   assert(persisted.permanentStabilize === 0, 'partial Stabilize must not prematurely commit permanent location progress');
 
@@ -263,7 +263,7 @@ async function assertDeliverOrderPersistence(browser) {
       blockers: save?.campaignRun?.overgrowth?.filter(Boolean)?.length
     };
   }, SAVE_KEY);
-  assert(persisted.version === 6, `Deliver persisted wrong save version ${persisted.version}`);
+  assert(persisted.version === 10, `Deliver persisted wrong save version ${persisted.version}`);
   assert(persisted.phase === 'deliver' && persisted.orderIndex === 1, `Deliver order cursor did not persist: ${JSON.stringify(persisted)}`);
   assert(JSON.stringify(persisted.orderTiers) === JSON.stringify([2,2,3,4]), `Deliver order queue changed: ${JSON.stringify(persisted.orderTiers)}`);
   assert(persisted.deliver === 0.25, `first order must commit exactly 0.25 Deliver progress, got ${persisted.deliver}`);
@@ -343,7 +343,7 @@ try {
 
   await assertPlayableRunPersistence(browser);
   await assertDeliverOrderPersistence(browser);
-  console.log('Campaign shell smoke passed with canonical v6 persistence + Stabilize/Deliver resume.');
+console.log('Campaign shell smoke passed with canonical v10 persistence + Stabilize/Deliver resume.');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

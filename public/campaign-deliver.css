@@ -36,7 +36,7 @@
 .campaign-run-shell[data-phase='mastery'] .campaign-run-cell.is-order-match .campaign-run-tier { background: #75419a; }
 
 .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) {
-  grid-template-columns: minmax(0,1fr) auto auto;
+  grid-template-columns: minmax(0,1fr) auto auto auto;
 }
 .campaign-run-deliver {
   min-width: 156px;
@@ -73,7 +73,7 @@
 
 @media (max-width: 700px) {
   .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) {
-    grid-template-columns: minmax(0,1fr) repeat(2, minmax(105px, auto));
+    grid-template-columns: minmax(0,1fr) repeat(3, minmax(88px, auto));
     gap: 6px;
   }
   .campaign-run-deliver {
@@ -92,10 +92,12 @@
     grid-column: 1 / -1;
   }
   .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) .campaign-run-supply,
-  .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) .campaign-run-deliver {
+  .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) .campaign-run-deliver,
+  .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) .campaign-run-restart {
     width: 100%;
     min-width: 0;
   }
+  .campaign-run-footer:has(.campaign-run-deliver:not([hidden])) .campaign-run-restart { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

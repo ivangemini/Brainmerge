@@ -64,6 +64,44 @@ export interface PrestigeUpgradeLevels {
   campaignPower: number;
 }
 
+export type PrestigeUpgradeId = keyof PrestigeUpgradeLevels;
+
+export type VisitorObjectiveKind = 'merges' | 'boxes' | 'campaignDelivery';
+
+export interface VisitorEventState {
+  id: string;
+  character: 'sneakerCourier' | 'pigeonInspector' | 'watermelonCook';
+  kind: VisitorObjectiveKind;
+  target: number;
+  progress: number;
+  remainingMs: number;
+}
+
+export interface FastEventState {
+  /** Monotonic foreground gameplay time; hidden/ad time is never added. */
+  activeMs: number;
+  comboCount: number;
+  comboExpiresAtActiveMs: number;
+  feverCharge: number;
+  feverRemainingMs: number;
+  feverCooldownRemainingMs: number;
+  nextVisitorAtActiveMs: number;
+  visitorSequence: number;
+  visitor: VisitorEventState | null;
+}
+
+export interface RetentionState {
+  firstSeenAt: number;
+  lastSessionAt: number;
+  sessionCount: number;
+  tier5ActiveMs: number | null;
+  tier8ActiveMs: number | null;
+  tier18ActiveMs: number | null;
+  activeAfterT18Ms: number;
+  firstPrestigeActiveMs: number | null;
+  world1RaidClearActiveMs: number | null;
+}
+
 export type CampaignRunPhase = 'stabilize' | 'deliver' | 'restore' | 'mastery';
 
 /**
@@ -90,6 +128,20 @@ export interface CampaignRunState {
   completed: boolean;
 }
 
+export type CampaignRaidPhase = 1 | 2 | 3;
+
+export interface CampaignRaidRunState {
+  worldId: number;
+  phase: CampaignRaidPhase;
+  cells: Cell[];
+  overgrowth: boolean[];
+  merges: number;
+  orderTiers: number[];
+  orderIndex: number;
+  selectedIndex: number | null;
+  completed: boolean;
+}
+
 export type NextActionKind = 'offline' | 'mission' | 'rescue' | 'merge' | 'upgrade' | 'box' | 'wait' | 'complete';
 
 export interface NextActionHint {
@@ -102,7 +154,11 @@ export interface NextActionHint {
 }
 
 export interface GameState {
-  version: 6;
+  version: 10;
+  /** Monotonic persistence revision used to resolve local/cloud conflicts. */
+  saveRevision: number;
+  /** Wall-clock timestamp of the persisted snapshot; revision wins when available. */
+  savedAt: number;
   cells: Cell[];
   coins: number;
   xp: number;
@@ -113,6 +169,8 @@ export interface GameState {
   paidBoxes: number;
   /** Highest core merge tier ever created; keeps Collection discovery persistent. */
   maxDiscoveredTier: number;
+  /** Highest tier created in the current main-board run; resets on Prestige. */
+  runMaxTier: number;
   /** Index of the active mission in the deterministic first-cycle mission track. */
   missionIndex: number;
   upgrades: UpgradeLevels;
@@ -129,10 +187,14 @@ export interface GameState {
   /** Permanent meta currency. Never spent by the ordinary Brain Box/Brain Lab economy. */
   brainCells: number;
   prestigeUpgrades: PrestigeUpgradeLevels;
+  events: FastEventState;
+  retention: RetentionState;
   /** Permanent Brainverse location / landmark / raid progress. */
   campaign: CampaignProgress;
   /** Optional resumable Campaign board. Never aliases or consumes main-board cells. */
   campaignRun: CampaignRunState | null;
+  /** Optional resumable World Raid board, isolated from both ordinary and Location boards. */
+  raidRun: CampaignRaidRunState | null;
   selectedIndex: number | null;
   messageKey: string | null;
 }

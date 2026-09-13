@@ -85,7 +85,7 @@ Detailed contract: `docs/CAMPAIGN_AND_META_PROGRESSION.md`.
 - [x] Clamp/sanitize corrupt Campaign/meta values.
 - [x] Campaign progress serialized through the existing local/Yandex `GameState` persistence boundary.
 - [x] Browser smoke mutates v6 Campaign progress, reloads and verifies restored UI state.
-- [x] Active `CampaignRunState` is persisted/resumed in canonical v6 save.
+- [x] Active `CampaignRunState` is persisted/resumed in canonical v7 save.
 
 ## P0 — Stateful Location engine — first implementation proven
 Goal: make a Location a multi-session merge objective instead of a short level.
@@ -128,47 +128,47 @@ Next product task is no longer to invent another one-off mini-game. Generalize t
 ## P0 — World 1 full restoration loop
 After Location 1 proves the engine:
 
-- [ ] Toilet Pond.
-- [ ] Watermelon Grill.
-- [ ] Hose Tunnels.
-- [ ] Gnome Yard.
-- [ ] Mushroom Field.
-- [ ] Backyard Core.
-- [ ] Data-driven Location definitions for phase goals, order queues, Overgrowth layouts and Landmark perks.
-- [ ] Data-driven order pressure increases across Locations.
+- [x] Toilet Pond.
+- [x] Watermelon Grill.
+- [x] Hose Tunnels.
+- [x] Gnome Yard.
+- [x] Mushroom Field.
+- [x] Backyard Core.
+- [x] Data-driven Location definitions for phase goals, order queues, Overgrowth layouts and Landmark perks.
+- [x] Data-driven order pressure increases across Locations.
 - [x] >=80% + 5-landmark Raid gate implemented in core.
 - [ ] Visible Landmark/restoration evolution beyond numeric node state if playtest proves it necessary.
 
 ## P0 — World 1 persistent Raid
-- [ ] Three playable Raid phases.
+- [x] Three playable Raid phases.
 - [x] Persistent Raid progress/clear storage foundation.
-- [ ] Merge/order contributions to Raid progress.
-- [ ] Stronger Overgrowth pressure in later phases.
-- [ ] High-tier final deliveries.
+- [x] Merge/order contributions to Raid progress.
+- [x] Stronger Overgrowth pressure in later phases.
+- [x] High-tier final deliveries.
 - [x] World 2 unlock rule derived from World 1 Raid clear.
 - [x] World 1 100% completion rule in core.
 
 ## P0 — Collection Rewards
 Still approved and now has v6 persistent claim storage.
 
-- [ ] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
-- [ ] `Rewards` section inside Collection; no new mobile dock item.
-- [ ] Permanent bounded reward data.
+- [x] Claim-once milestones at 5/18, 10/18, 15/18 and 18/18.
+- [x] `Rewards` section inside Collection; no new mobile dock item.
+- [x] Permanent bounded reward data.
 - [x] Claim-state persistence field exists in v6.
-- [ ] Prevent double claim in reward transaction.
+- [x] Prevent double claim in reward transaction.
 - [ ] Campaign-relevant rewards may exist, but must not trivialize Locations/Raids.
 
 ## P0 — Prestige / Brain Reset
 Still approved and now has v6 permanent-meta storage.
 
-- [ ] Unlock after first T18.
-- [ ] Confirmation clearly shows reset vs preserved state.
-- [ ] Reset run-level board/economy/Brain Lab only.
-- [ ] Preserve Collection + Locations + Landmarks + Raids.
+- [x] Unlock after first T18.
+- [x] Confirmation clearly shows reset vs preserved state.
+- [x] Reset run-level board/economy/Brain Lab only.
+- [x] Preserve Collection + Locations + Landmarks + Raids.
 - [x] Brain Cell / Prestige count / permanent-upgrade fields exist in v6.
-- [ ] Data-driven permanent upgrade tree and spend transactions.
-- [ ] First valid Prestige always awards at least one Brain Cell.
-- [ ] Deterministic reset/preserve/no-double-award tests.
+- [x] Data-driven permanent upgrade tree and spend transactions.
+- [x] First valid Prestige always awards at least one Brain Cell.
+- [x] Deterministic reset/preserve/no-double-award tests.
 
 ## P1 — World 2
 - [ ] World 2 Traffic Lock board modifier.
@@ -228,10 +228,10 @@ Potential later art:
 - [x] Active Stabilize/Deliver run browser resume tests.
 - [x] Restore Landmark browser persistence smoke.
 - [x] Mastery browser completion smoke through 100% Sneaker Garden.
-- [ ] Gameplay-earned Raid progress persistence/world-unlock tests.
-- [ ] Collection reward one-time claim tests.
-- [ ] Prestige reset/preserve tests.
-- [ ] Campaign progress survives Prestige.
+- [x] Gameplay-earned Raid progress persistence/world-unlock tests.
+- [x] Collection reward one-time claim tests.
+- [x] Prestige reset/preserve tests.
+- [x] Campaign progress survives Prestige.
 - [ ] Dedicated RU CampaignRun interaction smoke; locale resource parity and global RU runtime smoke are already green.
 
 ## External acceptance gates

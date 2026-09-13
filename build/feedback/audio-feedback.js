@@ -14,6 +14,14 @@ export class AudioFeedback {
         this.muted = !this.muted;
         this.syncButton();
     }
+    setActive(active) {
+        if (!this.context)
+            return;
+        if (active && !this.muted)
+            void this.context.resume();
+        if (!active && this.context.state === 'running')
+            void this.context.suspend();
+    }
     trigger(kind, anchor) {
         this.vibrate(kind);
         this.burst(kind, anchor);

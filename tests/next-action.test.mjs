@@ -14,7 +14,13 @@ function singleUnitState(tier = 1, coins = 0) {
   const state = createInitialState(0);
   const cells = Array.from({ length: BOARD_SIZE }, () => null);
   cells[0] = { id: `single-${tier}`, familyId: family.id, tier: family.tier };
-  return { ...state, cells, coins, maxDiscoveredTier: Math.max(state.maxDiscoveredTier, tier) };
+  return {
+    ...state,
+    cells,
+    coins,
+    maxDiscoveredTier: Math.max(state.maxDiscoveredTier, tier),
+    runMaxTier: Math.max(state.runMaxTier, tier)
+  };
 }
 
 test('next-action guidance starts with a free merge rather than telling player to spend', () => {
@@ -47,7 +53,7 @@ test('return session exposes a deterministic sequence of useful decisions withou
 test('true deadlock outranks spending recommendations', () => {
   const top = FAMILIES[FAMILIES.length - 1];
   const cells = Array.from({ length: BOARD_SIZE }, (_, index) => ({ id: `top-${index}`, familyId: top.id, tier: top.tier }));
-  const state = { ...createInitialState(0), cells, coins: 999, maxDiscoveredTier: top.tier };
+  const state = { ...createInitialState(0), cells, coins: 999, maxDiscoveredTier: top.tier, runMaxTier: top.tier };
   assert.equal(nextActionHint(state).kind, 'rescue');
 });
 
@@ -60,7 +66,7 @@ test('when there is no free merge, permanent affordable upgrades are surfaced be
   assert.equal(hint.upgradeCount, 3);
 });
 
-test('Box and wait guidance use the current escalating price and production rate', () => {
+test('Box and wait guidance use the current base-tier price and production rate', () => {
   const affordable = singleUnitState(1, 100);
   const box = nextActionHint(affordable);
   assert.equal(box.kind, 'box');

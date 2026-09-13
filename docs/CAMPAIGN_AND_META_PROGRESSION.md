@@ -174,10 +174,10 @@ Current architecture:
 - Campaign units never alias or consume main-board units;
 - free Campaign Supply never spends ordinary coins or increases paid Brain Box inflation;
 - only explicit completed Campaign rewards/permanent progress flow back to account state;
-- active CampaignRunState is serialized inside canonical save v6, not a second localStorage key.
+- active CampaignRunState is serialized inside canonical save v7, not a second localStorage key.
 
-## Campaign persistent data — save v6
-Save v6 currently owns:
+## Campaign persistent data — save v7
+Save v7 currently owns the v6 Campaign/meta fields plus persistence-order metadata:
 
 - per-world unlock/clear state;
 - per-Location Stabilize progress;
@@ -313,7 +313,7 @@ Campaign is a primary long-term destination.
 ## Delivery strategy from here
 Do not author 56 bespoke mini-games.
 
-1. **Done:** persistent Location domain model + save v6.
+1. **Done:** persistent Location domain model + save v7.
 2. **Done:** isolated CampaignRunState + complete Sneaker Garden four-phase vertical slice.
 3. Generalize Sneaker Garden into data-driven Location definitions.
 4. Author the remaining six World 1 Locations mostly through configuration and bounded mechanic variants.

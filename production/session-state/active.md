@@ -12,19 +12,37 @@ Each Campaign world contains:
 
 The validated T1-T18 merge-idle board remains the primary account-growth loop.
 
+Audit implementation status (2026-09-05): Phases 1–4 in `docs/CODE_AUDIT_PLAN.md` are implemented. Save v8 adds current-run tier ownership; bounded base-tier Box pricing and T9–T18 missions meet the first-run pacing model; Collection milestone rewards and the five-category Brain Cell Prestige layer are production-wired with exact-once reset behavior.
+
+Phase 5/6 continuation (2026-09-05): save v9 persists active-time combo/Fever/visitor state. Combo and Fever are live; visitor production scheduling waits for approved art while its exact-once core is tested. The Campaign run engine and launcher now support all seven data-driven World 1 Locations with stable per-Location blocker layouts and discovered-tier-capped orders. Raid gameplay and dual order choices remain next.
+
+Phase 6 completion (2026-09-05): save v10 persists a separate World Raid board. Later World 1 Locations provide two stable delivery choices. The World 1 gate remains >=80% restoration plus >=5 restored Landmarks; its three resumable phases commit one third each, escalate blockers from 8 to 12, end in three high-tier deliveries and unlock World 2 exactly once.
+
+Retention instrumentation (2026-09-05): save v10 also owns identifier-free session metrics and one-time active clocks for T5/T8/T18, post-T18 continuation, first Prestige and World 1 Raid clear. D1/D7 cohort conclusions remain blocked on real player data rather than inferred from tests.
+
 ## Current production baseline
 - browser-first TypeScript runtime;
 - 6x5 main merge board;
 - one sequential T1-T18 chain;
 - passive income, Brain Box economy, Brain Lab, missions, offline reward, Collection, Rescue and `Next move`;
-- canonical save v6 with Yandex/local persistence and v1-v5 migration;
-- permanent Campaign Location / Landmark / Raid progress in save v6;
+- canonical save v7 with ordered Yandex/local persistence and v1-v6 migration;
+- permanent Campaign Location / Landmark / Raid progress in save v7;
 - resumable isolated `CampaignRunState` in the same canonical save;
-- permanent Collection/Prestige metadata slots in save v6;
+- permanent Collection/Prestige metadata slots in save v7;
 - board-first mobile UI with Missions / Collection / Brain Lab sheets;
 - unified T1-T18 character atlas;
 - EN/RU runtime parity;
 - browser/motion/accessibility/Yandex CI gates.
+
+## Code audit Phase 1 — complete
+- audit/retention implementation plan is tracked in `docs/CODE_AUDIT_PLAN.md`;
+- canonical save v7 adds monotonic revision and save timestamp metadata while migrating v1-v6;
+- Yandex selects the newest valid local/cloud snapshot and serializes cloud writes;
+- boot-time timers/lifecycle handlers cannot persist the temporary initial state before save restoration;
+- legal Campaign merge results above lifetime discovery survive reload without advancing main discovery;
+- Campaign Supply remains able to produce a persisted T1 order after lifetime discovery increases;
+- non-finite economy/progression/save-order values are normalized safely;
+- validation: 101 tests, Yandex package/integrity/release audit, Campaign smoke, RC smoke and Yandex browser smoke passed.
 
 ## Campaign direction
 The obsolete `8 short stages per world / 64 one-shot stages / 3 stars` plan is retired.
@@ -95,7 +113,7 @@ World 1 / Location 1 — **Sneaker Garden** now has all four playable phases on 
 ### Isolation / persistence contract
 - Campaign board never aliases or consumes main-board cells;
 - Campaign actions do not change main-board coins, XP, main merge count or paid Brain Box inflation;
-- active Stabilize/Deliver/Restore/Mastery runs are persisted in save v6 and resume after reload;
+- active Stabilize/Deliver/Restore/Mastery runs are persisted in save v7 and resume after reload;
 - completed temporary run state can be dismissed without erasing permanent Location progress.
 
 Validation status:
@@ -115,13 +133,19 @@ Repository-ready:
 - World 1 Backyard Brainrot Zone environment + boss;
 - World 2 Surreal Brainrot City environment + boss.
 
-## Next implementation sequence
-1. Generalize the proven Sneaker Garden phase engine into data-driven World 1 Location configs.
-2. Make Toilet Pond playable using the same phase framework with Location-specific goals/landmark identity.
-3. Implement Watermelon Grill, Hose Tunnels, Gnome Yard, Mushroom Field and Backyard Core.
-4. Build persistent 3-phase World 1 Raid using the same isolated Campaign board/state boundary.
-5. Collection Rewards + Prestige integration on the same v6 meta.
-6. World 2 Traffic Lock + seven Locations + Raid.
+## Completed audit implementation sequence
+1. The Sneaker Garden engine is data-driven across all seven World 1 Locations.
+2. Later Locations expose stable two-choice delivery orders within discovered tiers.
+3. The persistent three-phase World 1 Raid uses its own saved board and unlocks World 2 exactly once.
+4. Collection Rewards and Prestige are integrated with bounded permanent upgrades.
+5. Combo and Fever use foreground active-time accounting; visitor logic is complete but remains production-disabled pending approved art.
+6. Provider-neutral analytics and save-v10 retention clocks cover T5/T8/T18, post-T18 continuation, first Prestige and World 1 Raid clear.
+
+## Current validation boundary
+- Do not expand World 2 from its approved foundation until World 1 and Prestige have real cohort evidence.
+- D1/D7 and milestone instrumentation is ready; analysis requires production cohort data.
+- Remaining implementation work from the audit is the visitor presentation after the required character states and sounds are supplied, plus gradual migration of touched Campaign controllers from `public/*.js` into typed ownership.
+- Latest verification: 115 tests, EN/RU parity, local package/release audit, World 1 Raid, packaged RC and packaged Yandex browser smokes pass.
 
 ## Source of truth
 - `docs/ROADMAP.md`

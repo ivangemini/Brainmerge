@@ -53,6 +53,7 @@ function createHarness() {
   return {
     windowMock,
     sdk,
+    player,
     cloudWrites,
     storageMap,
     gameplay,
@@ -248,18 +249,51 @@ test('Yandex adapter ordinary debounce persists the newest queued snapshot', asy
   });
 });
 
-test('Yandex adapter prefers cloud state and falls back to safe storage when cloud has no object state', async () => {
+test('Yandex adapter serializes cloud writes so an older request cannot finish last', async () => {
+  const harness = createHarness();
+  const releases = [];
+  let activeWrites = 0;
+  let maxActiveWrites = 0;
+  harness.player.setData = async (data, flush = false) => {
+    activeWrites += 1;
+    maxActiveWrites = Math.max(maxActiveWrites, activeWrites);
+    await new Promise((resolve) => releases.push(resolve));
+    harness.cloudWrites.push({ data, flush });
+    activeWrites -= 1;
+  };
+
+  await withWindow(harness.windowMock, async () => {
+    const adapter = new YandexPlatformAdapter();
+    await adapter.initialize();
+    const base = createInitialState(0);
+    const firstWrite = adapter.saveState({ ...base, coins: 100 }, true);
+    await new Promise((resolve) => setImmediate(resolve));
+    const secondWrite = adapter.saveState({ ...base, coins: 200 }, true);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(maxActiveWrites, 1);
+    releases.shift()?.();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(maxActiveWrites, 1);
+    releases.shift()?.();
+    await Promise.all([firstWrite, secondWrite]);
+    assert.deepEqual(harness.cloudWrites.map((write) => write.data.brainmerge.coins), [100, 200]);
+  });
+});
+
+test('Yandex adapter selects the newest valid local or cloud state', async () => {
   const harness = createHarness();
   await withWindow(harness.windowMock, async () => {
     const adapter = new YandexPlatformAdapter();
     await adapter.initialize();
-    const cloud = { ...createInitialState(0), coins: 333 };
+    const cloud = { ...createInitialState(0), coins: 333, saveRevision: 3, savedAt: 3_000 };
     harness.setCloudData({ brainmerge: cloud });
     assert.equal((await adapter.loadState()).coins, 333);
 
-    harness.setCloudData({});
-    const local = { ...cloud, coins: 444 };
+    const local = { ...cloud, coins: 444, saveRevision: 4, savedAt: 4_000 };
     harness.storageMap.set('brainmerge.save.v2', JSON.stringify(local));
     assert.equal((await adapter.loadState()).coins, 444);
+
+    harness.setCloudData({ brainmerge: { version: 7, cells: [] } });
+    assert.equal((await adapter.loadState()).coins, 444, 'corrupt cloud data must not hide a valid local snapshot');
   });
 });

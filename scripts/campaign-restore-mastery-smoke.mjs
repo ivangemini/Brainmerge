@@ -167,7 +167,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   await assertRestore(browser);
   await assertMastery(browser);
-  console.log('Sneaker Garden Restore + Mastery smoke passed with save v6 persistence and 100% completion.');
+  console.log('Sneaker Garden Restore + Mastery smoke passed with save v10 persistence and 100% completion.');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

@@ -81,6 +81,9 @@ try {
       return { width: Number.parseFloat(style.outlineWidth), style: style.outlineStyle, color: style.outlineColor };
     });
     assert(focusStyle && focusStyle.width >= 3 && focusStyle.style !== 'none' && focusStyle.color !== 'rgba(0, 0, 0, 0)', 'accessibility: focused board cell needs a visible >=3px focus ring');
+    const focusedIndex = await page.evaluate(() => document.activeElement?.getAttribute('data-cell'));
+    await page.waitForTimeout(5_200);
+    assert(await page.evaluate((index) => document.activeElement?.getAttribute('data-cell') === index, focusedIndex), 'passive income tick must preserve keyboard focus');
     await assertNoPageErrors(page, errors, 'fresh accessibility');
     await context.close();
   }
@@ -133,7 +136,7 @@ try {
     await context.close();
   }
 
-  // A real legacy v2 payload must migrate through packaged boot, render, and persist as canonical v6.
+  // A real legacy v2 payload must migrate through packaged boot, render, and persist as canonical v10.
   {
     const legacyCells = Array(30).fill(null);
     legacyCells[0] = { id: 'legacy-shark', familyId: 'shark-sneakers', tier: 1 };
@@ -159,7 +162,7 @@ try {
     assert(await page.locator('.cell[data-family="shark-sneakers"][data-chain-tier="5"]').count() === 1, 'migration: legacy Shark must render as canonical T5');
     assert(await page.locator('.collection-chip.is-unlocked').count() >= 5, 'migration: Collection must preserve discovered T5 progress');
     const persisted = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), SAVE_KEY);
-    assert(persisted?.version === 6, `migration: persisted save version must be 6, got ${persisted?.version}`);
+    assert(persisted?.version === 10, `migration: persisted save version must be 10, got ${persisted?.version}`);
     assert(persisted?.maxDiscoveredTier === 5, `migration: expected maxDiscoveredTier 5, got ${persisted?.maxDiscoveredTier}`);
     assert(persisted?.selectedIndex === null, 'migration: stale legacy selection must be cleared');
     assert(persisted?.missionIndex === 1, `migration: mission compatibility expected index 1, got ${persisted?.missionIndex}`);
@@ -171,7 +174,7 @@ try {
     await context.close();
   }
 
-  console.log('Packaged RC smoke OK: focus + reduced motion + touch targets + v2->v6 migration');
+  console.log('Packaged RC smoke OK: focus + reduced motion + touch targets + v2->v10 migration');
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

@@ -13,6 +13,7 @@
     "smoke:runtime": "node scripts/runtime-smoke.mjs",
     "smoke:campaign": "node scripts/campaign-shell-smoke.mjs",
     "smoke:campaign:final": "node scripts/campaign-restore-mastery-smoke.mjs",
+    "smoke:campaign:raid": "node scripts/campaign-raid-smoke.mjs",
     "smoke:rc": "node scripts/rc-smoke.mjs",
     "smoke:motion": "node scripts/motion-smoke.mjs",
     "smoke:locale": "node scripts/locale-runtime-smoke.mjs",

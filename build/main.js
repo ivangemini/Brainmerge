@@ -1,7 +1,9 @@
 import { BOARD_COLUMNS } from './core/catalog.js';
-import { acknowledgeCampaignRunCompletion, beginCampaignRun, campaignRunPresentationSnapshot, deliverCampaignBoardUnit, moveOrMergeCampaignBoard, selectCampaignBoardCell, spawnCampaignRunSupply } from './core/campaign-run.js';
+import { Analytics, BrowserEventAnalyticsSink } from './analytics/analytics.js';
+import { acknowledgeCampaignRunCompletion, beginCampaignRun, campaignRunPresentationSnapshot, deliverCampaignBoardUnit, moveOrMergeCampaignBoard, restartCampaignRunPhase, selectCampaignBoardCell, spawnCampaignRunSupply } from './core/campaign-run.js';
 import { campaignPresentationSnapshot } from './core/campaign.js';
-import { accrueOfflineIncome, accrueOnlineIncome, claimCurrentMission, claimOfflineIncome, createInitialState, isBoardFull, moveOrMerge, purchaseUpgrade, rescueDeadlock, sanitizeState, selectCell, spawnUnit } from './core/game.js';
+import { acknowledgeCampaignRaidPhase, beginCampaignRaid, campaignRaidPresentation, deliverCampaignRaidUnit, moveOrMergeCampaignRaid, selectCampaignRaidCell, spawnCampaignRaidSupply } from './core/campaign-raid.js';
+import { accrueOfflineIncome, accrueOnlineIncome, advanceFastEvents, claimCurrentMission, claimCollectionReward, claimOfflineIncome, createInitialState, isBoardFull, markSessionStart, moveOrMerge, performPrestige, purchasePrestigeUpgrade, purchaseUpgrade, recordVisitorProgress, rescueDeadlock, sanitizeState, selectCell, spawnUnit } from './core/game.js';
 import { AudioFeedback } from './feedback/audio-feedback.js';
 import { runCoinTrail, runDiscoveryCelebration, runUnitFlight } from './feedback/visual-effects.js';
 import { detectLocale, loadLocale, translate } from './i18n/i18n.js';
@@ -19,7 +21,10 @@ let platform = new LocalPlatformAdapter();
 let locale = detectLocale();
 let state = createInitialState();
 let adBusy = false;
+let bootComplete = false;
+let lastActiveEventTickAt = Date.now();
 const feedback = new AudioFeedback();
+const analytics = new Analytics(new BrowserEventAnalyticsSink());
 function cellElement(index) {
     return root.querySelector(`[data-cell="${index}"]`);
 }
@@ -120,6 +125,14 @@ function runRewardFx(selector, reward, anchor) {
     }
 }
 function settleOnline(now = Date.now()) {
+    const feverWasActive = state.events.feverRemainingMs > 0;
+    const elapsed = Math.max(0, now - lastActiveEventTickAt);
+    const canStartEvent = !adBusy && !view.isDragging() && !document.querySelector('[role="dialog"]');
+    state = advanceFastEvents(state, elapsed, canStartEvent, false);
+    if (!feverWasActive && state.events.feverRemainingMs > 0) {
+        analytics.track('fever_started', { tier: state.runMaxTier, activeSeconds: Math.floor(state.events.activeMs / 1000) });
+    }
+    lastActiveEventTickAt = now;
     state = accrueOnlineIncome(state, now);
 }
 function accrueReturnIncome(current, now = Date.now()) {
@@ -144,6 +157,8 @@ function activateCell(index) {
         if (result.merged) {
             const reward = Math.max(0, result.state.coins - before.coins);
             const discoveredTier = result.state.maxDiscoveredTier > beforeTier ? result.state.maxDiscoveredTier : null;
+            if (discoveredTier)
+                analytics.track('tier_discovered', { tier: discoveredTier, activeSeconds: Math.floor(result.state.events.activeMs / 1000) });
             feedback.trigger('merge', cellElement(index));
             runMergeFx(index, reward, discoveredTier);
         }
@@ -176,6 +191,8 @@ const view = new GameView(root, {
         const next = claimCurrentMission(state);
         if (next.missionIndex > beforeIndex)
             feedback.trigger('reward');
+        if (next.missionIndex > beforeIndex)
+            analytics.track('reward_claimed', { source: 'mission', missionIndex: beforeIndex });
         update(next);
         if (next.missionIndex > beforeIndex)
             runRewardFx('.side-card--mission', Math.max(0, next.coins - before.coins), anchor);
@@ -188,6 +205,8 @@ const view = new GameView(root, {
         const next = claimOfflineIncome(state);
         if (hadReward && next.pendingOfflineCoins === 0)
             feedback.trigger('reward');
+        if (hadReward && next.pendingOfflineCoins === 0)
+            analytics.track('reward_claimed', { source: 'offline', amount: next.coins - before.coins });
         update(next);
         if (hadReward && next.pendingOfflineCoins === 0) {
             const reward = Math.max(0, next.coins - before.coins);
@@ -196,12 +215,44 @@ const view = new GameView(root, {
             runCoinTrail(anchor, root.querySelector('.hud-pill--coin'), reward);
         }
     },
+    claimCollectionReward: (tier) => {
+        settleOnline();
+        const next = claimCollectionReward(state, tier);
+        if (next !== state)
+            feedback.trigger('reward');
+        if (next !== state)
+            analytics.track('reward_claimed', { source: 'collection', tier });
+        update(next);
+    },
+    prestige: () => {
+        if (!window.confirm(translate(locale, 'prestige.confirm')))
+            return;
+        settleOnline();
+        const next = performPrestige(state, Date.now());
+        if (next !== state)
+            feedback.trigger('reward');
+        if (next !== state)
+            analytics.track('prestige_completed', { count: next.prestigeCount, activeSeconds: Math.floor(state.events.activeMs / 1000) });
+        update(next);
+    },
+    purchasePrestigeUpgrade: (id) => {
+        settleOnline();
+        const before = state.prestigeUpgrades[id];
+        const next = purchasePrestigeUpgrade(state, id);
+        if (next.prestigeUpgrades[id] > before)
+            feedback.trigger('reward');
+        if (next.prestigeUpgrades[id] > before)
+            analytics.track('upgrade_purchased', { kind: `prestige_${id}`, level: next.prestigeUpgrades[id] });
+        update(next);
+    },
     purchaseUpgrade: (id) => {
         settleOnline();
         const beforeLevel = state.upgrades[id];
         const next = purchaseUpgrade(state, id);
         if (next.upgrades[id] > beforeLevel)
             feedback.trigger('reward');
+        if (next.upgrades[id] > beforeLevel)
+            analytics.track('upgrade_purchased', { kind: id, level: next.upgrades[id] });
         update(next);
         if (next.upgrades[id] > beforeLevel) {
             const button = root.querySelector(`[data-upgrade="${id}"]`);
@@ -250,6 +301,8 @@ const view = new GameView(root, {
         if (result.merged) {
             const reward = Math.max(0, result.state.coins - before.coins);
             const discoveredTier = result.state.maxDiscoveredTier > beforeTier ? result.state.maxDiscoveredTier : null;
+            if (discoveredTier)
+                analytics.track('tier_discovered', { tier: discoveredTier, activeSeconds: Math.floor(result.state.events.activeMs / 1000) });
             feedback.trigger('merge', cellElement(to));
             runMergeFx(to, reward, discoveredTier);
         }
@@ -266,7 +319,8 @@ function publishCampaignSnapshot() {
     window.dispatchEvent(new CustomEvent('brainmerge:campaign-state', {
         detail: {
             ...campaignPresentationSnapshot(state.campaign),
-            activeRun: campaignRunPresentationSnapshot(state.campaignRun)
+            activeRun: campaignRunPresentationSnapshot(state.campaignRun),
+            activeRaid: campaignRaidPresentation(state.raidRun)
         }
     }));
 }
@@ -290,8 +344,12 @@ async function handleRewardedSpawn() {
     if (adBusy || isBoardFull(state) || !platform.capabilities.rewardedAds)
         return;
     adBusy = true;
+    feedback.setActive(false);
     render();
     const rewarded = await platform.showRewarded('brain-box');
+    lastActiveEventTickAt = Date.now();
+    if (!document.hidden)
+        feedback.setActive(true);
     adBusy = false;
     settleOnline();
     if (rewarded) {
@@ -322,8 +380,19 @@ async function boot() {
     document.documentElement.lang = locale;
     const now = Date.now();
     const saved = sanitizeState(await platform.loadState(), now);
-    if (saved)
-        state = accrueReturnIncome(saved, now);
+    if (saved) {
+        const returned = accrueReturnIncome(saved, now);
+        const elapsedDays = Math.floor(Math.max(0, now - returned.retention.firstSeenAt) / 86_400_000);
+        state = markSessionStart(returned, now);
+        analytics.track('session_return', {
+            session: state.retention.sessionCount,
+            elapsedDays,
+            d1: elapsedDays >= 1,
+            d7: elapsedDays >= 7,
+            activeSeconds: Math.floor(state.events.activeMs / 1000),
+            afterT18Seconds: Math.floor(state.retention.activeAfterT18Ms / 1000)
+        });
+    }
     else
         state = createInitialState(now);
     render();
@@ -331,23 +400,25 @@ async function boot() {
     // first complete interactive render. Yandex moderation explicitly checks this timing.
     await platform.gameReady();
     void platform.saveState(state);
+    bootComplete = true;
+    lastActiveEventTickAt = Date.now();
 }
 window.setInterval(() => {
-    if (document.hidden)
+    if (!bootComplete || document.hidden)
         return;
-    const next = accrueOnlineIncome(state, Date.now());
-    if (next.coins !== state.coins || next.incomeRemainder !== state.incomeRemainder) {
-        state = next;
-        render();
-    }
-    else {
-        state = next;
+    const before = state;
+    settleOnline(Date.now());
+    const next = state;
+    if (next.coins !== before.coins || next.incomeRemainder !== before.incomeRemainder
+        || next.events.feverRemainingMs !== before.events.feverRemainingMs) {
+        const t = (key, params) => translate(locale, key, params);
+        view.renderPassive(state, locale, t);
     }
 }, INCOME_TICK_MS);
 // Passive-only sessions still receive periodic canonical snapshots. This bounds
 // cloud/local data loss without writing on every 5-second income presentation tick.
 window.setInterval(() => {
-    if (document.hidden)
+    if (!bootComplete || document.hidden)
         return;
     settleOnline();
     void platform.saveState(state);
@@ -366,7 +437,10 @@ window.addEventListener('brainmerge:campaign-command', (event) => {
         if (!Number.isInteger(worldId) || !locationId)
             return;
         settleOnline();
-        update(beginCampaignRun(state, worldId, locationId));
+        const next = beginCampaignRun(state, worldId, locationId);
+        if (next.campaignRun !== state.campaignRun)
+            analytics.track('campaign_started', { worldId, location: locationId });
+        update(next);
         return;
     }
     if (type === 'spawn') {
@@ -395,12 +469,65 @@ window.addEventListener('brainmerge:campaign-command', (event) => {
         if (!Number.isInteger(index))
             return;
         settleOnline();
-        update(deliverCampaignBoardUnit(state, index));
+        const beforeOrder = state.campaignRun?.orderIndex ?? 0;
+        let next = deliverCampaignBoardUnit(state, index);
+        if ((next.campaignRun?.orderIndex ?? 0) > beforeOrder)
+            next = recordVisitorProgress(next, 'campaignDelivery');
+        if ((next.campaignRun?.orderIndex ?? 0) > beforeOrder)
+            analytics.track('campaign_order_delivered', { worldId: next.campaignRun?.worldId ?? 0, tier: next.campaignRun?.orderTiers[beforeOrder] ?? 0 });
+        update(next);
         return;
     }
     if (type === 'acknowledge') {
         settleOnline();
         update(acknowledgeCampaignRunCompletion(state));
+        return;
+    }
+    if (type === 'restart') {
+        settleOnline();
+        update(restartCampaignRunPhase(state));
+        return;
+    }
+    if (type === 'startRaid') {
+        const worldId = typeof command.worldId === 'number' ? command.worldId : Number.NaN;
+        if (!Number.isInteger(worldId))
+            return;
+        settleOnline();
+        update(beginCampaignRaid(state, worldId));
+        return;
+    }
+    if (type === 'raidSpawn') {
+        settleOnline();
+        update(spawnCampaignRaidSupply(state));
+        return;
+    }
+    if (type === 'raidSelect') {
+        const index = command.index === null ? null : Number(command.index);
+        if (index !== null && !Number.isInteger(index))
+            return;
+        update(selectCampaignRaidCell(state, index), false);
+        return;
+    }
+    if (type === 'raidMoveOrMerge') {
+        const from = Number(command.from);
+        const to = Number(command.to);
+        if (!Number.isInteger(from) || !Number.isInteger(to))
+            return;
+        settleOnline();
+        update(moveOrMergeCampaignRaid(state, from, to));
+        return;
+    }
+    if (type === 'raidDeliver') {
+        const index = Number(command.index);
+        if (!Number.isInteger(index))
+            return;
+        settleOnline();
+        update(deliverCampaignRaidUnit(state, index));
+        return;
+    }
+    if (type === 'raidAcknowledge') {
+        settleOnline();
+        update(acknowledgeCampaignRaidPhase(state));
     }
 });
 window.addEventListener('keydown', (event) => {
@@ -440,20 +567,27 @@ root.addEventListener('keydown', (event) => {
     }
 });
 document.addEventListener('visibilitychange', () => {
+    if (!bootComplete)
+        return;
     const now = Date.now();
     if (document.hidden) {
         settleOnline(now);
         platform.setGameplayActive(false);
+        feedback.setActive(false);
         // Mobile browsers may suspend before pagehide. Flush the latest economy snapshot now.
         void platform.saveState(state, true);
         return;
     }
     state = accrueReturnIncome(state, now);
+    lastActiveEventTickAt = now;
     platform.setGameplayActive(true);
+    feedback.setActive(true);
     render();
     void platform.saveState(state);
 });
 window.addEventListener('pagehide', () => {
+    if (!bootComplete)
+        return;
     settleOnline();
     platform.setGameplayActive(false);
     void platform.saveState(state, true);

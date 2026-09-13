@@ -98,6 +98,13 @@ button:focus-visible { outline: 4px solid rgba(59, 133, 224, .65); outline-offse
 @keyframes mergePulse { from { transform: translateY(-2px) scale(1.02); } to { transform: translateY(-5px) scale(1.055); } }
 @keyframes tutorialPulse { from { transform: translateY(0) scale(1); } to { transform: translateY(-3px) scale(1.025); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+.meta-rewards, .prestige-upgrades { display: grid; gap: 6px; margin-top: 10px; }
+.meta-rewards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.meta-rewards button, .prestige-upgrades button { border: 0; border-radius: 10px; padding: 7px; background: #fff0bd; color: #4a344c; font-weight: 900; cursor: pointer; }
+.meta-rewards button:disabled, .prestige-upgrades button:disabled { opacity: .55; cursor: default; }
+.prestige-panel { margin-top: 14px; padding-top: 12px; border-top: 2px solid rgba(74,52,76,.12); }
+.fever-banner { display: none; align-items: center; justify-content: space-between; margin: 0 auto 8px; padding: 9px 14px; width: min(520px, 96%); border-radius: 16px; color: #fff; background: linear-gradient(90deg, #f05b45, #f4a52f, #9b55c2); box-shadow: 0 8px 22px rgba(194,73,54,.25); font-weight: 950; }
+.fever-banner.is-active { display: flex; animation: mergePulse .8s ease-in-out infinite alternate; }
 @media (max-width: 1100px) {
   .game-layout { grid-template-columns: 1fr; }
   .side-card { margin-top: 0; }

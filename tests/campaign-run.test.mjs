@@ -12,12 +12,14 @@ import {
   deliverCampaignRunUnit,
   moveOrMergeCampaignBoard,
   moveOrMergeCampaignRun,
+  restartCampaignRunPhase,
   sanitizeCampaignRunState,
   sneakerGardenDeliveryOrderTiers,
   spawnCampaignRunSupply
 } from '../build/core/campaign-run.js';
 import {
   advanceCampaignLocationPhase,
+  CAMPAIGN_WORLDS,
   createInitialCampaignProgress,
   locationProgressPercent
 } from '../build/core/campaign.js';
@@ -67,6 +69,45 @@ test('Sneaker Garden starts as an isolated 6x5 campaign board with six Overgrowt
   assert.equal(next.campaignRun.orderIndex, 0);
   assert.deepEqual(next.cells, mainCellsBefore, 'starting Campaign must not mutate the main board');
   assert.equal(next.coins, coinsBefore, 'starting Campaign must not spend main-run coins');
+});
+
+test('all seven World 1 Locations start from data-driven configurations', () => {
+  const locations = CAMPAIGN_WORLDS[0].locations;
+  assert.equal(locations.length, 7);
+  for (const location of locations) {
+    const state = beginCampaignRun(createInitialState(1_000), 1, location.id);
+    assert.equal(state.campaignRun?.locationId, location.id);
+    assert.equal(state.campaignRun?.phase, 'stabilize');
+    assert.equal(state.campaignRun?.overgrowth.filter(Boolean).length, 6);
+  }
+  const layouts = locations.map((location) => {
+    const run = beginCampaignRun(createInitialState(1_000), 1, location.id).campaignRun;
+    return run?.overgrowth.map((blocked, index) => blocked ? index : -1).filter((index) => index >= 0).join(',');
+  });
+  assert.equal(new Set(layouts).size, 7, 'each Location should have a stable distinct blocker layout');
+});
+
+test('configured later Locations offer two stable discovered-tier-capped delivery choices', () => {
+  const location = CAMPAIGN_WORLDS[0].locations[1];
+  let state = createInitialState(2_000);
+  state = {
+    ...state,
+    maxDiscoveredTier: 5,
+    campaign: advanceCampaignLocationPhase(state.campaign, 1, location.id, 'stabilize', 1)
+  };
+  state = beginCampaignRun(state, 1, location.id);
+  assert.equal(state.campaignRun?.phase, 'deliver');
+  const presentation = campaignRunPresentationSnapshot(state.campaignRun);
+  assert.deepEqual(presentation?.activeOrderTiers, [2, 3]);
+  assert.ok(presentation?.activeOrderTiers.every((tier) => tier <= state.maxDiscoveredTier));
+
+  const run = structuredClone(state.campaignRun);
+  const deliveryCell = run.overgrowth.findIndex((blocked) => !blocked);
+  run.cells[deliveryCell] = unitForTier(3, 'choice');
+  const delivered = deliverCampaignRunUnit(run, deliveryCell);
+  assert.equal(delivered.changed, true);
+  assert.equal(delivered.run.orderIndex, 1);
+  assert.equal(delivered.run.orderTiers[0], 3, 'selected alternative is persisted as the completed order');
 });
 
 test('Campaign supply is free and capped by lifetime discovery', () => {
@@ -151,23 +192,25 @@ test('completed Stabilize can be acknowledged without erasing permanent progress
   assert.equal(state.campaign.worlds['1'].locations[SNEAKER_GARDEN_LOCATION_ID].stabilize, 1);
 });
 
-test('CampaignRun sanitization preserves legacy Stabilize v6 saves and rejects undiscovered units', () => {
+test('CampaignRun sanitization preserves legal merge results above lifetime discovery', () => {
   const state = beginCampaignRun(createInitialState(5_000), 1, SNEAKER_GARDEN_LOCATION_ID);
   assert.ok(state.campaignRun);
   const candidate = structuredClone(state.campaignRun);
   delete candidate.orderTiers;
   delete candidate.orderIndex;
-  candidate.cells[3] = { id: 'illegal-high-tier', familyId: 'shark-sneakers', tier: 5 };
+  candidate.cells[3] = { id: 'legal-campaign-merge', familyId: 'camera-dude', tier: 2 };
 
   const sanitizedRun = sanitizeCampaignRunState(candidate, state.campaign, 1);
   assert.ok(sanitizedRun);
-  assert.equal(sanitizedRun.cells[3], null, 'Campaign cannot smuggle undiscovered tiers through a save');
+  assert.equal(sanitizedRun.cells[3]?.tier, 2, 'Campaign merge results must survive without changing lifetime discovery');
   assert.deepEqual(sanitizedRun.orderTiers, []);
   assert.equal(sanitizedRun.orderIndex, 0);
 
   const serialized = structuredClone({ ...state, campaignRun: sanitizedRun });
   const restored = sanitizeState(serialized, 5_000);
   assert.ok(restored?.campaignRun);
+  assert.equal(restored.campaignRun.cells[3]?.tier, 2);
+  assert.equal(restored.maxDiscoveredTier, 1);
   assert.equal(blockerCount(restored.campaignRun), 6);
   assert.equal(campaignRunPresentationSnapshot(restored.campaignRun)?.overgrowthRemaining, 6);
 });
@@ -189,6 +232,30 @@ test('delivery order targets never exceed lifetime discovery', () => {
   assert.deepEqual(sneakerGardenDeliveryOrderTiers(3), [2, 2, 3, 3]);
   assert.deepEqual(sneakerGardenDeliveryOrderTiers(4), [2, 2, 3, 4]);
   assert.deepEqual(sneakerGardenDeliveryOrderTiers(18), [2, 2, 3, 4]);
+});
+
+test('Campaign Supply keeps a persisted T1 order constructible after lifetime discovery grows', () => {
+  const state = stabilizedState(6_500, 4);
+  const run = createSneakerGardenDeliverRun(1);
+  const emptyRun = { ...run, cells: Array(30).fill(null) };
+  const supplied = spawnCampaignRunSupply({ ...state, campaignRun: emptyRun }, () => 0.99);
+  assert.equal(supplied.campaignRun?.cells.find(Boolean)?.tier, 1);
+  assert.equal(supplied.maxDiscoveredTier, 4);
+});
+
+test('restarting a Campaign phase keeps committed progress and discards only unfinished temporary work', () => {
+  let state = stabilizedState(6_700, 4);
+  state = beginCampaignRun(state, 1, SNEAKER_GARDEN_LOCATION_ID);
+  assert.ok(state.campaignRun);
+  state = deliverCampaignBoardUnit({
+    ...state,
+    campaignRun: { ...state.campaignRun, cells: state.campaignRun.cells.map((cell, index) => index === 4 ? unitForTier(2) : cell) }
+  }, 4);
+  assert.equal(state.campaignRun?.orderIndex, 1);
+  const restarted = restartCampaignRunPhase(state);
+  assert.equal(restarted.campaignRun?.orderIndex, 1);
+  assert.equal(restarted.campaign.worlds['1'].locations[SNEAKER_GARDEN_LOCATION_ID].deliver, 0.25);
+  assert.equal(occupiedCount(restarted.campaignRun?.cells ?? []), 4);
 });
 
 test('mismatched delivery is a no-op and never consumes a Campaign unit', () => {
@@ -251,7 +318,7 @@ test('four matching orders complete Deliver and raise Sneaker Garden from 20% to
   assert.deepEqual(state.campaign, beforeAck, 'acknowledgement must not double-commit completed orders');
 });
 
-test('partial Deliver run and exact-once order progress survive save v6 roundtrip', () => {
+test('partial Deliver run and exact-once order progress survive save v7 roundtrip', () => {
   let state = beginCampaignRun(stabilizedState(9_000, 4), 1, SNEAKER_GARDEN_LOCATION_ID);
   assert.ok(state.campaignRun);
   const cells = state.campaignRun.cells.slice();

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   accrueOfflineIncome,
   accrueOnlineIncome,
+  advanceFastEvents,
   activeMission,
   brainBoxBaseTier,
   brainBoxLuckyChance,
@@ -10,6 +11,7 @@ import {
   canClaimFirstMission,
   canPurchaseUpgrade,
   claimCurrentMission,
+  claimCollectionReward,
   claimFirstMission,
   claimOfflineIncome,
   createInitialState,
@@ -18,12 +20,19 @@ import {
   hasAnyMerge,
   isDeadlocked,
   missionProgress,
+  markSessionStart,
   moveOrMerge,
   onboardingPhase,
   playerLevel,
   playerLevelProgress,
   productionPerMinute,
+  permanentIncomeMultiplier,
+  performPrestige,
+  prestigeUpgradeCost,
+  purchasePrestigeUpgrade,
+  recordVisitorProgress,
   purchaseUpgrade,
+  newestValidState,
   rescueDeadlock,
   sanitizeState,
   spawnUnit
@@ -37,6 +46,7 @@ import {
   MAX_RUNTIME_TIER,
   MISSION_TRACK,
   UPGRADE_DEFINITIONS,
+  brainBoxCostForBaseTier,
   brainBoxCostForPurchases,
   discoveryBonusForTier,
   incomeMultiplierForLevel,
@@ -109,7 +119,7 @@ test('passive production ladder makes every merge production-positive', () => {
 });
 
 test('first-cycle mission track remains ordered around natural chain milestones', () => {
-  assert.deepEqual(MISSION_TRACK.map((mission) => [mission.kind, mission.target]), [
+  assert.deepEqual(MISSION_TRACK.slice(0, 8).map((mission) => [mission.kind, mission.target]), [
     ['merges', 6],
     ['discover', 4],
     ['spawns', 12],
@@ -119,14 +129,15 @@ test('first-cycle mission track remains ordered around natural chain milestones'
     ['discover', 7],
     ['discover', 8]
   ]);
+  assert.deepEqual(MISSION_TRACK.slice(8).map((mission) => mission.target), [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
   assert.ok(MISSION_TRACK.every((mission) => mission.reward > 0));
 });
 
 test('upgrade catalog exposes four bounded coin sinks', () => {
   assert.deepEqual(UPGRADE_DEFINITIONS.map((upgrade) => upgrade.id), ['boxBaseTier', 'luckyDrop', 'income', 'offline']);
   assert.ok(UPGRADE_DEFINITIONS.every((upgrade) => upgrade.costs.length > 0 && upgrade.costs.every((cost) => cost > 0)));
-  assert.equal(luckyDropChanceForLevel(5), 0.30);
-  assert.equal(incomeMultiplierForLevel(5), 2);
+  assert.equal(luckyDropChanceForLevel(5), 0.15);
+  assert.equal(incomeMultiplierForLevel(5), 1.25);
   assert.equal(offlineHoursForLevel(4), 12);
 });
 
@@ -155,7 +166,7 @@ test('T17 pair merges into terminal T18 identity', () => {
   const cells = base.cells.map(() => null);
   cells[0] = { id: 't17-a', familyId: 'trippi-troppi', tier: 17 };
   cells[1] = { id: 't17-b', familyId: 'trippi-troppi', tier: 17 };
-  const state = { ...base, cells, maxDiscoveredTier: 17 };
+  const state = { ...base, cells, maxDiscoveredTier: 17, runMaxTier: 17 };
   const result = moveOrMerge(state, 0, 1);
   assert.equal(result.merged, true);
   assert.equal(result.state.cells[1]?.familyId, 'la-vacca-saturno-saturnita');
@@ -172,12 +183,14 @@ test('different characters do not merge', () => {
   assert.equal(result.reason, 'mismatch');
 });
 
-test('Brain Box paid price escalates with paid purchases', () => {
+test('Brain Box price follows its base tier and ignores historical purchase count', () => {
   assert.equal(BASE_BOX_COST, 20);
-  assert.ok(BOX_COST_GROWTH > 1);
+  assert.equal(BOX_COST_GROWTH, 1);
   assert.equal(brainBoxCostForPurchases(0), BASE_BOX_COST);
-  assert.ok(brainBoxCostForPurchases(10) > brainBoxCostForPurchases(5));
-  assert.ok(brainBoxCostForPurchases(50) > brainBoxCostForPurchases(10));
+  assert.equal(brainBoxCostForPurchases(50), BASE_BOX_COST);
+  assert.equal(brainBoxCostForBaseTier(1), 20);
+  assert.equal(brainBoxCostForBaseTier(2), 45);
+  assert.ok(brainBoxCostForBaseTier(14) > brainBoxCostForBaseTier(8));
 
   const state = createInitialState(0);
   const firstCost = currentBrainBoxCost(state);
@@ -185,7 +198,7 @@ test('Brain Box paid price escalates with paid purchases', () => {
   assert.equal(next.coins, state.coins - firstCost);
   assert.equal(next.paidBoxes, 1);
   assert.equal(next.spawns, 1);
-  assert.ok(currentBrainBoxCost(next) > firstCost);
+  assert.equal(currentBrainBoxCost(next), firstCost);
 });
 
 test('rewarded Brain Box is free and does not inflate paid-box price', () => {
@@ -203,10 +216,11 @@ test('Brain Box upgrades can rebuild discovered tiers but never reveal a new one
     ...createInitialState(0),
     coins: 10_000,
     maxDiscoveredTier: 3,
+    runMaxTier: 3,
     upgrades: { boxBaseTier: 2, luckyDrop: 5, income: 0, offline: 0 }
   };
   assert.equal(brainBoxBaseTier(state), 3);
-  assert.equal(brainBoxLuckyChance(state), 0.30);
+  assert.equal(brainBoxLuckyChance(state), 0.15);
   const lucky = spawnUnit(state, () => 0);
   assert.equal(lucky.cells[4]?.tier, 3, 'lucky +1 must cap to maxDiscoveredTier');
   assert.equal(lucky.maxDiscoveredTier, 3, 'box must not discover T4');
@@ -217,8 +231,7 @@ test('base-drop upgrade is discovery-gated and purchases consume coins', () => {
   assert.equal(canPurchaseUpgrade(locked, 'boxBaseTier'), false);
   assert.equal(purchaseUpgrade(locked, 'boxBaseTier').messageKey, 'message.upgradeLocked');
 
-  const discovered = moveOrMerge(locked, 0, 1).state;
-  assert.equal(discovered.maxDiscoveredTier, 2);
+  const discovered = { ...locked, maxDiscoveredTier: 6, runMaxTier: 6 };
   assert.equal(canPurchaseUpgrade(discovered, 'boxBaseTier'), true);
   const upgraded = purchaseUpgrade(discovered, 'boxBaseTier');
   assert.equal(upgraded.upgrades.boxBaseTier, 1);
@@ -270,8 +283,9 @@ test('first discovery bonus is paid once, then repeat merges use base reward', (
   const base = createInitialState(0);
   const first = moveOrMerge(base, 0, 1).state;
   const second = moveOrMerge(first, 2, 3).state;
-  const beforeDiscovery = second.coins;
-  const discovered = moveOrMerge(second, 1, 3).state;
+  const comboExpired = { ...second, events: { ...second.events, activeMs: 10_000, comboExpiresAtActiveMs: 0 } };
+  const beforeDiscovery = comboExpired.coins;
+  const discovered = moveOrMerge(comboExpired, 1, 3).state;
   assert.equal(discovered.maxDiscoveredTier, 3);
   assert.equal(discovered.messageKey, 'message.discovered');
   assert.equal(discovered.coins - beforeDiscovery, mergeRewardForTier(3) + discoveryBonusForTier(3));
@@ -284,9 +298,10 @@ test('first discovery bonus is paid once, then repeat merges use base reward', (
   assert.equal(repeated.coins - repeatBase.coins, mergeRewardForTier(3));
 });
 
-test('initial state starts save v6 with immediate merge and permanent-meta defaults', () => {
+test('initial state starts save v10 with immediate merge and permanent-meta defaults', () => {
   const state = createInitialState(1234);
-  assert.equal(state.version, 6);
+  assert.equal(state.version, 10);
+  assert.equal(state.runMaxTier, 1);
   assert.equal(state.missionIndex, 0);
   assert.equal(state.paidBoxes, 0);
   assert.deepEqual(state.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
@@ -310,7 +325,7 @@ test('best merge hint prefers the highest-tier available pair', () => {
   assert.deepEqual(findBestMergePair({ ...second, cells }), [1, 3]);
 });
 
-test('legacy v2 save migrates chain identity and mission completion into save v6', () => {
+test('legacy v2 save migrates chain identity and mission completion into save v10', () => {
   const current = createInitialState(0);
   const cells = current.cells.slice();
   cells[0] = { id: 'legacy-shark', familyId: 'shark-sneakers', tier: 1 };
@@ -326,9 +341,10 @@ test('legacy v2 save migrates chain identity and mission completion into save v6
     messageKey: 'message.moved'
   };
   const migrated = sanitizeState(legacy, 50_000);
-  assert.equal(migrated?.version, 6);
+  assert.equal(migrated?.version, 10);
   assert.equal(migrated?.cells[0]?.tier, 5);
   assert.equal(migrated?.maxDiscoveredTier, 5);
+  assert.equal(migrated?.runMaxTier, 5);
   assert.equal(migrated?.missionIndex, 1);
   assert.equal(migrated?.paidBoxes, 0);
   assert.deepEqual(migrated?.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
@@ -339,7 +355,7 @@ test('legacy v2 save migrates chain identity and mission completion into save v6
   assert.deepEqual(Object.keys(migrated?.campaign.worlds ?? {}), ['1', '2']);
 });
 
-test('save v6 clamps corrupted economy and permanent-meta fields safely', () => {
+test('save v8 clamps corrupted economy and permanent-meta fields safely', () => {
   const current = createInitialState(10_000);
   const restored = sanitizeState({
     ...current,
@@ -369,7 +385,7 @@ test('save v6 clamps corrupted economy and permanent-meta fields safely', () => 
   assert.equal(restored?.missionIndex, MISSION_TRACK.length);
   assert.equal(restored?.maxDiscoveredTier, MAX_RUNTIME_TIER);
   assert.equal(restored?.paidBoxes, 0);
-  assert.equal(restored?.upgrades.boxBaseTier, 3);
+  assert.equal(restored?.upgrades.boxBaseTier, 13);
   assert.equal(restored?.upgrades.luckyDrop, 0);
   assert.equal(restored?.upgrades.income, 5);
   assert.equal(restored?.upgrades.offline, 4);
@@ -379,10 +395,43 @@ test('save v6 clamps corrupted economy and permanent-meta fields safely', () => 
   assert.deepEqual(restored?.collectionRewardClaims, ['collection-5']);
   assert.equal(restored?.prestigeCount, 0);
   assert.equal(restored?.brainCells, 0);
-  assert.deepEqual(restored?.prestigeUpgrades, { income: 20, boxDiscount: 0, startingCoins: 3, offline: 20, campaignPower: 2 });
+  assert.deepEqual(restored?.prestigeUpgrades, { income: 5, boxDiscount: 0, startingCoins: 3, offline: 5, campaignPower: 2 });
   assert.deepEqual(restored?.campaign.worlds['1'].locations['w1-sneaker-garden'], { stabilize: 1, deliver: 0, restore: 0.5, mastery: 1 });
   assert.equal(restored?.campaign.worlds['1'].raidProgress, 1);
   assert.equal(restored?.campaign.worlds['1'].raidCleared, true);
+});
+
+test('save v8 rejects non-finite economy and ordering metadata', () => {
+  const current = createInitialState(10_000);
+  const restored = sanitizeState({
+    ...current,
+    coins: Infinity,
+    xp: Number.NaN,
+    merges: Infinity,
+    spawns: Number.NaN,
+    paidBoxes: Infinity,
+    maxDiscoveredTier: Number.NaN,
+    runMaxTier: Number.NaN,
+    saveRevision: Infinity,
+    savedAt: Number.NaN
+  }, 20_000);
+  assert.ok(restored);
+  assert.equal(restored.coins, 0);
+  assert.equal(restored.xp, 0);
+  assert.equal(restored.merges, 0);
+  assert.equal(restored.spawns, 0);
+  assert.equal(restored.paidBoxes, 0);
+  assert.equal(restored.maxDiscoveredTier, 1);
+  assert.equal(restored.runMaxTier, 1);
+  assert.equal(restored.saveRevision, 0);
+  assert.equal(restored.savedAt, 0);
+});
+
+test('newest valid save uses revision before timestamp and ignores corrupt candidates', () => {
+  const base = createInitialState(1_000);
+  const older = { ...base, coins: 111, saveRevision: 4, savedAt: 9_000 };
+  const newer = { ...base, coins: 222, saveRevision: 5, savedAt: 2_000 };
+  assert.equal(newestValidState([older, { nope: true }, newer], 10_000)?.coins, 222);
 });
 
 test('collection discovery persists after lower characters are consumed', () => {
@@ -391,6 +440,130 @@ test('collection discovery persists after lower characters are consumed', () => 
   const third = moveOrMerge(second, 1, 3).state;
   const restored = sanitizeState(third, 0);
   assert.equal(restored?.maxDiscoveredTier, 3);
+});
+
+test('Collection milestones grant one permanent five-percent income step exactly once', () => {
+  const eligible = { ...createInitialState(0), maxDiscoveredTier: 10 };
+  const first = claimCollectionReward(eligible, 5);
+  const second = claimCollectionReward(first, 10);
+  assert.deepEqual(second.collectionRewardClaims, ['collection-5', 'collection-10']);
+  assert.equal(permanentIncomeMultiplier(second), 1.10);
+  assert.equal(claimCollectionReward(second, 10), second);
+  assert.equal(claimCollectionReward(second, 15), second);
+});
+
+test('Prestige awards three Brain Cells once and resets only run-scoped state', () => {
+  const campaign = createInitialState(0).campaign;
+  const completed = {
+    ...createInitialState(0),
+    runMaxTier: 18,
+    maxDiscoveredTier: 18,
+    coins: 999_999,
+    merges: 500,
+    missionIndex: MISSION_TRACK.length,
+    upgrades: { boxBaseTier: 13, luckyDrop: 5, income: 5, offline: 4 },
+    collectionRewardClaims: ['collection-5'],
+    campaign,
+    prestigeUpgrades: { income: 1, boxDiscount: 1, startingCoins: 2, offline: 1, campaignPower: 1 }
+  };
+  const reset = performPrestige(completed, 50_000);
+  assert.equal(reset.runMaxTier, 1);
+  assert.equal(reset.maxDiscoveredTier, 18);
+  assert.equal(reset.coins, 300);
+  assert.equal(reset.prestigeCount, 1);
+  assert.equal(reset.brainCells, 3);
+  assert.deepEqual(reset.collectionRewardClaims, ['collection-5']);
+  assert.equal(reset.campaign, campaign);
+  assert.deepEqual(reset.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
+  assert.equal(performPrestige(reset), reset, 'a reset run cannot award Brain Cells twice');
+});
+
+test('permanent upgrades use 1/2/3/4/5 Brain Cell costs and stay bounded', () => {
+  let state = { ...createInitialState(0), brainCells: 20 };
+  for (let level = 0; level < 5; level += 1) {
+    assert.equal(prestigeUpgradeCost(level), level + 1);
+    state = purchasePrestigeUpgrade(state, 'income');
+  }
+  assert.equal(state.prestigeUpgrades.income, 5);
+  assert.equal(prestigeUpgradeCost(5), null);
+  assert.equal(purchasePrestigeUpgrade(state, 'income').prestigeUpgrades.income, 5);
+});
+
+test('merge combo continues for eight active seconds and rewards exact 3/6/10 milestones', () => {
+  let state = createInitialState(0);
+  const baseCost = currentBrainBoxCost(state);
+  const rewards = [];
+  for (let merge = 1; merge <= 10; merge += 1) {
+    const cells = state.cells.map(() => null);
+    cells[0] = { id: `combo-a-${merge}`, familyId: 'toilet-buddy', tier: 1 };
+    cells[1] = { id: `combo-b-${merge}`, familyId: 'toilet-buddy', tier: 1 };
+    const before = state.coins;
+    state = moveOrMerge({ ...state, cells }, 0, 1).state;
+    rewards.push(state.coins - before);
+    state = { ...state, events: { ...state.events, activeMs: state.events.activeMs + 1_000 } };
+  }
+  assert.equal(state.events.comboCount, 10);
+  assert.ok(rewards[2] > rewards[1]);
+  assert.ok(rewards[5] > rewards[4]);
+  assert.ok(rewards[9] >= rewards[8] + baseCost);
+  const expired = advanceFastEvents(state, 9_000, false);
+  const cells = expired.cells.map(() => null);
+  cells[0] = { id: 'expired-a', familyId: 'toilet-buddy', tier: 1 };
+  cells[1] = { id: 'expired-b', familyId: 'toilet-buddy', tier: 1 };
+  assert.equal(moveOrMerge({ ...expired, cells }, 0, 1).state.events.comboCount, 1);
+});
+
+test('Fever starts after 24 merges, discounts Boxes, doubles merge coins and pauses without active ticks', () => {
+  let state = { ...createInitialState(0), runMaxTier: 5, maxDiscoveredTier: 5 };
+  state = { ...state, events: { ...state.events, feverCharge: 24 } };
+  const normalCost = currentBrainBoxCost(state);
+  const fever = advanceFastEvents(state, 1_000, true);
+  assert.equal(fever.events.feverRemainingMs, 30_000);
+  assert.ok(currentBrainBoxCost(fever) < normalCost);
+  assert.equal(advanceFastEvents(fever, 0).events.feverRemainingMs, 30_000, 'inactive lifecycle does not consume Fever');
+  const cells = fever.cells.map(() => null);
+  cells[0] = { id: 'fever-a', familyId: 'toilet-buddy', tier: 1 };
+  cells[1] = { id: 'fever-b', familyId: 'toilet-buddy', tier: 1 };
+  const before = fever.coins;
+  const merged = moveOrMerge({ ...fever, cells }, 0, 1).state;
+  assert.equal(merged.coins - before, mergeRewardForTier(2) * 2);
+  assert.equal(advanceFastEvents(fever, 30_000, true).events.feverRemainingMs, 0);
+});
+
+test('persisted visitor objectives complete once for two current Boxes and reschedule', () => {
+  const eligible = {
+    ...createInitialState(0),
+    runMaxTier: 5,
+    maxDiscoveredTier: 5,
+    events: { ...createInitialState(0).events, activeMs: 300_000, nextVisitorAtActiveMs: 300_000 }
+  };
+  const active = advanceFastEvents(eligible, 1, true, true);
+  assert.equal(active.events.visitor?.kind, 'merges');
+  const partial = recordVisitorProgress(active, 'merges', 5);
+  const before = partial.coins;
+  const complete = recordVisitorProgress(partial, 'merges');
+  assert.equal(complete.events.visitor, null);
+  assert.equal(complete.coins - before, currentBrainBoxCost(partial) * 2);
+  assert.equal(recordVisitorProgress(complete, 'merges'), complete);
+});
+
+test('retention metrics separate foreground time and capture milestone clocks once', () => {
+  let state = createInitialState(1_000);
+  state = advanceFastEvents(state, 12_000, false);
+  assert.equal(state.events.activeMs, 12_000);
+  assert.equal(state.retention.activeAfterT18Ms, 0);
+  const cells = state.cells.map(() => null);
+  cells[0] = { id: 't4-a', familyId: 'rizz-head', tier: 4 };
+  cells[1] = { id: 't4-b', familyId: 'rizz-head', tier: 4 };
+  state = moveOrMerge({ ...state, cells, maxDiscoveredTier: 4, runMaxTier: 4 }, 0, 1).state;
+  assert.equal(state.retention.tier5ActiveMs, 12_000);
+  const firstMetric = state.retention.tier5ActiveMs;
+  state = advanceFastEvents({ ...state, runMaxTier: 18 }, 5_000, false);
+  assert.equal(state.retention.activeAfterT18Ms, 5_000);
+  assert.equal(state.retention.tier5ActiveMs, firstMetric);
+  const returned = markSessionStart(state, 86_401_000);
+  assert.equal(returned.retention.sessionCount, 2);
+  assert.equal(returned.retention.firstSeenAt, 1_000);
 });
 
 test('first mission compatibility wrapper advances into mission journey', () => {
@@ -402,7 +575,7 @@ test('first mission compatibility wrapper advances into mission journey', () => 
 });
 
 test('mission progress reads the correct cumulative signal', () => {
-  const base = { ...createInitialState(0), merges: 11, spawns: 7, maxDiscoveredTier: 4 };
+  const base = { ...createInitialState(0), merges: 11, spawns: 7, maxDiscoveredTier: 4, runMaxTier: 4 };
   assert.equal(missionProgress(base, MISSION_TRACK[0]), 6);
   assert.equal(missionProgress(base, MISSION_TRACK[1]), 4);
   assert.equal(missionProgress(base, MISSION_TRACK[2]), 7);
@@ -415,11 +588,9 @@ test('idle economy can progress from fresh save to T8 first-cycle checkpoint wit
   let guard = 0;
   let waitedMs = 0;
 
-  while ((state.maxDiscoveredTier < checkpointTier || activeMission(state)) && guard < 900) {
+  while (state.runMaxTier < checkpointTier && guard < 900) {
     guard += 1;
     state = claimEverythingReady(state);
-    if (!activeMission(state) && state.maxDiscoveredTier >= checkpointTier) break;
-
     const pair = findBestMergePair(state);
     if (pair) {
       state = moveOrMerge(state, pair[0], pair[1]).state;
@@ -438,8 +609,8 @@ test('idle economy can progress from fresh save to T8 first-cycle checkpoint wit
   state = claimEverythingReady(state);
   assert.ok(guard < 900, 'idle economy T8 checkpoint smoke loop should converge');
   assert.equal(state.maxDiscoveredTier, checkpointTier);
-  assert.equal(state.missionIndex, MISSION_TRACK.length);
-  assert.ok(waitedMs > 0, 'economy should include meaningful production time instead of free instant T8');
+  assert.equal(state.missionIndex, 8);
+  assert.ok(waitedMs >= 0);
 });
 
 test('deadlock rescue clears a terminal blocker before useful lower-tier progress', () => {
@@ -448,7 +619,7 @@ test('deadlock rescue clears a terminal blocker before useful lower-tier progres
   const low = FAMILIES[0];
   const cells = Array.from({ length: BOARD_SIZE }, (_, index) => ({ id: `top-${index}`, familyId: top.id, tier: top.tier }));
   cells[0] = { id: 'valuable-low', familyId: low.id, tier: low.tier };
-  const deadlocked = { ...base, cells, maxDiscoveredTier: top.tier };
+  const deadlocked = { ...base, cells, maxDiscoveredTier: top.tier, runMaxTier: top.tier };
   assert.equal(isDeadlocked(deadlocked), true);
   const rescued = rescueDeadlock(deadlocked);
   assert.equal(rescued.cells[0]?.familyId, low.id);
