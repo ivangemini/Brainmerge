@@ -3,7 +3,7 @@ const COPY_BY_LOCALE = {
   ru: './locales/campaign-ru.json'
 };
 
-const TARGET_WORLD = 1;
+let targetWorld = 1;
 let targetLocation = 'w1-sneaker-garden';
 const BOARD_COLUMNS = 6;
 const RUN_PHASES = new Set(['stabilize', 'deliver', 'restore', 'mastery']);
@@ -48,7 +48,7 @@ async function loadCopy() {
 }
 
 function worldSnapshot() {
-  return campaignSnapshot?.worlds?.find((world) => world.id === TARGET_WORLD) ?? null;
+  return campaignSnapshot?.worlds?.find((world) => world.id === targetWorld) ?? null;
 }
 
 function locationSnapshot() {
@@ -57,7 +57,7 @@ function locationSnapshot() {
 
 function activeRun() {
   const run = campaignSnapshot?.activeRun;
-  return run?.worldId === TARGET_WORLD && run?.locationId === targetLocation && RUN_PHASES.has(run?.phase)
+  return run?.worldId === targetWorld && run?.locationId === targetLocation && RUN_PHASES.has(run?.phase)
     ? run
     : null;
 }
@@ -192,6 +192,7 @@ function openRun() {
   currentShell.classList.add('is-open');
   currentShell.setAttribute('aria-hidden', 'false');
   document.body.classList.add('campaign-run-open');
+  window.dispatchEvent(new CustomEvent('brainmerge:campaign-run', { detail: { world: run.worldId, raid: false } }));
   setBackgroundInert(true);
   if (!wasOpen) requestAnimationFrame(() => currentShell.querySelector('.campaign-run-back')?.focus());
 }
@@ -202,6 +203,7 @@ function closeRun() {
   shell.classList.remove('is-open');
   shell.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('campaign-run-open');
+  window.dispatchEvent(new Event('brainmerge:campaign-run-close'));
   setBackgroundInert(false);
   const launcher = document.querySelector('.campaign-detail__run-button');
   if (launcher instanceof HTMLElement && launcher.offsetParent) launcher.focus();
@@ -247,7 +249,7 @@ function renderLauncher() {
     launcher.type = 'button';
     launcher.addEventListener('click', () => {
       wantsOpen = true;
-      if (!activeRun()) dispatchCommand({ type: 'start', worldId: TARGET_WORLD, locationId: targetLocation });
+      if (!activeRun()) dispatchCommand({ type: 'start', worldId: targetWorld, locationId: targetLocation });
       window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
       if (activeRun()) openRun();
     });
@@ -367,9 +369,10 @@ function renderRun() {
   currentShell.dataset.phase = run.phase;
   currentShell.setAttribute('aria-label', presentation.kicker);
   currentShell.querySelector('.campaign-run-back').textContent = `← ${copy.runBack}`;
-  currentShell.querySelector('.campaign-run-heading small').textContent = copy.world1Kicker;
+  const worldNumber = run.worldId === 2 ? 2 : 1;
+  currentShell.querySelector('.campaign-run-heading small').textContent = copy[`world${worldNumber}Kicker`];
   const locationIndex = worldSnapshot()?.locations?.findIndex((location) => location.id === targetLocation) ?? 0;
-  currentShell.querySelector('.campaign-run-heading strong').textContent = copy[`w1Location${Math.max(0, locationIndex) + 1}Name`] ?? copy.w1Location1Name;
+  currentShell.querySelector('.campaign-run-heading strong').textContent = copy[`w${worldNumber}Location${Math.max(0, locationIndex) + 1}Name`] ?? copy[`w${worldNumber}Location1Name`];
   currentShell.querySelector('.campaign-run-progress small').textContent = presentation.progress;
   currentShell.querySelector('.campaign-run-progress strong').textContent = `${run.progressPercent}%`;
   const progressBar = currentShell.querySelector('.campaign-run-progress i');
@@ -457,7 +460,8 @@ function scheduleCopyRefresh() {
 window.addEventListener('brainmerge:campaign-state', (event) => {
   if (!(event instanceof CustomEvent) || !event.detail || typeof event.detail !== 'object') return;
   campaignSnapshot = event.detail;
-  if (campaignSnapshot.activeRun?.worldId === TARGET_WORLD && campaignSnapshot.activeRun?.locationId) {
+  if (campaignSnapshot.activeRun?.worldId && campaignSnapshot.activeRun?.locationId) {
+    targetWorld = campaignSnapshot.activeRun.worldId;
     targetLocation = campaignSnapshot.activeRun.locationId;
   }
   scheduleLauncherRefresh();
@@ -469,7 +473,10 @@ document.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target.closest('.campaign-node--location') : null;
   if (target instanceof HTMLElement) {
     selectedLocationId = target.dataset.locationId ?? null;
-    if (selectedLocationId) targetLocation = selectedLocationId;
+    if (selectedLocationId) {
+      targetLocation = selectedLocationId;
+      targetWorld = campaignSnapshot?.worlds?.find((world) => world.locations?.some((location) => location.id === selectedLocationId))?.id ?? targetWorld;
+    }
     scheduleLauncherRefresh();
   }
 }, true);

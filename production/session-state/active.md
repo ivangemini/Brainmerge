@@ -10,6 +10,16 @@ Each Campaign world contains:
 - Location landmarks;
 - four Location phases: Stabilize -> Deliver Orders -> Restore Landmark -> Mastery.
 
+## Normalized full build pass — 2026-09-13
+
+Working branch: `codex/normalized-full-build-20260913`, based on recovery commit `ca39fb2`. The recovery branch and all historical branches remain untouched.
+
+- Recovery remains canonical for save v10, Raid, retention, analytics, combo/Fever and visitor state.
+- The unique audio layer from `codex/world1-location-completion` is now adapted to the current runtime: five tracks, gesture unlock, fade, visibility/ad pause, independent Music/SFX settings under `brainmerge.audio.v1`, and `brainmerge:music-request` routing.
+- Rewarded ad boosts are restored as additive save-v10 state with safe defaults: Coin Boost, Golden Brain Box cooldown/queue, Mutation Charge and Free Upgrade daily limit.
+- Current typed Campaign/Raid engines now cover all seven World 1 layouts, World 2 Traffic Lock supply lanes, World 2 Location runs and World 2 Raid layouts. Campaign and Raid remain isolated from the main board.
+- A branch feature matrix is recorded in `docs/BRANCH_FEATURE_MATRIX.md`; old branches are comparison sources only and are not deleted or rewritten.
+
 The validated T1-T18 merge-idle board remains the primary account-growth loop.
 
 Audit implementation status (2026-09-05): Phases 1–4 in `docs/CODE_AUDIT_PLAN.md` are implemented. Save v8 adds current-run tier ownership; bounded base-tier Box pricing and T9–T18 missions meet the first-run pacing model; Collection milestone rewards and the five-category Brain Cell Prestige layer are production-wired with exact-once reset behavior.
@@ -146,6 +156,8 @@ Repository-ready:
 - D1/D7 and milestone instrumentation is ready; analysis requires production cohort data.
 - Remaining implementation work from the audit is the visitor presentation after the required character states and sounds are supplied, plus gradual migration of touched Campaign controllers from `public/*.js` into typed ownership.
 - Latest verification: 115 tests, EN/RU parity, local package/release audit, World 1 Raid, packaged RC and packaged Yandex browser smokes pass.
+
+Normalized-build validation is being rerun after the audio, rewarded-boost and World 2 merge. The required final gate is the current branch's build/test/smoke/package result, not the historical counts above.
 
 ## Source of truth
 - `docs/ROADMAP.md`

@@ -65,6 +65,13 @@ export const OFFLINE_HOURS_BY_LEVEL = [2, 4, 6, 8, 12] as const;
 /** Level 0 = T1 base, level 3 = T4 base. Spawn is always capped to already-discovered tiers. */
 export const MAX_BOX_BASE_TIER_LEVEL = 13;
 
+export const AD_REWARDS_CONFIG = {
+  coinBoost: { multiplier: 2, durationMinutes: 15, dailyLimit: 3 },
+  goldenBrainBox: { cooldownMinutes: 30, minTierBonus: 1, maxTierBonus: 2 },
+  mutation: { tierBonus: 2, chance: 0.40, maxCharges: 1 },
+  freeUpgrade: { dailyLimit: 1 }
+} as const;
+
 export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
   {
     id: 'boxBaseTier',

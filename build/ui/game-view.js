@@ -1,6 +1,7 @@
 import { assetForUnit, BOARD_COLUMNS, DEADLOCK_RESCUE_REFUND, FAMILIES, MISSION_TRACK, UPGRADE_DEFINITIONS, familyById, familyByTier, incomeMultiplierForLevel, luckyDropChanceForLevel, maxUpgradeLevel, offlineHoursForLevel, upgradeCost } from '../core/catalog.js';
-import { activeMission, brainBoxBaseTier, brainBoxLuckyChance, canClaimCurrentMission, canPrestige, claimableCollectionRewardTiers, canMerge, canPurchaseUpgrade, currentBrainBoxCost, findBestMergePair, findFirstMergePair, isBoardFull, isDeadlocked, missionProgress as missionProgressForState, nextActionHint, onboardingPhase, playerLevel, playerLevelProgress, productionPerMinute, unitProductionPerMinute, upgradeRequiredDiscoveryTier } from '../core/game.js';
+import { activeMission, adBoostPresentation, brainBoxBaseTier, brainBoxLuckyChance, canClaimCurrentMission, canPrestige, claimableCollectionRewardTiers, canMerge, canPurchaseUpgrade, currentBrainBoxCost, findBestMergePair, findFirstMergePair, isBoardFull, isDeadlocked, missionProgress as missionProgressForState, nextActionHint, onboardingPhase, playerLevel, playerLevelProgress, productionPerMinute, unitProductionPerMinute, upgradeRequiredDiscoveryTier } from '../core/game.js';
 import { prestigeUpgradeCost } from '../core/game.js';
+import { renderRewardBoostsPanel } from './reward-boosts.js';
 function presentationStyle(family) {
     const p = family.presentation;
     return `--unit-scale:${p.scale};--unit-y:${p.yPercent}%;--shadow-scale:${p.shadowScale};--collection-scale:${p.collectionScale}`;
@@ -104,6 +105,7 @@ export class GameView {
         const boxLuckyPercent = Math.round(brainBoxLuckyChance(state) * 100);
         const production = productionPerMinute(state);
         const guidance = nextActionHint(state);
+        const adBoosts = adBoostPresentation(state);
         const collectionReady = new Set(claimableCollectionRewardTiers(state));
         const prestigeIds = ['income', 'boxDiscount', 'startingCoins', 'offline', 'campaignPower'];
         this.root.innerHTML = `
@@ -122,8 +124,19 @@ export class GameView {
               <button class="locale-button ${locale === 'en' ? 'is-active' : ''}" data-locale="en">EN</button>
               <button class="locale-button ${locale === 'ru' ? 'is-active' : ''}" data-locale="ru">RU</button>
             </div>
+            <button class="audio-settings-button" type="button" data-audio-settings-toggle aria-expanded="false" aria-controls="audio-settings-dialog">⚙</button>
           </div>
         </header>
+
+        <section class="audio-settings-dialog" id="audio-settings-dialog" data-audio-settings-panel hidden aria-label="${t('audio.settings')}" role="dialog">
+          <div class="audio-settings-dialog__header"><strong data-audio-settings-title>${t('audio.settings')}</strong><button type="button" data-audio-settings-close aria-label="${t('audio.close')}">×</button></div>
+          <div class="audio-settings-list">
+            <label><span data-audio-music-label>${t('audio.music')}</span><input data-audio-music type="checkbox"></label>
+            <label><span data-audio-sfx-label>${t('audio.sfx')}</span><input data-audio-sfx type="checkbox"></label>
+            <label><span>${t('audio.musicVolume')}</span><input data-audio-music-volume type="range" min="0" max="1" step="0.01"></label>
+            <label><span>${t('audio.sfxVolume')}</span><input data-audio-sfx-volume type="range" min="0" max="1" step="0.01"></label>
+          </div>
+        </section>
 
         <section class="game-layout">
           <aside class="side-card side-card--mission ${mission ? '' : 'is-track-complete'}">
@@ -231,6 +244,7 @@ export class GameView {
           </section>
 
           <div class="right-rail">
+            ${renderRewardBoostsPanel({ state, adBoosts, rewardedAds: capabilities.rewardedAds, adBusy: capabilities.adBusy, adBusyAction: capabilities.adBusyAction, freeUpgradeResult: capabilities.freeUpgradeResult, t })}
             <aside class="side-card side-card--collection">
               <span class="panel-orb panel-orb--purple" aria-hidden="true"></span>
               <div class="side-card__eyebrow">${t('action.collection')}</div>
@@ -308,6 +322,9 @@ export class GameView {
     bindInteractions() {
         this.root.querySelector('[data-action="spawn"]')?.addEventListener('click', () => this.actions.spawn());
         this.root.querySelector('[data-action="rewarded-spawn"]')?.addEventListener('click', () => this.actions.rewardedSpawn());
+        this.root.querySelectorAll('[data-ad-boost]').forEach((button) => {
+            button.addEventListener('click', () => this.actions.rewardedBoost(button.dataset.adBoost));
+        });
         this.root.querySelector('[data-action="claim-mission"]')?.addEventListener('click', () => this.actions.claimMission());
         this.root.querySelector('[data-action="claim-offline"]')?.addEventListener('click', () => this.actions.claimOffline());
         this.root.querySelector('[data-action="prestige"]')?.addEventListener('click', () => this.actions.prestige());

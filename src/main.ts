@@ -28,6 +28,10 @@ import {
   claimCollectionReward,
   claimOfflineIncome,
   createInitialState,
+  activateCoinBoost,
+  activateMutationCharge,
+  grantFreeUpgrade,
+  grantGoldenBrainBox,
   isBoardFull,
   markSessionStart,
   moveOrMerge,
@@ -41,6 +45,7 @@ import {
   spawnUnit
 } from './core/game.js';
 import type { GameState, PrestigeUpgradeId, UpgradeId } from './core/types.js';
+import { MusicManager, type MusicTrack } from './audio/music-manager.js';
 import { AudioFeedback } from './feedback/audio-feedback.js';
 import { runCoinTrail, runDiscoveryCelebration, runUnitFlight } from './feedback/visual-effects.js';
 import { detectLocale, loadLocale, translate, type Locale } from './i18n/i18n.js';
@@ -48,6 +53,7 @@ import type { PlatformAdapter } from './platform/adapter.js';
 import { createPlatformAdapter } from './platform/factory.js';
 import { LocalPlatformAdapter } from './platform/local.js';
 import { GameView } from './ui/game-view.js';
+import type { RewardedAdAction } from './ui/reward-boosts.js';
 
 const rootCandidate = document.querySelector<HTMLElement>('#app');
 if (!rootCandidate) throw new Error('Missing #app root');
@@ -61,10 +67,34 @@ let platform: PlatformAdapter = new LocalPlatformAdapter();
 let locale: Locale = detectLocale();
 let state: GameState = createInitialState();
 let adBusy = false;
+let adBusyAction: RewardedAdAction | null = null;
+let freeUpgradeResult: { id: UpgradeId; level: number } | null = null;
 let bootComplete = false;
 let lastActiveEventTickAt = Date.now();
 const feedback = new AudioFeedback();
+const music = new MusicManager();
 const analytics = new Analytics(new BrowserEventAnalyticsSink());
+
+function requestMusic(track: MusicTrack | null): void {
+  window.dispatchEvent(new CustomEvent('brainmerge:music-request', { detail: { track } }));
+}
+
+function campaignWorldTrack(world: unknown): MusicTrack {
+  return Number(world) === 2 ? 'world2' : 'world1';
+}
+
+window.addEventListener('brainmerge:campaign-open', () => requestMusic('campaign'));
+window.addEventListener('brainmerge:campaign-close', () => requestMusic('main'));
+window.addEventListener('brainmerge:campaign-world-change', (event) => {
+  requestMusic(campaignWorldTrack((event as CustomEvent<{ world?: unknown }>).detail?.world));
+});
+window.addEventListener('brainmerge:campaign-run', (event) => {
+  const detail = (event as CustomEvent<{ world?: unknown; raid?: boolean }>).detail;
+  requestMusic(detail?.raid ? 'raid' : campaignWorldTrack(detail?.world));
+});
+window.addEventListener('brainmerge:campaign-run-close', () => requestMusic('campaign'));
+window.addEventListener('brainmerge:raid-open', () => requestMusic('raid'));
+window.addEventListener('brainmerge:raid-close', () => requestMusic('campaign'));
 
 function cellElement(index: number): HTMLElement | null {
   return root.querySelector<HTMLElement>(`[data-cell="${index}"]`);
@@ -222,6 +252,7 @@ const view = new GameView(root, {
     if (next.spawns > before.spawns) runSpawnFx(insertedCellIndex(before, next));
   },
   rewardedSpawn: () => { void handleRewardedSpawn(); },
+  rewardedBoost: (action) => { void handleRewardedBoost(action); },
   claimMission: () => {
     settleOnline();
     const anchor = elementCenter(root.querySelector('[data-action="claim-mission"]'));
@@ -351,9 +382,20 @@ function render(): void {
   const t = (key: string, params?: Record<string, string | number>) => translate(locale, key, params);
   view.render(state, locale, t, {
     rewardedAds: platform.capabilities.rewardedAds,
-    adBusy
+    adBusy,
+    adBusyAction,
+    freeUpgradeResult
   });
   feedback.setLabels(t('audio.mute'), t('audio.unmute'));
+  music.setLabels({
+    settings: t('audio.settings'),
+    music: t('audio.music'),
+    sfx: t('audio.sfx'),
+    close: t('audio.close')
+  });
+  if (!document.body.classList.contains('campaign-open')
+    && !document.body.classList.contains('campaign-run-open')
+    && !document.body.classList.contains('raid-run-open')) music.playMusic('main');
   publishCampaignSnapshot();
 }
 
@@ -368,10 +410,14 @@ async function handleRewardedSpawn(): Promise<void> {
   if (adBusy || isBoardFull(state) || !platform.capabilities.rewardedAds) return;
   adBusy = true;
   feedback.setActive(false);
+  music.setActive(false);
   render();
   const rewarded = await platform.showRewarded('brain-box');
   lastActiveEventTickAt = Date.now();
-  if (!document.hidden) feedback.setActive(true);
+  if (!document.hidden) {
+    feedback.setActive(true);
+    music.setActive(true);
+  }
   adBusy = false;
   settleOnline();
   if (rewarded) {
@@ -387,6 +433,52 @@ async function handleRewardedSpawn(): Promise<void> {
   }
   state = { ...state, messageKey: 'message.rewardUnavailable' };
   render();
+}
+
+async function handleRewardedBoost(action: RewardedAdAction): Promise<void> {
+  if (adBusy || !platform.capabilities.rewardedAds) return;
+  adBusy = true;
+  adBusyAction = action;
+  feedback.setActive(false);
+  music.setActive(false);
+  render();
+  let rewarded = false;
+  try {
+    rewarded = await platform.showRewarded(`boost-${action}`);
+  } catch {
+    rewarded = false;
+  }
+  lastActiveEventTickAt = Date.now();
+  if (!document.hidden) {
+    feedback.setActive(true);
+    music.setActive(true);
+  }
+  adBusy = false;
+  adBusyAction = null;
+  if (!rewarded) {
+    state = { ...state, messageKey: 'message.rewardUnavailable' };
+    render();
+    return;
+  }
+
+  const now = Date.now();
+  const beforeUpgrade = state.upgrades;
+  let next = state;
+  if (action === 'coinBoost') next = activateCoinBoost(state, now);
+  else if (action === 'goldenBrainBox') next = grantGoldenBrainBox(state, Math.random, now);
+  else if (action === 'mutation') next = activateMutationCharge(state, now);
+  else if (action === 'freeUpgrade') {
+    next = grantFreeUpgrade(state, Math.random, now);
+    const changed = (Object.keys(next.upgrades) as UpgradeId[]).find((id) => next.upgrades[id] > beforeUpgrade[id]);
+    freeUpgradeResult = changed ? { id: changed, level: next.upgrades[changed] } : null;
+  }
+  update(next);
+  if (freeUpgradeResult) {
+    window.setTimeout(() => {
+      freeUpgradeResult = null;
+      render();
+    }, 4_000);
+  }
 }
 
 async function boot(): Promise<void> {
@@ -580,6 +672,7 @@ document.addEventListener('visibilitychange', () => {
     settleOnline(now);
     platform.setGameplayActive(false);
     feedback.setActive(false);
+    music.setActive(false);
     // Mobile browsers may suspend before pagehide. Flush the latest economy snapshot now.
     void platform.saveState(state, true);
     return;
@@ -588,6 +681,7 @@ document.addEventListener('visibilitychange', () => {
   lastActiveEventTickAt = now;
   platform.setGameplayActive(true);
   feedback.setActive(true);
+  music.setActive(true);
   render();
   void platform.saveState(state);
 });
@@ -596,6 +690,7 @@ window.addEventListener('pagehide', () => {
   if (!bootComplete) return;
   settleOnline();
   platform.setGameplayActive(false);
+  music.setActive(false);
   void platform.saveState(state, true);
 });
 

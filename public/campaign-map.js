@@ -394,6 +394,7 @@ function createOverlay() {
       closeDetail({ restoreFocus: false });
       activeWorld = Number(tab.dataset.world) === 2 ? 2 : 1;
       renderWorld();
+      window.dispatchEvent(new CustomEvent('brainmerge:campaign-world-change', { detail: { world: activeWorld } }));
     });
   });
   return section;
@@ -408,6 +409,7 @@ function openCampaign() {
   }
   renderWorld();
   document.body.classList.add('campaign-open');
+  window.dispatchEvent(new Event('brainmerge:campaign-open'));
   overlay.classList.add('is-open');
   overlay.setAttribute('aria-hidden', 'false');
   if (appRoot) appRoot.inert = true;
@@ -421,6 +423,7 @@ function closeCampaign() {
   overlay.setAttribute('aria-hidden', 'true');
   if (appRoot) appRoot.inert = false;
   document.body.classList.remove('campaign-open');
+  window.dispatchEvent(new Event('brainmerge:campaign-close'));
   entryButton?.focus();
 }
 

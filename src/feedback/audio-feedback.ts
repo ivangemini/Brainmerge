@@ -2,10 +2,20 @@ type FeedbackKind = 'merge' | 'spawn' | 'reward' | 'rescue';
 
 export class AudioFeedback {
   private muted = false;
+  private sfxVolume = 0.7;
   private context: AudioContext | null = null;
   private button: HTMLButtonElement | null = null;
   private muteLabel = 'Mute sound';
   private unmuteLabel = 'Unmute sound';
+
+  constructor() {
+    window.addEventListener('brainmerge:sfx-setting', (event) => {
+      const detail = (event as CustomEvent<{ enabled?: boolean; volume?: number }>).detail;
+      if (typeof detail?.enabled === 'boolean') this.muted = !detail.enabled;
+      if (typeof detail?.volume === 'number' && Number.isFinite(detail.volume)) this.sfxVolume = Math.max(0, Math.min(1, detail.volume));
+      this.syncButton();
+    });
+  }
 
   setLabels(muteLabel: string, unmuteLabel: string): void {
     this.muteLabel = muteLabel;
@@ -16,6 +26,7 @@ export class AudioFeedback {
 
   toggleMute(): void {
     this.muted = !this.muted;
+    window.dispatchEvent(new CustomEvent('brainmerge:sfx-setting', { detail: { enabled: !this.muted } }));
     this.syncButton();
   }
 
@@ -60,6 +71,7 @@ export class AudioFeedback {
   }
 
   private tone(kind: FeedbackKind): void {
+    if (this.muted || this.sfxVolume <= 0) return;
     const context = this.getContext();
     if (!context) return;
     if (context.state === 'suspended') void context.resume();
@@ -67,7 +79,7 @@ export class AudioFeedback {
     const now = context.currentTime;
     const gain = context.createGain();
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(kind === 'reward' ? 0.09 : 0.065, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime((kind === 'reward' ? 0.09 : 0.065) * this.sfxVolume, now + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
     gain.connect(context.destination);
 

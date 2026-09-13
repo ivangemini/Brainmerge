@@ -21,9 +21,55 @@ export const SNEAKER_GARDEN_RESTORE_ORDER_COUNT = 6;
 export const SNEAKER_GARDEN_RESTORE_BATCH_SIZE = 2;
 export const SNEAKER_GARDEN_LANDMARK_LEVELS = 3;
 export const SNEAKER_GARDEN_MASTERY_ORDER_COUNT = 3;
+export const WORLD2_CAMPAIGN_WORLD_ID = 2;
+export const WORLD2_LOCATION_IDS = [
+  'w2-sneaker-transit', 'w2-pigeon-plaza', 'w2-vending-block',
+  'w2-long-neck-junction', 'w2-sunglasses-strip', 'w2-appliance-district', 'w2-city-core'
+] as const;
 export const CAMPAIGN_SUPPLY_BASE_LUCKY_CHANCE = 0.25;
 export const CAMPAIGN_SUPPLY_LANDMARK_LUCKY_STEP = 0.05;
 const SNEAKER_GARDEN_STARTING_CELLS = [0, 1, 6, 7] as const;
+
+type PhaseOvergrowthConfig = Record<CampaignRunPhase, readonly number[]>;
+type CampaignPerk = {
+  luckySupplyStep?: number;
+  supplyTierStep?: number;
+  supplyCopiesStep?: number;
+  masteryBlockerReductionStep?: number;
+};
+
+const LOCATION_CONFIGS: Record<string, { overgrowth: PhaseOvergrowthConfig; perk: CampaignPerk }> = {
+  [SNEAKER_GARDEN_LOCATION_ID]: {
+    overgrowth: { stabilize: SNEAKER_GARDEN_STABILIZE_OVERGROWTH, deliver: SNEAKER_GARDEN_DELIVER_OVERGROWTH, restore: SNEAKER_GARDEN_RESTORE_OVERGROWTH, mastery: SNEAKER_GARDEN_MASTERY_OVERGROWTH },
+    perk: { luckySupplyStep: 0.05 }
+  },
+  'w1-toilet-pond': { overgrowth: { stabilize: [3, 4, 9, 10, 15, 16, 21], deliver: [4, 10, 16, 21], restore: [10, 16, 21], mastery: [3, 4, 9, 10, 15, 16] }, perk: { luckySupplyStep: 0.02 } },
+  'w1-watermelon-grill': { overgrowth: { stabilize: [5, 11, 17, 22, 23, 24, 29], deliver: [11, 17, 23, 29], restore: [17, 23, 29], mastery: [5, 11, 17, 22, 23, 29] }, perk: { supplyTierStep: 1 } },
+  'w1-hose-tunnels': { overgrowth: { stabilize: [2, 3, 8, 9, 14, 15, 20, 21], deliver: [3, 9, 15, 21], restore: [9, 15, 21], mastery: [2, 3, 8, 9, 14, 15, 20] }, perk: { supplyCopiesStep: 0 } },
+  'w1-gnome-yard': { overgrowth: { stabilize: [4, 5, 10, 11, 16, 17, 22, 23], deliver: [5, 11, 17, 23, 29], restore: [11, 17, 23], mastery: [4, 5, 10, 11, 16, 17, 22] }, perk: { supplyCopiesStep: 1 } },
+  'w1-mushroom-field': { overgrowth: { stabilize: [2, 5, 8, 11, 14, 17, 20, 23, 26], deliver: [5, 11, 17, 23, 29], restore: [11, 17, 23, 29], mastery: [2, 5, 8, 11, 14, 17, 20, 23] }, perk: { masteryBlockerReductionStep: 1 } },
+  'w1-backyard-core': { overgrowth: { stabilize: [2, 3, 4, 5, 8, 9, 10, 11, 14, 15], deliver: [3, 5, 9, 11, 15, 17], restore: [5, 11, 17, 23], mastery: [2, 3, 4, 5, 8, 9, 10, 11, 14] }, perk: { luckySupplyStep: 0.03, supplyTierStep: 1 } },
+  ...Object.fromEntries(WORLD2_LOCATION_IDS.map((locationId, index) => [locationId, {
+    overgrowth: {
+      stabilize: Array.from({ length: 5 + index }, (_, cell) => (cell * 2 + index) % BOARD_SIZE),
+      deliver: Array.from({ length: 3 + Math.floor(index / 2) }, (_, cell) => (cell * 3 + index) % BOARD_SIZE),
+      restore: Array.from({ length: 2 + Math.floor(index / 3) }, (_, cell) => (cell * 5 + index) % BOARD_SIZE),
+      mastery: Array.from({ length: 5 + index }, (_, cell) => (cell * 2 + index) % BOARD_SIZE)
+    },
+    perk: { luckySupplyStep: index === 0 || index === 6 ? 0.04 : 0, supplyTierStep: index === 2 || index === 6 ? 1 : 0, supplyCopiesStep: index === 4 ? 1 : 0, masteryBlockerReductionStep: index === 5 ? 1 : 0 }
+  }]))
+};
+
+function locationConfig(locationId: string): { overgrowth: PhaseOvergrowthConfig; perk: CampaignPerk } | null {
+  return LOCATION_CONFIGS[locationId] ?? null;
+}
+
+function landmarkLevelForRestore(progress: number): number {
+  if (progress >= 1) return 3;
+  if (progress >= 2 / 3) return 2;
+  if (progress >= 1 / 3) return 1;
+  return 0;
+}
 
 let campaignSequence = 0;
 
@@ -114,17 +160,13 @@ function sanitizeCampaignUnit(candidate: unknown): Unit | null {
   return { id: raw.id.slice(0, 160), familyId: family.id, tier: family.tier };
 }
 
-function phaseOvergrowthIndexes(phase: CampaignRunPhase, locationId = SNEAKER_GARDEN_LOCATION_ID): readonly number[] {
-  const base = phase === 'stabilize'
-    ? SNEAKER_GARDEN_STABILIZE_OVERGROWTH
-    : phase === 'deliver'
-      ? SNEAKER_GARDEN_DELIVER_OVERGROWTH
-      : phase === 'restore'
-        ? SNEAKER_GARDEN_RESTORE_OVERGROWTH
-        : SNEAKER_GARDEN_MASTERY_OVERGROWTH;
-  const world = campaignWorldById(1);
-  const offset = Math.max(0, (world?.locations.find((entry) => entry.id === locationId)?.index ?? 1) - 1);
-  return base.map((index) => (index + offset * 3) % BOARD_SIZE);
+function phaseOvergrowthIndexes(phase: CampaignRunPhase, locationId = SNEAKER_GARDEN_LOCATION_ID, landmarkLevel = 0): readonly number[] {
+  const config = locationConfig(locationId);
+  if (!config) return [];
+  const indexes = config.overgrowth[phase];
+  if (phase !== 'mastery') return indexes;
+  const reduction = Math.min(indexes.length, Math.floor(landmarkLevel) * (config.perk.masteryBlockerReductionStep ?? 0));
+  return indexes.slice(0, indexes.length - reduction);
 }
 
 function overgrowthFromIndexes(indexes: readonly number[]): boolean[] {
@@ -135,8 +177,8 @@ function overgrowthFromIndexes(indexes: readonly number[]): boolean[] {
   return blocked;
 }
 
-function sanitizeOvergrowth(candidate: unknown[], phase: CampaignRunPhase, locationId: string): boolean[] {
-  const allowed = new Set(phaseOvergrowthIndexes(phase, locationId));
+function sanitizeOvergrowth(candidate: unknown[], phase: CampaignRunPhase, locationId: string, landmarkLevel = 0): boolean[] {
+  const allowed = new Set(phaseOvergrowthIndexes(phase, locationId, landmarkLevel));
   return Array.from({ length: BOARD_SIZE }, (_, index) => {
     if (!allowed.has(index)) return false;
     if (phase === 'mastery') return true;
@@ -155,7 +197,7 @@ function overgrowthRemaining(run: CampaignRunState): number {
 }
 
 function capLocationOrderTier(maxDiscoveredTier: number, locationId = SNEAKER_GARDEN_LOCATION_ID): number {
-  const world = campaignWorldById(1);
+  const world = campaignWorldById(locationId.startsWith('w2-') ? WORLD2_CAMPAIGN_WORLD_ID : 1);
   const cap = world?.locations.find((entry) => entry.id === locationId)?.orderTierMax ?? 4;
   return Math.max(1, Math.min(cap, safeMaxDiscoveredTier(maxDiscoveredTier)));
 }
@@ -188,7 +230,7 @@ function expectedOrderCount(phase: CampaignRunPhase): number {
 
 function defaultOrderTiers(phase: CampaignRunPhase, maxDiscoveredTier: number, locationId = SNEAKER_GARDEN_LOCATION_ID): number[] {
   const maxTier = capLocationOrderTier(maxDiscoveredTier, locationId);
-  const world = campaignWorldById(1);
+  const world = campaignWorldById(locationId.startsWith('w2-') ? WORLD2_CAMPAIGN_WORLD_ID : 1);
   const minTier = Math.min(maxTier, world?.locations.find((entry) => entry.id === locationId)?.orderTierMin ?? 2);
   if (phase === 'deliver') {
     const locationIndex = world?.locations.find((entry) => entry.id === locationId)?.index ?? 1;
@@ -234,8 +276,8 @@ function locationCurrentPhase(campaign: CampaignProgress, worldId: number, locat
   return phase === 'stabilize' || phase === 'deliver' || phase === 'restore' || phase === 'mastery' ? phase : null;
 }
 
-function createLocationRun(phase: CampaignRunPhase, maxDiscoveredTier: number, worldId = 1, locationId = SNEAKER_GARDEN_LOCATION_ID): CampaignRunState {
-  const indexes = phaseOvergrowthIndexes(phase, locationId);
+function createLocationRun(phase: CampaignRunPhase, maxDiscoveredTier: number, worldId = 1, locationId = SNEAKER_GARDEN_LOCATION_ID, landmarkLevel = 0): CampaignRunState {
+  const indexes = phaseOvergrowthIndexes(phase, locationId, landmarkLevel);
   return {
     worldId,
     locationId,
@@ -295,7 +337,8 @@ export function sanitizeCampaignRunState(
   if (!locationProgress) return null;
   const currentPhase = currentLocationPhase(locationProgress);
   const maxTier = safeMaxDiscoveredTier(maxDiscoveredTier);
-  const overgrowth = sanitizeOvergrowth(raw.overgrowth, phase, raw.locationId);
+  const landmarkLevel = landmarkLevelForRestore(locationProgress.restore);
+  const overgrowth = sanitizeOvergrowth(raw.overgrowth, phase, raw.locationId, landmarkLevel);
   const cells: Cell[] = raw.cells.map((entry, index) => {
     if (overgrowth[index]) return null;
     if (entry === null) return null;
@@ -312,7 +355,7 @@ export function sanitizeCampaignRunState(
       phase,
       cells,
       overgrowth,
-      overgrowthTotal: phaseOvergrowthIndexes(phase, raw.locationId).length,
+      overgrowthTotal: phaseOvergrowthIndexes(phase, raw.locationId, landmarkLevel).length,
       merges: nonnegativeInt(raw.merges, 100_000),
       spawns: nonnegativeInt(raw.spawns, 100_000),
       orderTiers: [],
@@ -334,7 +377,7 @@ export function sanitizeCampaignRunState(
     phase,
     cells,
     overgrowth,
-    overgrowthTotal: phaseOvergrowthIndexes(phase, raw.locationId).length,
+    overgrowthTotal: phaseOvergrowthIndexes(phase, raw.locationId, landmarkLevel).length,
     merges: nonnegativeInt(raw.merges, 100_000),
     spawns: nonnegativeInt(raw.spawns, 100_000),
     orderTiers,
@@ -356,7 +399,8 @@ export function startCampaignRun(
   if (!world || !campaignLocationById(world, locationId)) return null;
   const phase = locationCurrentPhase(campaign, worldId, locationId);
   if (!phase) return null;
-  return createLocationRun(phase, maxDiscoveredTier, worldId, locationId);
+  const restore = campaignWorldProgress(campaign, worldId)?.locations[locationId]?.restore ?? 0;
+  return createLocationRun(phase, maxDiscoveredTier, worldId, locationId, landmarkLevelForRestore(restore));
 }
 
 export function selectCampaignRunCell(run: CampaignRunState, index: number | null): CampaignRunState {
@@ -394,21 +438,29 @@ export function spawnCampaignSupply(
   landmarkLevel = 0
 ): CampaignRunState {
   if (run.completed) return run;
-  const target = run.cells.findIndex((cell, index) => cell === null && !run.overgrowth[index]);
-  if (target < 0) return { ...run, selectedIndex: null };
-
+  const config = locationConfig(run.locationId);
   const maxTier = safeMaxDiscoveredTier(maxDiscoveredTier);
   const pendingOrderFloor = run.phase === 'stabilize'
     ? maxTier
     : Math.min(...run.orderTiers.slice(run.orderIndex), maxTier);
   // A persisted low-tier order must remain constructible after lifetime discovery
   // grows and ordinary Supply would otherwise start above it.
-  const baseTier = Math.max(1, Math.min(2, maxTier, pendingOrderFloor));
-  const luckyTier = random() < campaignSupplyLuckyChanceForLandmarkLevel(landmarkLevel) ? baseTier + 1 : baseTier;
-  const tier = Math.max(1, Math.min(maxTier, luckyTier));
+  const safeLevel = Math.max(0, Math.min(SNEAKER_GARDEN_LANDMARK_LEVELS, Math.floor(landmarkLevel)));
+  const baseTier = Math.max(1, Math.min(maxTier, pendingOrderFloor, 2 + safeLevel * (config?.perk.supplyTierStep ?? 0)));
+  const supplyCount = 1 + safeLevel * (config?.perk.supplyCopiesStep ?? 0);
   const cells = run.cells.slice();
-  cells[target] = createCampaignUnit(tier);
-  return { ...run, cells, spawns: run.spawns + 1, selectedIndex: null };
+  let spawned = 0;
+  for (let supply = 0; supply < supplyCount; supply += 1) {
+    const trafficLane = run.worldId === WORLD2_CAMPAIGN_WORLD_ID ? run.spawns % BOARD_COLUMNS : null;
+    const laneTarget = cells.findIndex((cell, index) => cell === null && !run.overgrowth[index] && (trafficLane === null || index % BOARD_COLUMNS === trafficLane));
+    const target = laneTarget >= 0 ? laneTarget : cells.findIndex((cell, index) => cell === null && !run.overgrowth[index]);
+    if (target < 0) break;
+    const luckyChance = campaignSupplyLuckyChanceForLandmarkLevel(safeLevel) + safeLevel * (config?.perk.luckySupplyStep ?? 0);
+    const luckyTier = random() < Math.min(0.95, luckyChance) ? baseTier + 1 : baseTier;
+    cells[target] = createCampaignUnit(Math.max(1, Math.min(maxTier, luckyTier)));
+    spawned += 1;
+  }
+  return spawned === 0 ? { ...run, selectedIndex: null } : { ...run, cells, spawns: run.spawns + spawned, selectedIndex: null };
 }
 
 function gridDistance(a: number, b: number): number {
@@ -631,7 +683,8 @@ export function acknowledgeCampaignRunCompletion(state: GameState): GameState {
 export function restartCampaignRunPhase(state: GameState): GameState {
   const current = state.campaignRun;
   if (!current || current.completed) return state;
-  const fresh = createLocationRun(current.phase, state.maxDiscoveredTier, current.worldId, current.locationId);
+  const restore = campaignWorldProgress(state.campaign, current.worldId)?.locations[current.locationId]?.restore ?? 0;
+  const fresh = createLocationRun(current.phase, state.maxDiscoveredTier, current.worldId, current.locationId, landmarkLevelForRestore(restore));
   const progress = campaignWorldProgress(state.campaign, current.worldId)?.locations[current.locationId];
   if (!progress) return state;
   let orderIndex = 0;

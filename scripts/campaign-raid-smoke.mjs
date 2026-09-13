@@ -16,8 +16,9 @@ const server = createServer(async (req, res) => {
   try {
     let path = safePath(req.url ?? '/');
     try { if ((await stat(path)).isDirectory()) path = join(path, 'index.html'); } catch { if (!extname(path)) path = join(ROOT.pathname, 'index.html'); }
-    res.writeHead(200, { 'content-type': mime.get(extname(path)) ?? 'application/octet-stream' }); res.end(await readFile(path));
-  } catch { res.writeHead(404); res.end(); }
+    const body = await readFile(path);
+    res.writeHead(200, { 'content-type': mime.get(extname(path)) ?? 'application/octet-stream' }); res.end(body);
+  } catch { if (res.headersSent) return; res.writeHead(404); res.end(); }
 });
 
 let seed = { ...createInitialState(Date.now()), maxDiscoveredTier: 8, runMaxTier: 8 };

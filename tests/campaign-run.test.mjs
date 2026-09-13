@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   SNEAKER_GARDEN_LOCATION_ID,
+  WORLD2_LOCATION_IDS,
   acknowledgeCampaignRunCompletion,
   beginCampaignRun,
   campaignRunPresentationSnapshot,
@@ -78,13 +79,34 @@ test('all seven World 1 Locations start from data-driven configurations', () => 
     const state = beginCampaignRun(createInitialState(1_000), 1, location.id);
     assert.equal(state.campaignRun?.locationId, location.id);
     assert.equal(state.campaignRun?.phase, 'stabilize');
-    assert.equal(state.campaignRun?.overgrowth.filter(Boolean).length, 6);
+    assert.ok((state.campaignRun?.overgrowth.filter(Boolean).length ?? 0) >= 6);
   }
   const layouts = locations.map((location) => {
     const run = beginCampaignRun(createInitialState(1_000), 1, location.id).campaignRun;
     return run?.overgrowth.map((blocked, index) => blocked ? index : -1).filter((index) => index >= 0).join(',');
   });
   assert.equal(new Set(layouts).size, 7, 'each Location should have a stable distinct blocker layout');
+});
+
+test('World 2 uses Traffic Lock lanes and remains isolated from the main board', () => {
+  const base = createInitialState(1_000);
+  const unlocked = {
+    ...base,
+    maxDiscoveredTier: 5,
+    campaign: {
+      ...base.campaign,
+      worlds: {
+        ...base.campaign.worlds,
+        '1': { ...base.campaign.worlds['1'], raidCleared: true, raidProgress: 1 }
+      }
+    }
+  };
+  const next = beginCampaignRun(unlocked, 2, WORLD2_LOCATION_IDS[0]);
+  assert.equal(next.campaignRun?.worldId, 2);
+  assert.ok((next.campaignRun?.overgrowth.filter(Boolean).length ?? 0) >= 5);
+  const spawned = spawnCampaignRunSupply(next, () => 0);
+  assert.equal(spawned.campaignRun?.cells[12]?.tier, 3, 'first Traffic Lock supply uses lane 0 after the starter units');
+  assert.deepEqual(spawned.cells, unlocked.cells, 'World 2 supply must not consume main-board cells');
 });
 
 test('configured later Locations offer two stable discovered-tier-capped delivery choices', () => {

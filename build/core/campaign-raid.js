@@ -5,6 +5,17 @@ const PHASE_BLOCKERS = {
     2: [1, 3, 6, 8, 11, 13, 16, 18, 21, 23, 26, 28],
     3: [2, 5, 8, 11, 14, 17, 20, 23, 26, 29]
 };
+const WORLD2_PHASE_BLOCKERS = {
+    1: [0, 2, 4, 6, 8, 10, 12],
+    2: [0, 1, 2, 6, 7, 8, 12, 13, 14, 18],
+    3: [0, 1, 2, 3, 6, 7, 8, 9, 12, 13, 14, 15, 18, 19]
+};
+const WORLD1_RAID_ORDER_TIERS = {
+    1: [2, 3, 3, 4], 2: [3, 4, 4, 5, 5], 3: [4, 5, 6, 6]
+};
+const WORLD2_RAID_ORDER_TIERS = {
+    1: [3, 4, 4, 5], 2: [4, 5, 5, 6, 6], 3: [5, 6, 7, 7]
+};
 const PHASE_MERGES = { 1: 8, 2: 12, 3: 0 };
 let raidSequence = 0;
 function unit(tier) {
@@ -12,8 +23,8 @@ function unit(tier) {
     raidSequence += 1;
     return { id: `raid-${family.id}-${Date.now().toString(36)}-${raidSequence}`, familyId: family.id, tier: family.tier };
 }
-function blockers(phase) {
-    const set = new Set(PHASE_BLOCKERS[phase]);
+function blockers(phase, worldId = 1) {
+    const set = new Set((worldId === 2 ? WORLD2_PHASE_BLOCKERS : PHASE_BLOCKERS)[phase]);
     return Array.from({ length: BOARD_SIZE }, (_, index) => set.has(index));
 }
 function createRun(worldId, phase, maxTier) {
@@ -25,9 +36,11 @@ function createRun(worldId, phase, maxTier) {
         worldId,
         phase,
         cells,
-        overgrowth: blockers(phase),
+        overgrowth: blockers(phase, worldId),
         merges: 0,
-        orderTiers: phase === 3 ? [Math.max(1, cap - 2), Math.max(1, cap - 1), cap] : [],
+        orderTiers: phase === 3
+            ? (worldId === 2 ? WORLD2_RAID_ORDER_TIERS[phase] : WORLD1_RAID_ORDER_TIERS[phase]).map((tier) => Math.min(cap, tier))
+            : [],
         orderIndex: 0,
         selectedIndex: null,
         completed: false
@@ -43,7 +56,7 @@ export function sanitizeCampaignRaidRun(candidate, state) {
     const progress = campaignWorldProgress(state.campaign, raw.worldId);
     if (!world || !progress || !isWorldRaidUnlocked(world, progress) || !Array.isArray(raw.cells) || raw.cells.length !== BOARD_SIZE)
         return null;
-    const allowed = blockers(raw.phase);
+    const allowed = blockers(raw.phase, raw.worldId);
     const cells = raw.cells.map((entry, index) => {
         if (allowed[index] || entry === null || !entry || typeof entry !== 'object')
             return null;
@@ -143,6 +156,6 @@ export function campaignRaidPresentation(run) {
     if (!run)
         return null;
     const target = run.phase === 3 ? run.orderTiers[run.orderIndex] ?? null : null;
-    const progress = run.phase === 3 ? run.orderIndex / 3 : run.merges / PHASE_MERGES[run.phase];
+    const progress = run.phase === 3 ? run.orderIndex / Math.max(1, run.orderTiers.length) : run.merges / PHASE_MERGES[run.phase];
     return { ...run, cells: run.cells.map((cell) => cell ? { familyId: cell.familyId, tier: cell.tier } : null), targetTier: target, progressPercent: Math.round(Math.min(1, progress) * 100) };
 }

@@ -1,6 +1,7 @@
 let snapshot = null;
 let copy = null;
 let raidSelected = false;
+let raidWorldId = 1;
 let shell = null;
 let returnFocus = null;
 
@@ -13,6 +14,7 @@ function closeRaid() {
   const wasOpen = shell?.classList.contains('is-open') === true;
   shell?.classList.remove('is-open');
   if (!wasOpen) return;
+  window.dispatchEvent(new Event('brainmerge:raid-close'));
   const campaignShell = document.querySelector('.campaign-shell.is-open');
   if (campaignShell instanceof HTMLElement) {
     for (const child of document.body.children) child.inert = child !== campaignShell;
@@ -66,9 +68,10 @@ function render() {
   const current = ensureShell();
   const wasOpen = current.classList.contains('is-open');
   current.classList.add('is-open');
+  window.dispatchEvent(new CustomEvent('brainmerge:raid-open', { detail: { world: run.worldId } }));
   setBackgroundInert(true);
   if (!wasOpen) requestAnimationFrame(() => current.querySelector('[data-raid-close]')?.focus());
-  current.querySelector('header small').textContent = copy.world1Kicker;
+  current.querySelector('header small').textContent = copy[`world${run.worldId === 2 ? 2 : 1}Kicker`];
   current.querySelector('header strong').textContent = `${copy.raidLabel} · ${copy[`raidPhase${run.phase}`]}`;
   current.querySelector('[data-raid-progress]').textContent = `${run.progressPercent}%`;
   current.querySelector('[data-raid-goal]').textContent = copy[`raidPhase${run.phase}Desc`];
@@ -94,12 +97,12 @@ function installLauncher() {
     button.className = 'campaign-raid-start';
     button.addEventListener('click', () => {
       returnFocus = document.querySelector('[data-raid]');
-      if (!snapshot?.activeRaid) command({ type: 'startRaid', worldId: 1 });
+      if (!snapshot?.activeRaid) command({ type: 'startRaid', worldId: raidWorldId });
       else render();
     });
     detail.append(button);
   }
-  const world = snapshot?.worlds?.find((entry) => entry.id === 1);
+  const world = snapshot?.worlds?.find((entry) => entry.id === raidWorldId);
   button.hidden = !(world?.raidUnlocked && !world?.raidCleared);
   button.textContent = snapshot?.activeRaid ? copy.runResume : copy.raidUnlocked;
 }
@@ -107,6 +110,7 @@ function installLauncher() {
 document.addEventListener('click', async (event) => {
   raidSelected = Boolean(event.target instanceof Element && event.target.closest('[data-raid]'));
   if (raidSelected) {
+    raidWorldId = Number(document.querySelector('.campaign-scene')?.dataset.world) === 2 ? 2 : 1;
     await ensureCopy();
     window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
     window.setTimeout(installLauncher, 0);
@@ -114,6 +118,7 @@ document.addEventListener('click', async (event) => {
 }, true);
 window.addEventListener('brainmerge:campaign-state', async (event) => {
   snapshot = event.detail;
+  if (snapshot?.activeRaid?.worldId) raidWorldId = snapshot.activeRaid.worldId;
   if (!copy) await ensureCopy();
   installLauncher();
   render();

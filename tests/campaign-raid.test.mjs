@@ -62,3 +62,26 @@ test('World 1 Raid persists through three phases and unlocks World 2 exactly onc
   assert.equal(acknowledgeCampaignRaidPhase(state), state, 'cleared raid cannot award progress twice');
   assert.equal(campaignRaidPresentation(state.raidRun), null);
 });
+
+test('World 2 Raid uses its own Traffic Lock layout and order pressure', () => {
+  let state = raidUnlockedState();
+  state = {
+    ...state,
+    campaign: {
+      ...state.campaign,
+      worlds: {
+        ...state.campaign.worlds,
+        '1': { ...state.campaign.worlds['1'], raidCleared: true, raidProgress: 1 }
+      }
+    }
+  };
+  for (const location of CAMPAIGN_WORLDS[1].locations.slice(0, 6)) {
+    for (const phase of ['stabilize', 'deliver', 'restore', 'mastery']) {
+      state = { ...state, campaign: advanceCampaignLocationPhase(state.campaign, 2, location.id, phase, 1) };
+    }
+  }
+  state = beginCampaignRaid(state, 2);
+  assert.equal(state.raidRun?.worldId, 2);
+  assert.equal(state.raidRun?.overgrowth.filter(Boolean).length, 7);
+  assert.deepEqual(state.raidRun?.orderTiers, []);
+});

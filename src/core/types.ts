@@ -56,6 +56,19 @@ export interface UpgradeDefinition {
   costs: readonly number[];
 }
 
+export interface AdBoostState {
+  coinBoostExpiresAt: number | null;
+  coinBoostUsesToday: number;
+  coinBoostUsageDate: string | null;
+  goldenBoxAvailableAt: number | null;
+  mutationCharge: boolean;
+  freeUpgradeUsesToday: number;
+  freeUpgradeUsageDate: string | null;
+  pendingGoldenBoxes: number;
+  /** Highest wall-clock value observed by the rewarded-ad subsystem. */
+  lastObservedAt: number;
+}
+
 export interface PrestigeUpgradeLevels {
   income: number;
   boxDiscount: number;
@@ -187,6 +200,8 @@ export interface GameState {
   /** Permanent meta currency. Never spent by the ordinary Brain Box/Brain Lab economy. */
   brainCells: number;
   prestigeUpgrades: PrestigeUpgradeLevels;
+  /** Optional rewarded-ad acceleration state, restored with safe defaults for older saves. */
+  adBoosts: AdBoostState;
   events: FastEventState;
   retention: RetentionState;
   /** Permanent Brainverse location / landmark / raid progress. */
