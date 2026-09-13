@@ -43,7 +43,7 @@ body.campaign-run-open { overflow: hidden; }
   inset: 0;
   background:
     linear-gradient(rgba(44,30,49,.4), rgba(44,30,49,.52)),
-    url('./assets/campaign/campaign-world-01.webp') center / cover no-repeat;
+    url('./assets/campaign/campaign-world-01.jpg') center / cover no-repeat;
   filter: saturate(.86) brightness(.9);
 }
 .campaign-run-backdrop::after {

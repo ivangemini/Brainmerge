@@ -137,6 +137,7 @@ function ensureShell() {
           <button class="campaign-run-supply" type="button"></button>
           <button class="campaign-run-deliver" type="button" hidden></button>
           <button class="campaign-run-restart" type="button"></button>
+          <button class="campaign-run-abandon campaign-run-restart" type="button"></button>
         </footer>
       </div>
       <div class="campaign-run-complete" aria-hidden="true">
@@ -160,6 +161,14 @@ function ensureShell() {
     const run = activeRun();
     if (!run || run.completed || !window.confirm(copy.runRestartConfirm)) return;
     dispatchCommand({ type: 'restart' });
+  });
+  section.querySelector('.campaign-run-abandon')?.addEventListener('click', () => {
+    const run = activeRun();
+    if (!run || run.completed || !window.confirm(copy.runAbandonConfirm)) return;
+    wantsOpen = false;
+    closeRun();
+    dispatchCommand({ type: 'abandon' });
+    window.dispatchEvent(new Event('brainmerge:campaign-state-request'));
   });
   section.querySelector('.campaign-run-complete button')?.addEventListener('click', () => {
     wantsOpen = false;
@@ -401,11 +410,14 @@ function renderRun() {
   }
 
   currentShell.querySelector('.campaign-run-supply-copy strong').textContent = copy.runSupply;
-  currentShell.querySelector('.campaign-run-supply-copy small').textContent = run.phase === 'restore'
+  const landmarkRestored = (locationSnapshot()?.phases?.restore ?? 0) > 0;
+  const perkHint = landmarkRestored && run.landmarkPerkKey ? copy[run.landmarkPerkKey] : null;
+  const landmarkName = copy[`w${worldNumber}Landmark${Math.max(0, locationIndex) + 1}Name`] ?? '';
+  currentShell.querySelector('.campaign-run-supply-copy small').textContent = interpolate(perkHint ?? (run.phase === 'restore'
     ? copy.runRestoreSupplyHint
     : run.phase === 'mastery'
       ? copy.runMasterySupplyHint
-      : copy.runSupplyHint;
+      : copy.runSupplyHint), { landmark: landmarkName });
   const supply = currentShell.querySelector('.campaign-run-supply');
   if (supply instanceof HTMLButtonElement) {
     supply.textContent = `+ ${copy.runSupply}`;
@@ -428,6 +440,11 @@ function renderRun() {
   if (restart instanceof HTMLButtonElement) {
     restart.textContent = copy.runRestart;
     restart.disabled = run.completed;
+  }
+  const abandon = currentShell.querySelector('.campaign-run-abandon');
+  if (abandon instanceof HTMLButtonElement) {
+    abandon.textContent = copy.runAbandon;
+    abandon.hidden = run.completed;
   }
 
   renderBoard(run);

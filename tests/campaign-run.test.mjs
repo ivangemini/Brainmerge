@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   SNEAKER_GARDEN_LOCATION_ID,
   WORLD2_LOCATION_IDS,
+  abandonCampaignRun,
   acknowledgeCampaignRunCompletion,
   beginCampaignRun,
   campaignRunPresentationSnapshot,
@@ -357,4 +358,56 @@ test('partial Deliver run and exact-once order progress survive save v7 roundtri
   const presentation = campaignRunPresentationSnapshot(restored.campaignRun);
   assert.equal(presentation?.progressPercent, 25);
   assert.equal(presentation?.activeOrderTier, 2);
+});
+
+test('landmark perks from every Campaign location stay on the current typed engine', () => {
+  const extraClears = createSneakerGardenStabilizeRun(5);
+  const pair = extraClears.cells.slice();
+  pair[0] = unitForTier(1, 'perk-a');
+  pair[1] = unitForTier(1, 'perk-b');
+  const mergedOnce = moveOrMergeCampaignRun({ ...extraClears, locationId: 'w1-toilet-pond', cells: pair }, 0, 1);
+  const mergedWithPerk = moveOrMergeCampaignRun({ ...extraClears, locationId: 'w1-toilet-pond', cells: pair }, 0, 1, 1);
+  assert.equal(blockerCount(mergedOnce.run) - blockerCount(extraClears), -1);
+  assert.equal(blockerCount(mergedWithPerk.run) - blockerCount(extraClears), -2);
+
+  const unlocked = {
+    ...createInitialState(1_000),
+    campaign: {
+      ...createInitialState(1_000).campaign,
+      worlds: {
+        ...createInitialState(1_000).campaign.worlds,
+        '1': { ...createInitialState(1_000).campaign.worlds['1'], raidCleared: true, raidProgress: 1 }
+      }
+    }
+  };
+  const city = beginCampaignRun(unlocked, 2, WORLD2_LOCATION_IDS[3]);
+  assert.equal(city.campaignRun?.phase, 'stabilize');
+  assert.equal(campaignRunPresentationSnapshot(city.campaignRun)?.landmarkPerkKey, 'w2Perk4');
+  const restoredCity = {
+    ...city,
+    campaignRun: null,
+    campaign: {
+      ...city.campaign,
+      worlds: {
+        ...city.campaign.worlds,
+        '2': {
+          ...city.campaign.worlds['2'],
+          locations: {
+            ...city.campaign.worlds['2'].locations,
+            [WORLD2_LOCATION_IDS[3]]: { stabilize: 1, deliver: 1, restore: 1, mastery: 0 }
+          }
+        }
+      }
+    }
+  };
+  const starterCache = beginCampaignRun(restoredCity, 2, WORLD2_LOCATION_IDS[3]);
+  assert.equal(occupiedCount(starterCache.campaignRun?.cells ?? []), 6, 'Rush Hour Start adds three free starter units at landmark level 3');
+});
+
+test('abandoning a Campaign run clears only its temporary board', () => {
+  const state = beginCampaignRun(createInitialState(2_000), 1, SNEAKER_GARDEN_LOCATION_ID);
+  const abandoned = abandonCampaignRun(state);
+  assert.equal(abandoned.campaignRun, null);
+  assert.deepEqual(abandoned.cells, state.cells);
+  assert.deepEqual(abandoned.campaign, state.campaign);
 });

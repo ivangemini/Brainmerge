@@ -2,6 +2,7 @@ import { BOARD_COLUMNS } from './core/catalog.js';
 import { Analytics, BrowserEventAnalyticsSink } from './analytics/analytics.js';
 import {
   acknowledgeCampaignRunCompletion,
+  abandonCampaignRun,
   beginCampaignRun,
   campaignRunPresentationSnapshot,
   deliverCampaignBoardUnit,
@@ -601,6 +602,12 @@ window.addEventListener('brainmerge:campaign-command', (event) => {
   if (type === 'restart') {
     settleOnline();
     update(restartCampaignRunPhase(state));
+    return;
+  }
+
+  if (type === 'abandon') {
+    settleOnline();
+    update(abandonCampaignRun(state));
     return;
   }
 

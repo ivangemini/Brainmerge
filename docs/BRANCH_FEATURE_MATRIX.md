@@ -2,6 +2,8 @@
 
 The recovery snapshot is the canonical base for the normalized build. Existing branches remain untouched; this document records which unique slices were evaluated and where they now live.
 
+The exhaustive ref-by-ref inventory is in [BRANCH_AUDIT.md](./BRANCH_AUDIT.md). The wildcard rows below are only a compact feature map; they do not represent the complete branch list.
+
 | Source branch | Unique slice | Decision | Normalized location |
 | --- | --- | --- | --- |
 | `codex/recovery-full-build-20260913` | Save v10, Raid, retention, analytics, combo/fever/visitor, current Campaign engine | Keep as canonical base | `src/core/game.ts`, `src/core/campaign*.ts`, `src/analytics/`, `src/main.ts` |

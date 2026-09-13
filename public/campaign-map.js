@@ -5,7 +5,7 @@ const COPY_BY_LOCALE = {
 
 const WORLD_CONFIG = {
   1: {
-    background: './public/assets/campaign/campaign-world-01.webp',
+    background: './public/assets/campaign/campaign-world-01.jpg',
     boss: './public/assets/campaign/boss-world-01.webp',
     kickerKey: 'world1Kicker',
     nameKey: 'world1Name',
@@ -21,7 +21,7 @@ const WORLD_CONFIG = {
     raid: [93, 10, 42, 12]
   },
   2: {
-    background: './public/assets/campaign/campaign-world-02.webp',
+    background: './public/assets/campaign/campaign-world-02.jpg',
     boss: './public/assets/campaign/boss-world-02.b64',
     kickerKey: 'world2Kicker',
     nameKey: 'world2Name',

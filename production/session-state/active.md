@@ -158,10 +158,12 @@ Repository-ready:
 - Latest verification: 115 tests, EN/RU parity, local package/release audit, World 1 Raid, packaged RC and packaged Yandex browser smokes pass.
 
 Normalized-build final gate on `codex/normalized-full-build-20260913`:
+- exhaustive audit covers every named local/remote ref; exact duplicate branch groups and `origin/HEAD` alias are recorded in `docs/BRANCH_AUDIT.md`;
+- missing unique behavior from the audited branches is represented by the current typed engines: all World 1/2 Landmark Perks, safe Campaign-run abandon, World 2 Location/Raid persistence and high-resolution Campaign backgrounds;
 - `npm run build`: passed, EN/RU parity 224/224;
-- `npm test`: passed, 124/124 tests;
-- runtime, Campaign shell, Restore + Mastery, World 1 Raid, RC, motion, RU and Yandex browser smokes: passed;
-- local and Yandex packages: passed integrity and release audit;
+- `npm test`: passed, 126/126 tests;
+- runtime, Campaign shell, Restore + Mastery, World 1 Raid, World 2 Location/Raid, RC, motion, RU and Yandex browser smokes: passed;
+- local package: passed integrity and release audit; Yandex package verification is part of the final gate;
 - browser verification on `localhost:4173`: main board, audio settings persistence, Campaign seven-location map, World 2 routing and touch merge passed with no page errors.
 
 The recovery snapshot remains `codex/recovery-full-build-20260913` at `ca39fb2`; historical feature branches remain untouched.

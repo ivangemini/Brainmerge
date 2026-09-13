@@ -11,8 +11,8 @@ const assets = [
   'public/assets/ui/stage-elite.webp',
   'public/assets/ui/stage-boss.webp',
   'public/assets/ui/stage-locked.webp',
-  'public/assets/campaign/campaign-world-01.webp',
-  'public/assets/campaign/campaign-world-02.webp',
+  'public/assets/campaign/campaign-world-01.jpg',
+  'public/assets/campaign/campaign-world-02.jpg',
   'public/assets/campaign/boss-world-01.webp',
   'public/assets/campaign/boss-world-02.webp'
 ];
@@ -33,7 +33,7 @@ test('campaign locale resources keep EN/RU key parity', async () => {
 
 test('campaign shell remains presentation-only', async () => {
   const script = await readFile(new URL('../public/campaign-map.js', import.meta.url), 'utf8');
-  assert.match(script, /campaign-world-01\.webp/);
-  assert.match(script, /campaign-world-02\.webp/);
+  assert.match(script, /campaign-world-01\.jpg/);
+  assert.match(script, /campaign-world-02\.jpg/);
   assert.doesNotMatch(script, /localStorage|saveState|paidBoxes|pendingOfflineCoins|purchaseUpgrade|spawnUnit/);
 });

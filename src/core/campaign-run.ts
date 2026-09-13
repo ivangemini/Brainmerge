@@ -32,23 +32,27 @@ const SNEAKER_GARDEN_STARTING_CELLS = [0, 1, 6, 7] as const;
 
 type PhaseOvergrowthConfig = Record<CampaignRunPhase, readonly number[]>;
 type CampaignPerk = {
+  id: string;
+  descriptionKey: string;
   luckySupplyStep?: number;
   supplyTierStep?: number;
   supplyCopiesStep?: number;
+  mergeClearStep?: number;
+  startingTierOneStep?: number;
   masteryBlockerReductionStep?: number;
 };
 
 const LOCATION_CONFIGS: Record<string, { overgrowth: PhaseOvergrowthConfig; perk: CampaignPerk }> = {
   [SNEAKER_GARDEN_LOCATION_ID]: {
     overgrowth: { stabilize: SNEAKER_GARDEN_STABILIZE_OVERGROWTH, deliver: SNEAKER_GARDEN_DELIVER_OVERGROWTH, restore: SNEAKER_GARDEN_RESTORE_OVERGROWTH, mastery: SNEAKER_GARDEN_MASTERY_OVERGROWTH },
-    perk: { luckySupplyStep: 0.05 }
+    perk: { id: 'supply-luck', descriptionKey: 'w1PerkSneakerGarden', luckySupplyStep: 0.05 }
   },
-  'w1-toilet-pond': { overgrowth: { stabilize: [3, 4, 9, 10, 15, 16, 21], deliver: [4, 10, 16, 21], restore: [10, 16, 21], mastery: [3, 4, 9, 10, 15, 16] }, perk: { luckySupplyStep: 0.02 } },
-  'w1-watermelon-grill': { overgrowth: { stabilize: [5, 11, 17, 22, 23, 24, 29], deliver: [11, 17, 23, 29], restore: [17, 23, 29], mastery: [5, 11, 17, 22, 23, 29] }, perk: { supplyTierStep: 1 } },
-  'w1-hose-tunnels': { overgrowth: { stabilize: [2, 3, 8, 9, 14, 15, 20, 21], deliver: [3, 9, 15, 21], restore: [9, 15, 21], mastery: [2, 3, 8, 9, 14, 15, 20] }, perk: { supplyCopiesStep: 0 } },
-  'w1-gnome-yard': { overgrowth: { stabilize: [4, 5, 10, 11, 16, 17, 22, 23], deliver: [5, 11, 17, 23, 29], restore: [11, 17, 23], mastery: [4, 5, 10, 11, 16, 17, 22] }, perk: { supplyCopiesStep: 1 } },
-  'w1-mushroom-field': { overgrowth: { stabilize: [2, 5, 8, 11, 14, 17, 20, 23, 26], deliver: [5, 11, 17, 23, 29], restore: [11, 17, 23, 29], mastery: [2, 5, 8, 11, 14, 17, 20, 23] }, perk: { masteryBlockerReductionStep: 1 } },
-  'w1-backyard-core': { overgrowth: { stabilize: [2, 3, 4, 5, 8, 9, 10, 11, 14, 15], deliver: [3, 5, 9, 11, 15, 17], restore: [5, 11, 17, 23], mastery: [2, 3, 4, 5, 8, 9, 10, 11, 14] }, perk: { luckySupplyStep: 0.03, supplyTierStep: 1 } },
+  'w1-toilet-pond': { overgrowth: { stabilize: [3, 4, 9, 10, 15, 16, 21], deliver: [4, 10, 16, 21], restore: [10, 16, 21], mastery: [3, 4, 9, 10, 15, 16] }, perk: { id: 'clearing-pulse', descriptionKey: 'w1PerkToiletPond', mergeClearStep: 1 } },
+  'w1-watermelon-grill': { overgrowth: { stabilize: [5, 11, 17, 22, 23, 24, 29], deliver: [11, 17, 23, 29], restore: [17, 23, 29], mastery: [5, 11, 17, 22, 23, 29] }, perk: { id: 'supply-tier', descriptionKey: 'w1PerkWatermelonGrill', supplyTierStep: 1 } },
+  'w1-hose-tunnels': { overgrowth: { stabilize: [2, 3, 8, 9, 14, 15, 20, 21], deliver: [3, 9, 15, 21], restore: [9, 15, 21], mastery: [2, 3, 8, 9, 14, 15, 20] }, perk: { id: 'starter-cache', descriptionKey: 'w1PerkHoseTunnels', startingTierOneStep: 1 } },
+  'w1-gnome-yard': { overgrowth: { stabilize: [4, 5, 10, 11, 16, 17, 22, 23], deliver: [5, 11, 17, 23, 29], restore: [11, 17, 23], mastery: [4, 5, 10, 11, 16, 17, 22] }, perk: { id: 'supply-cache', descriptionKey: 'w1PerkGnomeYard', supplyCopiesStep: 1 } },
+  'w1-mushroom-field': { overgrowth: { stabilize: [2, 5, 8, 11, 14, 17, 20, 23, 26], deliver: [5, 11, 17, 23, 29], restore: [11, 17, 23, 29], mastery: [2, 5, 8, 11, 14, 17, 20, 23] }, perk: { id: 'mastery-paths', descriptionKey: 'w1PerkMushroomField', masteryBlockerReductionStep: 1 } },
+  'w1-backyard-core': { overgrowth: { stabilize: [2, 3, 4, 5, 8, 9, 10, 11, 14, 15], deliver: [3, 5, 9, 11, 15, 17], restore: [5, 11, 17, 23], mastery: [2, 3, 4, 5, 8, 9, 10, 11, 14] }, perk: { id: 'core-resonance', descriptionKey: 'w1PerkBackyardCore', luckySupplyStep: 0.03, supplyTierStep: 1 } },
   ...Object.fromEntries(WORLD2_LOCATION_IDS.map((locationId, index) => [locationId, {
     overgrowth: {
       stabilize: Array.from({ length: 5 + index }, (_, cell) => (cell * 2 + index) % BOARD_SIZE),
@@ -56,7 +60,15 @@ const LOCATION_CONFIGS: Record<string, { overgrowth: PhaseOvergrowthConfig; perk
       restore: Array.from({ length: 2 + Math.floor(index / 3) }, (_, cell) => (cell * 5 + index) % BOARD_SIZE),
       mastery: Array.from({ length: 5 + index }, (_, cell) => (cell * 2 + index) % BOARD_SIZE)
     },
-    perk: { luckySupplyStep: index === 0 || index === 6 ? 0.04 : 0, supplyTierStep: index === 2 || index === 6 ? 1 : 0, supplyCopiesStep: index === 4 ? 1 : 0, masteryBlockerReductionStep: index === 5 ? 1 : 0 }
+    perk: [
+      { id: 'traffic-routing', descriptionKey: 'w2Perk1', luckySupplyStep: 0.04 },
+      { id: 'signal-cache', descriptionKey: 'w2Perk2', mergeClearStep: 1 },
+      { id: 'vending-overflow', descriptionKey: 'w2Perk3', supplyTierStep: 1 },
+      { id: 'rush-hour-start', descriptionKey: 'w2Perk4', startingTierOneStep: 1 },
+      { id: 'crosswalk-cache', descriptionKey: 'w2Perk5', supplyCopiesStep: 1 },
+      { id: 'gridlock-bypass', descriptionKey: 'w2Perk6', masteryBlockerReductionStep: 1 },
+      { id: 'city-resonance', descriptionKey: 'w2Perk7', luckySupplyStep: 0.03, supplyTierStep: 1 }
+    ][index]
   }]))
 };
 
@@ -121,6 +133,7 @@ export interface CampaignRunPresentation {
   restoreBatchOrderIndex: number;
   selectedIndex: number | null;
   completed: boolean;
+  landmarkPerkKey: string | null;
 }
 
 function asRecord(candidate: unknown): Record<string, unknown> | null {
@@ -186,9 +199,16 @@ function sanitizeOvergrowth(candidate: unknown[], phase: CampaignRunPhase, locat
   });
 }
 
-function initialCampaignCells(): Cell[] {
+function initialCampaignCells(overgrowth: readonly boolean[], bonusTierOnes = 0): Cell[] {
   const cells: Cell[] = Array.from({ length: BOARD_SIZE }, () => null);
-  for (const index of SNEAKER_GARDEN_STARTING_CELLS) cells[index] = createCampaignUnit(1);
+  for (const index of SNEAKER_GARDEN_STARTING_CELLS) {
+    if (!overgrowth[index]) cells[index] = createCampaignUnit(1);
+  }
+  for (let added = 0; added < bonusTierOnes; added += 1) {
+    const index = cells.findIndex((cell, cellIndex) => cell === null && !overgrowth[cellIndex]);
+    if (index < 0) break;
+    cells[index] = createCampaignUnit(1);
+  }
   return cells;
 }
 
@@ -278,12 +298,15 @@ function locationCurrentPhase(campaign: CampaignProgress, worldId: number, locat
 
 function createLocationRun(phase: CampaignRunPhase, maxDiscoveredTier: number, worldId = 1, locationId = SNEAKER_GARDEN_LOCATION_ID, landmarkLevel = 0): CampaignRunState {
   const indexes = phaseOvergrowthIndexes(phase, locationId, landmarkLevel);
+  const overgrowth = overgrowthFromIndexes(indexes);
+  const config = locationConfig(locationId);
+  const startingTierOneBonus = Math.max(0, Math.floor(landmarkLevel) * (config?.perk.startingTierOneStep ?? 0));
   return {
     worldId,
     locationId,
     phase,
-    cells: initialCampaignCells(),
-    overgrowth: overgrowthFromIndexes(indexes),
+    cells: initialCampaignCells(overgrowth, startingTierOneBonus),
+    overgrowth,
     overgrowthTotal: indexes.length,
     merges: 0,
     spawns: 0,
@@ -471,18 +494,18 @@ function gridDistance(a: number, b: number): number {
   return Math.abs(ax - bx) + Math.abs(ay - by);
 }
 
-function clearNearestOvergrowth(overgrowth: boolean[], mergeIndex: number): { overgrowth: boolean[]; clearedIndex: number | null } {
+function clearNearestOvergrowth(overgrowth: boolean[], mergeIndex: number, count = 1): { overgrowth: boolean[]; clearedIndex: number | null } {
   const blocked = overgrowth.flatMap((entry, index) => entry ? [index] : []);
   if (blocked.length === 0) return { overgrowth, clearedIndex: null };
   blocked.sort((a, b) => gridDistance(a, mergeIndex) - gridDistance(b, mergeIndex) || a - b);
   const clearedIndex = blocked[0] ?? null;
   if (clearedIndex === null) return { overgrowth, clearedIndex: null };
   const next = overgrowth.slice();
-  next[clearedIndex] = false;
+  for (const index of blocked.slice(0, Math.max(1, Math.floor(count)))) next[index] = false;
   return { overgrowth: next, clearedIndex };
 }
 
-export function moveOrMergeCampaignRun(run: CampaignRunState, from: number, to: number): CampaignRunMoveResult {
+export function moveOrMergeCampaignRun(run: CampaignRunState, from: number, to: number, additionalOvergrowthClears = 0): CampaignRunMoveResult {
   if (run.completed || !Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= BOARD_SIZE || to >= BOARD_SIZE || run.overgrowth[from] || run.overgrowth[to]) {
     return { run, changed: false, merged: false, clearedIndex: null };
   }
@@ -515,7 +538,7 @@ export function moveOrMergeCampaignRun(run: CampaignRunState, from: number, to: 
   cells[to] = createCampaignUnit(nextFamily.tier);
   const cleared = run.phase === 'mastery'
     ? { overgrowth: run.overgrowth, clearedIndex: null }
-    : clearNearestOvergrowth(run.overgrowth, to);
+    : clearNearestOvergrowth(run.overgrowth, to, 1 + Math.max(0, Math.floor(additionalOvergrowthClears)));
   const completed = run.phase === 'stabilize'
     ? cleared.overgrowth.every((entry) => !entry)
     : run.completed;
@@ -647,7 +670,10 @@ export function selectCampaignBoardCell(state: GameState, index: number | null):
 
 export function moveOrMergeCampaignBoard(state: GameState, from: number, to: number): CampaignGameMoveResult {
   if (!state.campaignRun) return { state, changed: false, merged: false, clearedIndex: null };
-  const result = moveOrMergeCampaignRun(state.campaignRun, from, to);
+  const config = locationConfig(state.campaignRun.locationId);
+  const landmarkLevel = locationLandmarkLevel(state.campaign, state.campaignRun.worldId, state.campaignRun.locationId);
+  const additionalOvergrowthClears = landmarkLevel * (config?.perk.mergeClearStep ?? 0);
+  const result = moveOrMergeCampaignRun(state.campaignRun, from, to, additionalOvergrowthClears);
   if (result.run === state.campaignRun) return { state, changed: result.changed, merged: result.merged, clearedIndex: result.clearedIndex };
   const campaign = result.run.completed
     ? commitCampaignRunCompletion(state.campaign, result.run)
@@ -677,6 +703,11 @@ export function acknowledgeCampaignRunCompletion(state: GameState): GameState {
   if (!state.campaignRun?.completed) return state;
   const campaign = commitCampaignRunCompletion(state.campaign, state.campaignRun);
   return { ...state, campaign, campaignRun: null };
+}
+
+/** Abandons only the temporary Campaign board; all committed progress remains saved. */
+export function abandonCampaignRun(state: GameState): GameState {
+  return state.campaignRun ? { ...state, campaignRun: null } : state;
 }
 
 /** Rebuilds only the temporary phase board and keeps every already committed objective. */
@@ -733,6 +764,7 @@ export function campaignRunPresentationSnapshot(run: CampaignRunState | null): C
     restoreBatchTotal: run.phase === 'restore' ? SNEAKER_GARDEN_LANDMARK_LEVELS : 0,
     restoreBatchOrderIndex,
     selectedIndex: run.selectedIndex,
-    completed: run.completed
+    completed: run.completed,
+    landmarkPerkKey: locationConfig(run.locationId)?.perk.descriptionKey ?? null
   };
 }

@@ -40,13 +40,13 @@ Location number, restoration %, phase status, World Progress, Landmark level, lo
 
 ## Approved World 1 / World 2 Campaign art
 ### World 1 — Backyard Brainrot Zone
-- `public/assets/campaign/campaign-world-01.webp` — production opaque environment.
+- `public/assets/campaign/campaign-world-01.jpg` — high-resolution production opaque environment.
 - `public/assets/campaign/boss-world-01.webp` — transparent World 1 boss.
 
 Environment identity is surreal TikTok-style backyard brainrot: impossible garden/object/animal/fashion fusions distributed through the world. It intentionally contains no baked Location circles, text or UI.
 
 ### World 2 — Surreal Brainrot City
-- `public/assets/campaign/campaign-world-02.webp` — normalized production opaque environment.
+- `public/assets/campaign/campaign-world-02.jpg` — high-resolution normalized production opaque environment.
 - `public/assets/campaign/boss-world-02.b64` — current packaged base64-backed WebP payload for the transparent World 2 boss; `public/campaign-map.js` resolves it to a data URL at runtime.
 
 The base64-backed path is a repository transport workaround, not gameplay state. If replaced later with a normal binary WebP, update this manifest and browser coverage in the same pass.

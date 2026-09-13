@@ -1,6 +1,6 @@
 import { BOARD_COLUMNS } from './core/catalog.js';
 import { Analytics, BrowserEventAnalyticsSink } from './analytics/analytics.js';
-import { acknowledgeCampaignRunCompletion, beginCampaignRun, campaignRunPresentationSnapshot, deliverCampaignBoardUnit, moveOrMergeCampaignBoard, restartCampaignRunPhase, selectCampaignBoardCell, spawnCampaignRunSupply } from './core/campaign-run.js';
+import { acknowledgeCampaignRunCompletion, abandonCampaignRun, beginCampaignRun, campaignRunPresentationSnapshot, deliverCampaignBoardUnit, moveOrMergeCampaignBoard, restartCampaignRunPhase, selectCampaignBoardCell, spawnCampaignRunSupply } from './core/campaign-run.js';
 import { campaignPresentationSnapshot } from './core/campaign.js';
 import { acknowledgeCampaignRaidPhase, beginCampaignRaid, campaignRaidPresentation, deliverCampaignRaidUnit, moveOrMergeCampaignRaid, selectCampaignRaidCell, spawnCampaignRaidSupply } from './core/campaign-raid.js';
 import { accrueOfflineIncome, accrueOnlineIncome, advanceFastEvents, claimCurrentMission, claimCollectionReward, claimOfflineIncome, createInitialState, activateCoinBoost, activateMutationCharge, grantFreeUpgrade, grantGoldenBrainBox, isBoardFull, markSessionStart, moveOrMerge, performPrestige, purchasePrestigeUpgrade, purchaseUpgrade, recordVisitorProgress, rescueDeadlock, sanitizeState, selectCell, spawnUnit } from './core/game.js';
@@ -573,6 +573,11 @@ window.addEventListener('brainmerge:campaign-command', (event) => {
     if (type === 'restart') {
         settleOnline();
         update(restartCampaignRunPhase(state));
+        return;
+    }
+    if (type === 'abandon') {
+        settleOnline();
+        update(abandonCampaignRun(state));
         return;
     }
     if (type === 'startRaid') {
