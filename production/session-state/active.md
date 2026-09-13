@@ -157,7 +157,14 @@ Repository-ready:
 - Remaining implementation work from the audit is the visitor presentation after the required character states and sounds are supplied, plus gradual migration of touched Campaign controllers from `public/*.js` into typed ownership.
 - Latest verification: 115 tests, EN/RU parity, local package/release audit, World 1 Raid, packaged RC and packaged Yandex browser smokes pass.
 
-Normalized-build validation is being rerun after the audio, rewarded-boost and World 2 merge. The required final gate is the current branch's build/test/smoke/package result, not the historical counts above.
+Normalized-build final gate on `codex/normalized-full-build-20260913`:
+- `npm run build`: passed, EN/RU parity 224/224;
+- `npm test`: passed, 124/124 tests;
+- runtime, Campaign shell, Restore + Mastery, World 1 Raid, RC, motion, RU and Yandex browser smokes: passed;
+- local and Yandex packages: passed integrity and release audit;
+- browser verification on `localhost:4173`: main board, audio settings persistence, Campaign seven-location map, World 2 routing and touch merge passed with no page errors.
+
+The recovery snapshot remains `codex/recovery-full-build-20260913` at `ca39fb2`; historical feature branches remain untouched.
 
 ## Source of truth
 - `docs/ROADMAP.md`
