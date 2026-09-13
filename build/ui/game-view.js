@@ -1,5 +1,5 @@
-import { assetForUnit, BOARD_COLUMNS, DEADLOCK_RESCUE_REFUND, FAMILIES, MISSION_TRACK, UPGRADE_DEFINITIONS, familyById, familyByTier, incomeMultiplierForLevel, luckyDropChanceForLevel, maxUpgradeLevel, offlineHoursForLevel, upgradeCost } from '../core/catalog.js';
-import { activeMission, adBoostPresentation, brainBoxBaseTier, brainBoxLuckyChance, canClaimCurrentMission, canPrestige, claimableCollectionRewardTiers, canMerge, canPurchaseUpgrade, currentBrainBoxCost, findBestMergePair, findFirstMergePair, isBoardFull, isDeadlocked, missionProgress as missionProgressForState, nextActionHint, onboardingPhase, playerLevel, playerLevelProgress, productionPerMinute, unitProductionPerMinute, upgradeRequiredDiscoveryTier } from '../core/game.js';
+import { assetForUnit, BOARD_COLUMNS, DEADLOCK_RESCUE_REFUND, FAMILIES, MISSION_TRACK, UPGRADE_DEFINITIONS, familyById, familyByTier, incomeMultiplierForLevel, clickPowerBonusForLevel, clickCritChanceForLevel, tapRewardForTier, luckyDropChanceForLevel, maxUpgradeLevel, offlineHoursForLevel, upgradeCost } from '../core/catalog.js';
+import { activeMission, adBoostPresentation, brainBoxBaseTier, brainBoxLuckyChance, canClaimCurrentMission, canPrestige, claimableCollectionRewardTiers, canMerge, canPurchaseUpgrade, currentBrainBoxCost, findBestMergePair, findFirstMergePair, isBoardFull, isDeadlocked, missionProgress as missionProgressForState, nextActionHint, onboardingPhase, playerLevel, playerLevelProgress, productionPerMinute, maxTierOnBoard, unitProductionPerMinute, upgradeRequiredDiscoveryTier } from '../core/game.js';
 import { prestigeUpgradeCost } from '../core/game.js';
 import { renderRewardBoostsPanel } from './reward-boosts.js';
 function presentationStyle(family) {
@@ -22,6 +22,10 @@ function upgradeEffect(state, id, t) {
     if (id === 'income') {
         return t('upgrade.effect.income', { multiplier: incomeMultiplierForLevel(level).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') });
     }
+    if (id === 'clickPower')
+        return t('upgrade.effect.clickPower', { bonus: Math.round(clickPowerBonusForLevel(level) * 100) });
+    if (id === 'clickCrit')
+        return t('upgrade.effect.clickCrit', { chance: Math.round(clickCritChanceForLevel(level) * 100), multiplier: 2 });
     return t('upgrade.effect.offline', { hours: offlineHoursForLevel(level) });
 }
 function nextActionText(hint, t) {
@@ -102,6 +106,7 @@ export class GameView {
             : null;
         const boxCost = currentBrainBoxCost(state);
         const boxBaseTier = brainBoxBaseTier(state);
+        const clickReward = tapRewardForTier(maxTierOnBoard(state), state.upgrades.clickPower);
         const boxLuckyPercent = Math.round(brainBoxLuckyChance(state) * 100);
         const production = productionPerMinute(state);
         const guidance = nextActionHint(state);
@@ -232,6 +237,9 @@ export class GameView {
             </div>` : ''}
 
             <div class="spawn-dock ${phase === 'spawn' ? 'is-tutorial' : ''}">
+              <button class="clicker-button" data-action="clicker" aria-label="${t('action.clickerAria', { reward: clickReward })}">
+                <span class="clicker-button__icon" aria-hidden="true">●</span><span class="clicker-button__reward">+${clickReward}</span>
+              </button>
               <button class="spawn-button" data-action="spawn" ${state.coins < boxCost || boardFull || capabilities.adBusy ? 'disabled' : ''}>
                 <span class="spawn-button__icon">✦</span>
                 <span><strong>${t('action.spawn')}</strong><small>${t('action.spawnCost', { cost: boxCost })}</small></span>
@@ -320,6 +328,7 @@ export class GameView {
         this.bindInteractions();
     }
     bindInteractions() {
+        this.root.querySelector('[data-action="clicker"]')?.addEventListener('click', () => this.actions.clicker());
         this.root.querySelector('[data-action="spawn"]')?.addEventListener('click', () => this.actions.spawn());
         this.root.querySelector('[data-action="rewarded-spawn"]')?.addEventListener('click', () => this.actions.rewardedSpawn());
         this.root.querySelectorAll('[data-ad-boost]').forEach((button) => {

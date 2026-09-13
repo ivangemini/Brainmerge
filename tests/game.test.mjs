@@ -35,7 +35,8 @@ import {
   newestValidState,
   rescueDeadlock,
   sanitizeState,
-  spawnUnit
+  spawnUnit,
+  tapUnit
 } from '../build/core/game.js';
 import {
   BASE_BOX_COST,
@@ -53,7 +54,8 @@ import {
   luckyDropChanceForLevel,
   mergeRewardForTier,
   nextFamilyFor,
-  offlineHoursForLevel
+  offlineHoursForLevel,
+  tapRewardForTier
 } from '../build/core/catalog.js';
 import { localeFromLanguage } from '../build/i18n/i18n.js';
 
@@ -129,16 +131,27 @@ test('first-cycle mission track remains ordered around natural chain milestones'
     ['discover', 7],
     ['discover', 8]
   ]);
-  assert.deepEqual(MISSION_TRACK.slice(8).map((mission) => mission.target), [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+  assert.deepEqual(MISSION_TRACK.slice(8).map((mission) => mission.target), [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 25, 100]);
   assert.ok(MISSION_TRACK.every((mission) => mission.reward > 0));
 });
 
-test('upgrade catalog exposes four bounded coin sinks', () => {
-  assert.deepEqual(UPGRADE_DEFINITIONS.map((upgrade) => upgrade.id), ['boxBaseTier', 'luckyDrop', 'income', 'offline']);
+test('upgrade catalog exposes six bounded coin sinks', () => {
+  assert.deepEqual(UPGRADE_DEFINITIONS.map((upgrade) => upgrade.id), ['boxBaseTier', 'luckyDrop', 'income', 'offline', 'clickPower', 'clickCrit']);
   assert.ok(UPGRADE_DEFINITIONS.every((upgrade) => upgrade.costs.length > 0 && upgrade.costs.every((cost) => cost > 0)));
   assert.equal(luckyDropChanceForLevel(5), 0.15);
   assert.equal(incomeMultiplierForLevel(5), 1.25);
   assert.equal(offlineHoursForLevel(4), 12);
+});
+
+test('clicker payout scales from the occupied board tier and preserves merge state', () => {
+  const state = createInitialState(0);
+  const first = tapUnit(state, () => 0.99, 0);
+  assert.equal(first.reward, tapRewardForTier(1));
+  assert.equal(first.state.clicks, 1);
+  assert.deepEqual(first.state.cells, state.cells);
+  const critical = tapUnit({ ...state, upgrades: { ...state.upgrades, clickPower: 5, clickCrit: 5 }, cells: [{ id: 't9', familyId: 'brr-brr-patapim', tier: 9 }, ...state.cells.slice(1)] }, () => 0, 0);
+  assert.equal(critical.reward, tapRewardForTier(9, 5) * 2);
+  assert.equal(critical.critical, true);
 });
 
 test('runtime character presentation stays inside safe normalization bounds', () => {
@@ -304,7 +317,8 @@ test('initial state starts save v10 with immediate merge and permanent-meta defa
   assert.equal(state.runMaxTier, 1);
   assert.equal(state.missionIndex, 0);
   assert.equal(state.paidBoxes, 0);
-  assert.deepEqual(state.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
+  assert.deepEqual(state.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0, clickPower: 0, clickCrit: 0 });
+  assert.equal(state.clicks, 0);
   assert.deepEqual(state.collectionRewardClaims, []);
   assert.equal(state.prestigeCount, 0);
   assert.equal(state.brainCells, 0);
@@ -347,7 +361,8 @@ test('legacy v2 save migrates chain identity and mission completion into save v1
   assert.equal(migrated?.runMaxTier, 5);
   assert.equal(migrated?.missionIndex, 1);
   assert.equal(migrated?.paidBoxes, 0);
-  assert.deepEqual(migrated?.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
+  assert.deepEqual(migrated?.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0, clickPower: 0, clickCrit: 0 });
+  assert.equal(migrated?.clicks, 0);
   assert.equal(migrated?.lastAccrualAt, 50_000);
   assert.equal(migrated?.selectedIndex, null);
   assert.equal(migrated?.prestigeCount, 0);
@@ -474,7 +489,7 @@ test('Prestige awards three Brain Cells once and resets only run-scoped state', 
   assert.equal(reset.brainCells, 3);
   assert.deepEqual(reset.collectionRewardClaims, ['collection-5']);
   assert.equal(reset.campaign, campaign);
-  assert.deepEqual(reset.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0 });
+  assert.deepEqual(reset.upgrades, { boxBaseTier: 0, luckyDrop: 0, income: 0, offline: 0, clickPower: 0, clickCrit: 0 });
   assert.equal(performPrestige(reset), reset, 'a reset run cannot award Brain Cells twice');
 });
 
@@ -579,6 +594,7 @@ test('mission progress reads the correct cumulative signal', () => {
   assert.equal(missionProgress(base, MISSION_TRACK[0]), 6);
   assert.equal(missionProgress(base, MISSION_TRACK[1]), 4);
   assert.equal(missionProgress(base, MISSION_TRACK[2]), 7);
+  assert.equal(missionProgress({ ...base, clicks: 19 }, { kind: 'clicks', target: 25, id: 'test-clicks', reward: 1, titleKey: '', textKey: '' }), 19);
 });
 
 test('idle economy can progress from fresh save to T8 first-cycle checkpoint without rewarded ads or negative coins', () => {

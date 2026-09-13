@@ -34,6 +34,11 @@ export const BOX_COST_GROWTH = 1;
 export const SPAWN_COST = BASE_BOX_COST;
 export const DEADLOCK_RESCUE_REFUND = 5;
 
+/** Supplementary clicker economy recovered from the fullest historical state. */
+export const CLICK_REWARD_PER_TIER = 10;
+export const CLICK_POWER_BONUS_BY_LEVEL = [0, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25] as const;
+export const CLICK_CRIT_CHANCE_BY_LEVEL = [0, 0.05, 0.10, 0.16, 0.23, 0.30, 0.36, 0.41, 0.46, 0.50] as const;
+
 /**
  * Passive production is deliberately >2x per tier so merging two equal units
  * always increases production instead of punishing the player for merging.
@@ -96,6 +101,18 @@ export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
     titleKey: 'upgrade.offline.title',
     descriptionKey: 'upgrade.offline.description',
     costs: [300, 900, 2500, 7000]
+  },
+  {
+    id: 'clickPower',
+    titleKey: 'upgrade.clickPower.title',
+    descriptionKey: 'upgrade.clickPower.description',
+    costs: [150, 450, 1200, 3200, 9000, 24000, 60000, 145000, 340000]
+  },
+  {
+    id: 'clickCrit',
+    titleKey: 'upgrade.clickCrit.title',
+    descriptionKey: 'upgrade.clickCrit.description',
+    costs: [250, 700, 1800, 5000, 14000, 36000, 90000, 220000, 520000]
   }
 ] as const;
 
@@ -124,6 +141,8 @@ export const MISSION_TRACK: readonly MissionDefinition[] = [
   { id: 'discover-16', kind: 'discover', target: 16, reward: 149643, titleKey: 'mission.discover16.title', textKey: 'mission.discover16.text' },
   { id: 'discover-17', kind: 'discover', target: 17, reward: 336696, titleKey: 'mission.discover17.title', textKey: 'mission.discover17.text' },
   { id: 'discover-18', kind: 'discover', target: 18, reward: 757564, titleKey: 'mission.discover18.title', textKey: 'mission.discover18.text' }
+  ,{ id: 'click-25', kind: 'clicks', target: 25, reward: 750, titleKey: 'mission.click25.title', textKey: 'mission.click25.text' }
+  ,{ id: 'click-100', kind: 'clicks', target: 100, reward: 2200, titleKey: 'mission.click100.title', textKey: 'mission.click100.text' }
 ] as const;
 
 export const FIRST_MISSION_TARGET = MISSION_TRACK[0]!.target;
@@ -274,6 +293,20 @@ export function mergeRewardForTier(tier: number): number {
 
 export function discoveryBonusForTier(tier: number): number {
   return DISCOVERY_BONUS_BY_TIER[Math.floor(tier)] ?? 0;
+}
+
+export function tapRewardForTier(tier: number, clickPowerLevel = 0): number {
+  const baseReward = Math.max(1, Math.min(MAX_RUNTIME_TIER, Math.floor(tier))) * CLICK_REWARD_PER_TIER;
+  const level = Math.max(0, Math.min(CLICK_POWER_BONUS_BY_LEVEL.length - 1, Math.floor(clickPowerLevel)));
+  return Math.max(1, Math.ceil(baseReward * (1 + CLICK_POWER_BONUS_BY_LEVEL[level]!)));
+}
+
+export function clickPowerBonusForLevel(level: number): number {
+  return CLICK_POWER_BONUS_BY_LEVEL[Math.max(0, Math.min(CLICK_POWER_BONUS_BY_LEVEL.length - 1, Math.floor(level)))]!;
+}
+
+export function clickCritChanceForLevel(level: number): number {
+  return CLICK_CRIT_CHANCE_BY_LEVEL[Math.max(0, Math.min(CLICK_CRIT_CHANCE_BY_LEVEL.length - 1, Math.floor(level)))]!;
 }
 
 export function brainBoxCostForPurchases(paidBoxes: number): number {

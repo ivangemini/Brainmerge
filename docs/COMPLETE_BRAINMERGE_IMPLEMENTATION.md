@@ -6,11 +6,12 @@ Canonical base: `9536cfc6b3f8be2529519e1a9bd4e30d1aa2abb2`
 
 ## Результат
 
-Selective-port изменений не потребовалось. По `COMPLETE_BRAINMERGE_AUDIT.md`
-и `COMPLETE_BRAINMERGE_FEATURE_MATRIX.md` все подтверждённые production-срезы
-уже находятся в canonical HEAD. Поэтому код игры не изменялся: сохранены typed
-Campaign/Raid, unified `campaign-run.ts`, unified `GameState`, save v10, audio,
-retention/analytics, EN/RU, Yandex и touch/browser boundaries.
+State-ranking выявил один реальный gap, который не был виден в feature-only
+аудите: historical max snapshot содержал полноценный clicker/progression slice.
+Он перенесён selective-port’ом в current save-v10/unified architecture:
+`clicks`, `tapUnit`, critical payout, `clickPower`, `clickCrit`, две локали,
+touch/mouse button и две click-миссии. Existing Campaign/Raid, retention,
+analytics, audio, Yandex и atlas boundaries сохранены.
 
 ## Проверенные источники
 
@@ -41,11 +42,12 @@ retention/analytics, EN/RU, Yandex и touch/browser boundaries.
 
 ## Проверки
 
-- `npm test`: **126/126 passed**; TypeScript build и EN/RU parity **224/224**.
+- `npm test`: **127/127 passed**; TypeScript build и EN/RU parity **235/235**.
 - `npm run package`: local package integrity и release audit passed.
 - `npm run package:yandex`: Yandex package integrity и release audit passed.
 - Browser/runtime smoke passed: runtime, Campaign shell, Restore + Mastery,
   World 1 Raid, World 2 Location/Raid, RC, motion, RU locale и Yandex.
+- `npm run package` и `npm run package:yandex`: package integrity и release audit passed.
 
 ## Остатки
 
@@ -56,6 +58,6 @@ presentation, ожидающий утверждённых art/sound states. В G
 
 ## Commit
 
-Этот отчёт, два forensic audit-документа и запись session state фиксируются
-обычным commit’ом после прохождения проверок. История Git, старые refs и
-ветки не переписывались и не удалялись.
+Этот отчёт, ranking/gap документы и clicker slice фиксируются обычным commit’ом
+после прохождения проверок. История Git, старые refs и ветки не переписывались
+и не удалялись.

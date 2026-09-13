@@ -3,7 +3,7 @@ import { Analytics, BrowserEventAnalyticsSink } from './analytics/analytics.js';
 import { acknowledgeCampaignRunCompletion, abandonCampaignRun, beginCampaignRun, campaignRunPresentationSnapshot, deliverCampaignBoardUnit, moveOrMergeCampaignBoard, restartCampaignRunPhase, selectCampaignBoardCell, spawnCampaignRunSupply } from './core/campaign-run.js';
 import { campaignPresentationSnapshot } from './core/campaign.js';
 import { acknowledgeCampaignRaidPhase, beginCampaignRaid, campaignRaidPresentation, deliverCampaignRaidUnit, moveOrMergeCampaignRaid, selectCampaignRaidCell, spawnCampaignRaidSupply } from './core/campaign-raid.js';
-import { accrueOfflineIncome, accrueOnlineIncome, advanceFastEvents, claimCurrentMission, claimCollectionReward, claimOfflineIncome, createInitialState, activateCoinBoost, activateMutationCharge, grantFreeUpgrade, grantGoldenBrainBox, isBoardFull, markSessionStart, moveOrMerge, performPrestige, purchasePrestigeUpgrade, purchaseUpgrade, recordVisitorProgress, rescueDeadlock, sanitizeState, selectCell, spawnUnit } from './core/game.js';
+import { accrueOfflineIncome, accrueOnlineIncome, advanceFastEvents, claimCurrentMission, claimCollectionReward, claimOfflineIncome, createInitialState, activateCoinBoost, activateMutationCharge, grantFreeUpgrade, grantGoldenBrainBox, isBoardFull, markSessionStart, moveOrMerge, performPrestige, purchasePrestigeUpgrade, purchaseUpgrade, recordVisitorProgress, rescueDeadlock, sanitizeState, selectCell, spawnUnit, tapUnit } from './core/game.js';
 import { MusicManager } from './audio/music-manager.js';
 import { AudioFeedback } from './feedback/audio-feedback.js';
 import { runCoinTrail, runDiscoveryCelebration, runUnitFlight } from './feedback/visual-effects.js';
@@ -193,6 +193,19 @@ function activateCell(index) {
         cellElement(index)?.focus();
 }
 const view = new GameView(root, {
+    clicker: () => {
+        settleOnline();
+        const click = tapUnit(state, Math.random, Date.now());
+        if (!click.rewarded)
+            return;
+        state = click.state;
+        update(state);
+        feedback.trigger('reward');
+        const anchor = elementCenter(root.querySelector('[data-action="clicker"]'));
+        floatValueAt(anchor, `+${click.reward}`);
+        if (click.critical)
+            transientClass(root.querySelector('[data-action="clicker"]'), 'fx-critical-tap', 620);
+    },
     spawn: () => {
         settleOnline();
         const before = state;

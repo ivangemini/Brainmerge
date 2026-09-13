@@ -43,7 +43,8 @@ import {
   rescueDeadlock,
   sanitizeState,
   selectCell,
-  spawnUnit
+  spawnUnit,
+  tapUnit
 } from './core/game.js';
 import type { GameState, PrestigeUpgradeId, UpgradeId } from './core/types.js';
 import { MusicManager, type MusicTrack } from './audio/music-manager.js';
@@ -243,6 +244,17 @@ function activateCell(index: number): void {
 }
 
 const view = new GameView(root, {
+  clicker: () => {
+    settleOnline();
+    const click = tapUnit(state, Math.random, Date.now());
+    if (!click.rewarded) return;
+    state = click.state;
+    update(state);
+    feedback.trigger('reward');
+    const anchor = elementCenter(root.querySelector('[data-action="clicker"]'));
+    floatValueAt(anchor, `+${click.reward}`);
+    if (click.critical) transientClass(root.querySelector('[data-action="clicker"]'), 'fx-critical-tap', 620);
+  },
   spawn: () => {
     settleOnline();
     const before = state;

@@ -29,7 +29,7 @@ export interface Unit {
 
 export type Cell = Unit | null;
 export type OnboardingPhase = 'merge' | 'spawn' | 'complete';
-export type MissionKind = 'merges' | 'discover' | 'spawns';
+export type MissionKind = 'merges' | 'discover' | 'spawns' | 'clicks';
 
 export interface MissionDefinition {
   id: string;
@@ -40,13 +40,15 @@ export interface MissionDefinition {
   textKey: string;
 }
 
-export type UpgradeId = 'boxBaseTier' | 'luckyDrop' | 'income' | 'offline';
+export type UpgradeId = 'boxBaseTier' | 'luckyDrop' | 'income' | 'offline' | 'clickPower' | 'clickCrit';
 
 export interface UpgradeLevels {
   boxBaseTier: number;
   luckyDrop: number;
   income: number;
   offline: number;
+  clickPower: number;
+  clickCrit: number;
 }
 
 export interface UpgradeDefinition {
@@ -178,6 +180,8 @@ export interface GameState {
   merges: number;
   /** All Brain Box openings, including rewarded. Used by mission progress. */
   spawns: number;
+  /** Successful clicker actions. Kept separate from merges for click missions. */
+  clicks: number;
   /** Paid Brain Box purchases only. Drives escalating paid-box price. */
   paidBoxes: number;
   /** Highest core merge tier ever created; keeps Collection discovery persistent. */
@@ -219,4 +223,11 @@ export interface MergeResult {
   changed: boolean;
   merged: boolean;
   reason?: 'empty-source' | 'same-cell' | 'mismatch' | 'max-tier';
+}
+
+export interface TapResult {
+  state: GameState;
+  rewarded: boolean;
+  reward: number;
+  critical: boolean;
 }

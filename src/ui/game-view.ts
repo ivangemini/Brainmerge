@@ -8,6 +8,9 @@ import {
   familyById,
   familyByTier,
   incomeMultiplierForLevel,
+  clickPowerBonusForLevel,
+  clickCritChanceForLevel,
+  tapRewardForTier,
   luckyDropChanceForLevel,
   maxUpgradeLevel,
   offlineHoursForLevel,
@@ -35,6 +38,7 @@ import {
   playerLevel,
   playerLevelProgress,
   productionPerMinute,
+  maxTierOnBoard,
   unitProductionPerMinute,
   upgradeRequiredDiscoveryTier
 } from '../core/game.js';
@@ -44,6 +48,7 @@ import type { Locale } from '../i18n/i18n.js';
 import { renderRewardBoostsPanel, type RewardedAdAction } from './reward-boosts.js';
 
 export interface GameViewActions {
+  clicker(): void;
   spawn(): void;
   rewardedSpawn(): void;
   rewardedBoost(action: RewardedAdAction): void;
@@ -89,6 +94,8 @@ function upgradeEffect(state: GameState, id: UpgradeId, t: Translator): string {
   if (id === 'income') {
     return t('upgrade.effect.income', { multiplier: incomeMultiplierForLevel(level).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') });
   }
+  if (id === 'clickPower') return t('upgrade.effect.clickPower', { bonus: Math.round(clickPowerBonusForLevel(level) * 100) });
+  if (id === 'clickCrit') return t('upgrade.effect.clickCrit', { chance: Math.round(clickCritChanceForLevel(level) * 100), multiplier: 2 });
   return t('upgrade.effect.offline', { hours: offlineHoursForLevel(level) });
 }
 
@@ -162,6 +169,7 @@ export class GameView {
       : null;
     const boxCost = currentBrainBoxCost(state);
     const boxBaseTier = brainBoxBaseTier(state);
+    const clickReward = tapRewardForTier(maxTierOnBoard(state), state.upgrades.clickPower);
     const boxLuckyPercent = Math.round(brainBoxLuckyChance(state) * 100);
     const production = productionPerMinute(state);
     const guidance = nextActionHint(state);
@@ -293,6 +301,9 @@ export class GameView {
             </div>` : ''}
 
             <div class="spawn-dock ${phase === 'spawn' ? 'is-tutorial' : ''}">
+              <button class="clicker-button" data-action="clicker" aria-label="${t('action.clickerAria', { reward: clickReward })}">
+                <span class="clicker-button__icon" aria-hidden="true">●</span><span class="clicker-button__reward">+${clickReward}</span>
+              </button>
               <button class="spawn-button" data-action="spawn" ${state.coins < boxCost || boardFull || capabilities.adBusy ? 'disabled' : ''}>
                 <span class="spawn-button__icon">✦</span>
                 <span><strong>${t('action.spawn')}</strong><small>${t('action.spawnCost', { cost: boxCost })}</small></span>
@@ -383,6 +394,7 @@ export class GameView {
   }
 
   private bindInteractions(): void {
+    this.root.querySelector('[data-action="clicker"]')?.addEventListener('click', () => this.actions.clicker());
     this.root.querySelector('[data-action="spawn"]')?.addEventListener('click', () => this.actions.spawn());
     this.root.querySelector('[data-action="rewarded-spawn"]')?.addEventListener('click', () => this.actions.rewardedSpawn());
     this.root.querySelectorAll<HTMLButtonElement>('[data-ad-boost]').forEach((button) => {

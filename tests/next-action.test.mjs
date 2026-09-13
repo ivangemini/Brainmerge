@@ -60,10 +60,10 @@ test('true deadlock outranks spending recommendations', () => {
 test('when there is no free merge, permanent affordable upgrades are surfaced before another Box', () => {
   const state = singleUnitState(1, 300);
   const ready = affordableUpgradeIds(state);
-  assert.deepEqual(ready, ['luckyDrop', 'income', 'offline']);
+  assert.deepEqual(ready, ['luckyDrop', 'income', 'offline', 'clickPower', 'clickCrit']);
   const hint = nextActionHint(state);
   assert.equal(hint.kind, 'upgrade');
-  assert.equal(hint.upgradeCount, 3);
+  assert.equal(hint.upgradeCount, 5);
 });
 
 test('Box and wait guidance use the current base-tier price and production rate', () => {

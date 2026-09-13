@@ -13,10 +13,12 @@ import {
   familyByTier,
   incomeMultiplierForLevel,
   luckyDropChanceForLevel,
+  clickCritChanceForLevel,
   maxUpgradeLevel,
   mergeRewardForTier,
   nextFamilyFor,
   offlineHoursForLevel,
+  tapRewardForTier,
   upgradeCost
 } from './catalog.js';
 import { sanitizeCampaignRunState } from './campaign-run.js';
@@ -28,6 +30,7 @@ import type {
   FamilyId,
   GameState,
   MergeResult,
+  TapResult,
   MissionDefinition,
   NextActionHint,
   OnboardingPhase,
@@ -48,7 +51,9 @@ const DEFAULT_UPGRADES: UpgradeLevels = {
   boxBaseTier: 0,
   luckyDrop: 0,
   income: 0,
-  offline: 0
+  offline: 0,
+  clickPower: 0,
+  clickCrit: 0
 };
 
 const DEFAULT_PRESTIGE_UPGRADES: PrestigeUpgradeLevels = {
@@ -125,7 +130,9 @@ function sanitizeUpgrades(candidate: unknown): UpgradeLevels {
     boxBaseTier: Math.min(MAX_BOX_BASE_TIER_LEVEL, sanitizeUpgradeLevel('boxBaseTier', raw.boxBaseTier)),
     luckyDrop: sanitizeUpgradeLevel('luckyDrop', raw.luckyDrop),
     income: sanitizeUpgradeLevel('income', raw.income),
-    offline: sanitizeUpgradeLevel('offline', raw.offline)
+    offline: sanitizeUpgradeLevel('offline', raw.offline),
+    clickPower: sanitizeUpgradeLevel('clickPower', raw.clickPower),
+    clickCrit: sanitizeUpgradeLevel('clickCrit', raw.clickCrit)
   };
 }
 
@@ -240,6 +247,7 @@ export function createInitialState(now = Date.now()): GameState {
     xp: 0,
     merges: 0,
     spawns: 0,
+    clicks: 0,
     paidBoxes: 0,
     maxDiscoveredTier: 1,
     runMaxTier: 1,
@@ -293,6 +301,7 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
     : maxDiscoveredTier;
   const runMaxTier = Math.max(discoveredFromBoard, Math.min(savedRunMaxTier, maxDiscoveredTier));
   const spawns = version >= 2 ? sanitizeNonnegativeInt(state.spawns) : 0;
+  const clicks = version >= 6 ? sanitizeNonnegativeInt(state.clicks) : 0;
 
   let missionIndex = 0;
   if (version >= 4 && typeof state.missionIndex === 'number' && Number.isFinite(state.missionIndex)) {
@@ -330,6 +339,7 @@ export function sanitizeState(candidate: unknown, now = Date.now()): GameState |
     xp: sanitizeNonnegativeInt(state.xp),
     merges: sanitizeNonnegativeInt(state.merges),
     spawns,
+    clicks,
     paidBoxes: version >= 5 && typeof state.paidBoxes === 'number' && Number.isFinite(state.paidBoxes)
       ? Math.max(0, Math.floor(state.paidBoxes))
       : 0,
@@ -781,6 +791,10 @@ export function productionPerMinute(state: GameState): number {
   return base * incomeMultiplierForLevel(state.upgrades.income) * permanentIncomeMultiplier(state);
 }
 
+export function maxTierOnBoard(state: Pick<GameState, 'cells'>): number {
+  return state.cells.reduce((highest, cell) => Math.max(highest, cell?.tier ?? 1), 1);
+}
+
 export function unitProductionPerMinute(state: GameState, familyId: FamilyId): number {
   const family = familyById.get(familyId);
   if (!family) return 0;
@@ -790,6 +804,19 @@ export function unitProductionPerMinute(state: GameState, familyId: FamilyId): n
 export function permanentIncomeMultiplier(state: GameState): number {
   const claimedMilestones = COLLECTION_REWARD_TIERS.filter((tier) => state.collectionRewardClaims.includes(`collection-${tier}`)).length;
   return 1 + claimedMilestones * 0.05 + state.prestigeUpgrades.income * 0.10;
+}
+
+export function tapUnit(state: GameState, random = Math.random, now = Date.now()): TapResult {
+  const current = reconcileAdBoostState(state, now);
+  const reward = tapRewardForTier(maxTierOnBoard(current), current.upgrades.clickPower);
+  const critical = random() < clickCritChanceForLevel(current.upgrades.clickCrit);
+  const payout = (critical ? reward * 2 : reward) * coinBoostMultiplier(current, now);
+  return {
+    state: { ...current, coins: current.coins + payout, clicks: current.clicks + 1 },
+    rewarded: true,
+    reward: payout,
+    critical
+  };
 }
 
 export function claimableCollectionRewardTiers(state: GameState): number[] {
@@ -1035,6 +1062,7 @@ export function activeMission(state: GameState): MissionDefinition | null {
 export function missionValue(state: GameState, mission: MissionDefinition): number {
   if (mission.kind === 'merges') return state.merges;
   if (mission.kind === 'spawns') return state.spawns;
+  if (mission.kind === 'clicks') return state.clicks;
   return state.runMaxTier;
 }
 

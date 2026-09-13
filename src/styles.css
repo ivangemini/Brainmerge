@@ -85,6 +85,13 @@ button:focus-visible { outline: 4px solid rgba(59, 133, 224, .65); outline-offse
 .spawn-dock { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .spawn-dock.is-tutorial .spawn-button { box-shadow: 0 0 0 5px rgba(255,241,144,.75), 0 8px 0 #c9792d, 0 14px 22px rgba(113,72,37,.2), inset 0 2px 0 rgba(255,255,255,.65); }
 .spawn-button, .rewarded-button { display: flex; align-items: center; gap: 12px; border: 0; border-radius: 22px; cursor: pointer; }
+.clicker-button { min-width: 92px; display: grid; place-items: center; gap: 2px; border: 0; border-radius: 20px; cursor: pointer; color: #fff8df; background: linear-gradient(180deg, #a66ee8, #7046bd); box-shadow: 0 7px 0 #4d318c, 0 12px 18px rgba(77,49,140,.22), inset 0 2px 0 rgba(255,255,255,.35); font-weight: 950; }
+.clicker-button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.clicker-button:active { transform: translateY(5px); box-shadow: 0 2px 0 #4d318c, 0 7px 12px rgba(77,49,140,.18); }
+.clicker-button__icon { font-size: 22px; line-height: 1; }
+.clicker-button__reward { font-size: 14px; }
+.fx-critical-tap { animation: critical-tap .62s ease-out; }
+@keyframes critical-tap { 35% { filter: brightness(1.45) saturate(1.35); transform: translateY(-3px) scale(1.06); } }
 .spawn-button { min-width: 230px; padding: 11px 20px 11px 13px; color: #3e2d3e; background: linear-gradient(180deg, #ffd475, #f3aa38); box-shadow: 0 8px 0 #c9792d, 0 14px 22px rgba(113,72,37,.2), inset 0 2px 0 rgba(255,255,255,.65); }
 .spawn-button:hover, .rewarded-button:hover { filter: brightness(1.035); transform: translateY(-1px); }
 .spawn-button:active { transform: translateY(5px); box-shadow: 0 3px 0 #c9792d, 0 8px 14px rgba(113,72,37,.17); }

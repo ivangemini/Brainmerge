@@ -22,6 +22,16 @@ Working branch: `codex/normalized-full-build-20260913`, based on recovery commit
 
 The validated T1-T18 merge-idle board remains the primary account-growth loop.
 
+State ranking continuation (2026-09-13): historical max source group
+`02e38af8`/`e195b42b`/`1ef9c70d` was compared against canonical `9536cfc6`.
+The only confirmed production gap was the additive clicker/progression slice:
+click counter, tier-scaled tap payout, critical taps, Click Power/Critical Click
+upgrades and click missions. These are now adapted to save v10 and the current
+unified GameState. Old split Campaign/Prestige engines and standalone character
+rasters remain intentionally excluded by the architecture/art-bible contracts.
+Validation: 127 tests, build/locales, local+Yandex package audits, runtime,
+Campaign, Raid, locale and Yandex browser smokes passed.
+
 Audit implementation status (2026-09-05): Phases 1–4 in `docs/CODE_AUDIT_PLAN.md` are implemented. Save v8 adds current-run tier ownership; bounded base-tier Box pricing and T9–T18 missions meet the first-run pacing model; Collection milestone rewards and the five-category Brain Cell Prestige layer are production-wired with exact-once reset behavior.
 
 Phase 5/6 continuation (2026-09-05): save v9 persists active-time combo/Fever/visitor state. Combo and Fever are live; visitor production scheduling waits for approved art while its exact-once core is tested. The Campaign run engine and launcher now support all seven data-driven World 1 Locations with stable per-Location blocker layouts and discovered-tier-capped orders. Raid gameplay and dual order choices remain next.
