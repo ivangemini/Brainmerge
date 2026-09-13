@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright';
+import { MISSION_TRACK } from '../build/core/catalog.js';
 
 const ROOT = new URL('../dist/', import.meta.url);
 const OUTPUT = new URL('../runtime-artifacts/', import.meta.url);
@@ -55,7 +56,7 @@ function rewardAndUpgradeState() {
 }
 function maxedUpgradeState() {
   const cells = Array(30).fill(null); cells[0] = unit('tung-wood', 8, 0);
-  return baseState({ cells, coins: 250000, merges: 120, spawns: 90, paidBoxes: 60, maxDiscoveredTier: 8, missionIndex: 18, upgrades: { boxBaseTier: 13, luckyDrop: 5, income: 5, offline: 4 } });
+  return baseState({ cells, coins: 250000, merges: 120, spawns: 90, paidBoxes: 60, maxDiscoveredTier: 8, missionIndex: MISSION_TRACK.length, upgrades: { boxBaseTier: 13, luckyDrop: 5, income: 5, offline: 4 } });
 }
 function discoveryState() {
   const cells = Array(30).fill(null); cells[0] = unit('coffee-ballerina', 7, 'a'); cells[1] = unit('coffee-ballerina', 7, 'b');

@@ -1,5 +1,14 @@
 # Active Session — Brainmerge
 
+## Active main restored — 2026-09-13
+
+- User requested the advanced version with Campaign art, music and settings as the current game.
+- Local `main` fast-forwarded from `d5a2b29` to `7f2a10c` from `codex/normalized-full-build-20260913`; previous main is preserved as `codex/backup-main-before-restore-20260913`. Remote publication is unchanged.
+- Rebuilt local package and existing localhost:4173 workspace server now serves the restored source/build/assets.
+- Fixed runtime smoke's completed-mission fixture to use `MISSION_TRACK.length`, accounting for recovered click missions.
+- Verified this pass: TypeScript build, 235-key EN/RU parity, 127 tests, local package integrity/release audit, runtime viewport/state smoke, Campaign persistence, World 1 Raid, World 2 Location/Raid, browser audio settings persistence and actual music playback.
+- Current working baseline is local `main`; earlier branch references below describe historical recovery work.
+
 ## Current objective
 Brainmerge is in post-RC retention/meta development. The long-term product objective is **Brainverse world restoration**, not a ladder of short Campaign stages.
 
